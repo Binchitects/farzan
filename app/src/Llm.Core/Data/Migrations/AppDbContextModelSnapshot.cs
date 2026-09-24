@@ -36,10 +36,18 @@ namespace Llm.Core.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<byte[]>("Data")
+                        .HasColumnType("bytea");
+
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasMaxLength(260)
                         .HasColumnType("character varying(260)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
@@ -86,12 +94,18 @@ namespace Llm.Core.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Error")
                         .HasColumnType("text");
 
                     b.Property<string>("Model")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
 
                     b.Property<int?>("PromptTokens")
                         .HasColumnType("integer");
@@ -110,6 +124,9 @@ namespace Llm.Core.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("ThinkingMs")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ToolCallId")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -122,6 +139,8 @@ namespace Llm.Core.Data.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ConversationId", "ParentId");
 
                     b.HasIndex("ConversationId", "Sequence")
                         .IsUnique();
@@ -138,6 +157,23 @@ namespace Llm.Core.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("CurrentLeafId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("MaxTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SystemPrompt")
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)");
+
+                    b.Property<double?>("Temperature")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("Thinking")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -146,6 +182,9 @@ namespace Llm.Core.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<double?>("TopP")
+                        .HasColumnType("double precision");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
