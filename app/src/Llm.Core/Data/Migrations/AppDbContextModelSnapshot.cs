@@ -238,14 +238,14 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.PrimitiveCollection<List<string>>("Tools")
+                        .HasColumnType("text[]");
+
                     b.Property<double?>("TopP")
                         .HasColumnType("double precision");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("UseArgus")
-                        .HasColumnType("boolean");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -255,6 +255,80 @@ namespace Llm.Core.Data.Migrations
                     b.HasIndex("UserId", "UpdatedAt");
 
                     b.ToTable("conversations", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.McpServer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("EmailHeader")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("HeaderName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("HeaderValueEncrypted")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("mcp_servers", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.ToolSetting", b =>
+                {
+                    b.Property<string>("ToolId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("AskFirst")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Audience")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.PrimitiveCollection<List<Guid>>("Groups")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
+                    b.Property<bool>("OnByDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ToolId");
+
+                    b.ToTable("tool_settings", (string)null);
                 });
 
             modelBuilder.Entity("Llm.Core.Data.Setting", b =>
