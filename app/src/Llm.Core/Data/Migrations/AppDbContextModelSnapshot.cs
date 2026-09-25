@@ -154,10 +154,16 @@ namespace Llm.Core.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("CurrentLeafId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ForkedFromId")
                         .HasColumnType("uuid");
 
                     b.Property<int?>("MaxTokens")
