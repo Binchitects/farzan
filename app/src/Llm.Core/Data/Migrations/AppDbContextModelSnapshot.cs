@@ -519,6 +519,91 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("audit_events", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Models.LocalModel", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Context")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CpuMoe")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExtraPreset")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("File")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("GpuLayers")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("InputPerMtok")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("KvType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("MaxOutput")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("OutputPerMtok")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("Parallel")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Projector")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("Thinking")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Tools")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Name");
+
+                    b.ToTable("local_models", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Models.ModelAccess", b =>
+                {
+                    b.Property<string>("Model")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Audience")
+                        .HasColumnType("integer");
+
+                    b.PrimitiveCollection<List<Guid>>("Groups")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Model");
+
+                    b.ToTable("model_access", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
                 {
                     b.Property<int>("Id")
