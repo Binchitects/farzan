@@ -534,6 +534,15 @@ namespace Llm.Core.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DraftHead")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("DraftMax")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(3);
+
                     b.Property<string>("ExtraPreset")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
@@ -557,15 +566,34 @@ namespace Llm.Core.Data.Migrations
                     b.Property<int?>("MaxOutput")
                         .HasColumnType("integer");
 
+                    b.Property<double?>("MinP")
+                        .HasColumnType("double precision");
+
+                    b.Property<bool>("Mtp")
+                        .HasColumnType("boolean");
+
                     b.Property<decimal?>("OutputPerMtok")
                         .HasColumnType("numeric");
 
                     b.Property<int>("Parallel")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Placement")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("auto");
+
+                    b.Property<double?>("PresencePenalty")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("Projector")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<double?>("Temperature")
+                        .HasColumnType("double precision");
 
                     b.Property<bool>("Thinking")
                         .HasColumnType("boolean");
@@ -573,8 +601,20 @@ namespace Llm.Core.Data.Migrations
                     b.Property<bool>("Tools")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("TopK")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("TopP")
+                        .HasColumnType("double precision");
+
+                    b.Property<int?>("Ubatch")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Yarn")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Name");
 
