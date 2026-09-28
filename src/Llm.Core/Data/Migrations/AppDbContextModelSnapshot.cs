@@ -173,6 +173,9 @@ namespace Llm.Core.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Summary")
+                        .HasColumnType("text");
+
                     b.Property<int?>("ThinkingMs")
                         .HasColumnType("integer");
 
