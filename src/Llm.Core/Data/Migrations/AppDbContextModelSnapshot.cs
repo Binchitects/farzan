@@ -648,6 +648,43 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("model_access", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Models.RemoteServer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApiKeyProtected")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("BaseUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("VerifyTls")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("remote_servers", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
                 {
                     b.Property<int>("Id")
@@ -1018,6 +1055,50 @@ namespace Llm.Core.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Models.RemoteServer", b =>
+                {
+                    b.OwnsMany("Llm.Core.Models.RemoteModel", "Models", b1 =>
+                        {
+                            b1.Property<Guid>("RemoteServerId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<int?>("Context");
+
+                            b1.Property<decimal?>("InputPerMtok");
+
+                            b1.Property<int?>("MaxOutput");
+
+                            b1.Property<string>("Name")
+                                .IsRequired();
+
+                            b1.Property<decimal?>("OutputPerMtok");
+
+                            b1.Property<string>("Remote")
+                                .IsRequired();
+
+                            b1.Property<bool>("Thinking");
+
+                            b1.Property<bool>("Tools");
+
+                            b1.Property<bool>("Vision");
+
+                            b1.HasKey("RemoteServerId", "__synthesizedOrdinal");
+
+                            b1.ToTable("remote_servers");
+
+                            b1
+                                .ToJson("Models")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("RemoteServerId");
+                        });
+
+                    b.Navigation("Models");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
