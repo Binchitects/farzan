@@ -143,6 +143,9 @@ namespace Llm.Core.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DetailsJson")
+                        .HasColumnType("text");
+
                     b.Property<int?>("DurationMs")
                         .HasColumnType("integer");
 
