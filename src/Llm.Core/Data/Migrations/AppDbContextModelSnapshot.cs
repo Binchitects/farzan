@@ -654,6 +654,56 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("model_access", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Models.ModelWindow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.PrimitiveCollection<List<int>>("Days")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer[]")
+                        .HasDefaultValueSql("'{}'::integer[]");
+
+                    b.Property<string>("DefaultModel")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<TimeOnly>("End")
+                        .HasColumnType("time without time zone");
+
+                    b.PrimitiveCollection<List<string>>("Keep")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text[]")
+                        .HasDefaultValueSql("'{}'::text[]");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeOnly>("Start")
+                        .HasColumnType("time without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("model_windows", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Models.RemoteServer", b =>
                 {
                     b.Property<Guid>("Id")
