@@ -812,6 +812,58 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("model_access", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Models.ModelDownload", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Bytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Dir")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Repo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Revision")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<long>("Total")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("model_downloads", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Models.ModelWindow", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1296,6 +1348,37 @@ namespace Llm.Core.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Models.ModelDownload", b =>
+                {
+                    b.OwnsMany("Llm.Core.Models.DownloadFile", "Files", b1 =>
+                        {
+                            b1.Property<Guid>("ModelDownloadId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Path")
+                                .IsRequired();
+
+                            b1.Property<string>("Sha256");
+
+                            b1.Property<long>("Size");
+
+                            b1.HasKey("ModelDownloadId", "__synthesizedOrdinal");
+
+                            b1.ToTable("model_downloads");
+
+                            b1
+                                .ToJson("Files")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ModelDownloadId");
+                        });
+
+                    b.Navigation("Files");
                 });
 
             modelBuilder.Entity("Llm.Core.Models.RemoteServer", b =>
