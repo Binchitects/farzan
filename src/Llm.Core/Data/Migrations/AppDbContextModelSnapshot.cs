@@ -71,6 +71,26 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("group_members", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.AttachmentPage", b =>
+                {
+                    b.Property<Guid>("AttachmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("Total")
+                        .HasColumnType("integer");
+
+                    b.HasKey("AttachmentId", "Number");
+
+                    b.ToTable("attachment_pages", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.ChatAttachment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1310,6 +1330,15 @@ namespace Llm.Core.Data.Migrations
                     b.HasOne("Llm.Core.Identity.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.AttachmentPage", b =>
+                {
+                    b.HasOne("Llm.Core.Chat.ChatAttachment", null)
+                        .WithMany()
+                        .HasForeignKey("AttachmentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
