@@ -137,6 +137,9 @@ namespace Llm.Core.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ContextJson")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("ConversationId")
                         .HasColumnType("uuid");
 
