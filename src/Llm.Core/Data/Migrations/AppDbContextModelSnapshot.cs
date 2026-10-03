@@ -1541,6 +1541,8 @@ namespace Llm.Core.Data.Migrations
 
                             b1.Property<long>("Size");
 
+                            b1.Property<string>("Target");
+
                             b1.HasKey("ModelDownloadId", "__synthesizedOrdinal");
 
                             b1.ToTable("model_downloads");
