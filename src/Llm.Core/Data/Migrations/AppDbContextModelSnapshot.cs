@@ -448,6 +448,32 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("project_files", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.SafeguardMark", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Kind", "At");
+
+                    b.ToTable("safeguard_marks", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.ScheduledRun", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1468,6 +1494,15 @@ namespace Llm.Core.Data.Migrations
                     b.HasOne("Llm.Core.Chat.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.SafeguardMark", b =>
+                {
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
