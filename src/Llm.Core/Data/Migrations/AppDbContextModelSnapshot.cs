@@ -118,8 +118,14 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<double?>("Seconds")
+                        .HasColumnType("double precision");
+
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
+
+                    b.Property<byte[]>("Sound")
+                        .HasColumnType("bytea");
 
                     b.Property<string>("Text")
                         .IsRequired()
