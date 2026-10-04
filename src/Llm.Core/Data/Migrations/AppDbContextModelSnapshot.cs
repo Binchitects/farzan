@@ -29,8 +29,21 @@ namespace Llm.Core.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool?>("BlockedPatterns")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CostCentre")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("Credit")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("CreditPerMember")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
@@ -40,10 +53,25 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<string>("Moderation")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("RedactPii")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int?>("RetentionDays")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SecretScanning")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.HasKey("Id");
 
@@ -361,6 +389,9 @@ namespace Llm.Core.Data.Migrations
 
                     b.Property<Guid?>("CurrentLeafId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("ForkedFromId")
                         .HasColumnType("uuid");
@@ -1212,6 +1243,13 @@ namespace Llm.Core.Data.Migrations
                     b.Property<string>("LdapDn")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("LegalHoldReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("LegalHoldSince")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
