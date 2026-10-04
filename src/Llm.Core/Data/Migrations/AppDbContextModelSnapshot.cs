@@ -390,6 +390,33 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("mcp_servers", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.Memory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "UpdatedAt");
+
+                    b.ToTable("memories", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -559,6 +586,57 @@ namespace Llm.Core.Data.Migrations
                     b.HasIndex("UserId", "Kind", "At");
 
                     b.ToTable("safeguard_marks", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.SavedPrompt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.PrimitiveCollection<List<Guid>>("Groups")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid?>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Sharing")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("prompts", (string)null);
                 });
 
             modelBuilder.Entity("Llm.Core.Chat.ScheduledRun", b =>
@@ -834,6 +912,9 @@ namespace Llm.Core.Data.Migrations
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("MemoryOff")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -1576,6 +1657,15 @@ namespace Llm.Core.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.Memory", b =>
+                {
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.Notification", b =>
                 {
                     b.HasOne("Llm.Core.Identity.AppUser", null)
@@ -1625,6 +1715,19 @@ namespace Llm.Core.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.SavedPrompt", b =>
+                {
+                    b.HasOne("Llm.Core.Chat.McpServer", null)
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("Llm.Core.Chat.ScheduledRun", b =>
