@@ -71,6 +71,115 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("group_members", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.Assistant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ChatsStarted")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("blue");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.PrimitiveCollection<List<Guid>>("EditorGroups")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
+                    b.PrimitiveCollection<List<Guid>>("EditorPeople")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
+                    b.PrimitiveCollection<List<Guid>>("Groups")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("bot");
+
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Reach")
+                        .HasColumnType("integer");
+
+                    b.PrimitiveCollection<List<string>>("Starters")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text[]")
+                        .HasDefaultValueSql("'{}'::text[]");
+
+                    b.Property<string>("Thinking")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.PrimitiveCollection<List<string>>("Tools")
+                        .HasColumnType("text[]");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "UpdatedAt");
+
+                    b.ToTable("projects", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.AssistantFile", b =>
+                {
+                    b.Property<Guid>("AssistantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ProjectId");
+
+                    b.Property<Guid>("AttachmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("AssistantId", "AttachmentId");
+
+                    b.HasIndex("AttachmentId");
+
+                    b.ToTable("project_files", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.AttachmentPage", b =>
                 {
                     b.Property<Guid>("AttachmentId")
@@ -235,6 +344,67 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("chat_messages", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.ChatShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.PrimitiveCollection<List<Guid>>("Groups")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
+                    b.Property<Guid?>("LeafId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Opens")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Reach")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("chat_shares", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.ChatShareView", b =>
+                {
+                    b.Property<Guid>("ShareId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("FirstAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("LastAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ShareId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("chat_share_views", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.Conversation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -243,6 +413,10 @@ namespace Llm.Core.Data.Migrations
 
                     b.Property<DateTimeOffset?>("ArchivedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AssistantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ProjectId");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -265,9 +439,6 @@ namespace Llm.Core.Data.Migrations
                     b.Property<string>("Model")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
-
-                    b.Property<Guid?>("ProjectId")
-                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("ScheduledTaskId")
                         .HasColumnType("uuid");
@@ -302,7 +473,7 @@ namespace Llm.Core.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProjectId");
+                    b.HasIndex("AssistantId");
 
                     b.HasIndex("UserId", "UpdatedAt");
 
@@ -471,59 +642,6 @@ namespace Llm.Core.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("person_credentials", (string)null);
-                });
-
-            modelBuilder.Entity("Llm.Core.Chat.Project", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Instructions")
-                        .HasMaxLength(20000)
-                        .HasColumnType("character varying(20000)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "UpdatedAt");
-
-                    b.ToTable("projects", (string)null);
-                });
-
-            modelBuilder.Entity("Llm.Core.Chat.ProjectFile", b =>
-                {
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("AttachmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("AddedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("ProjectId", "AttachmentId");
-
-                    b.HasIndex("AttachmentId");
-
-                    b.ToTable("project_files", (string)null);
                 });
 
             modelBuilder.Entity("Llm.Core.Chat.SafeguardMark", b =>
@@ -1526,6 +1644,30 @@ namespace Llm.Core.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.Assistant", b =>
+                {
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.AssistantFile", b =>
+                {
+                    b.HasOne("Llm.Core.Chat.Assistant", null)
+                        .WithMany()
+                        .HasForeignKey("AssistantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Llm.Core.Chat.ChatAttachment", null)
+                        .WithMany()
+                        .HasForeignKey("AttachmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.AttachmentPage", b =>
                 {
                     b.HasOne("Llm.Core.Chat.ChatAttachment", null)
@@ -1553,11 +1695,41 @@ namespace Llm.Core.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.ChatShare", b =>
+                {
+                    b.HasOne("Llm.Core.Chat.Conversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.ChatShareView", b =>
+                {
+                    b.HasOne("Llm.Core.Chat.ChatShare", null)
+                        .WithMany()
+                        .HasForeignKey("ShareId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.Conversation", b =>
                 {
-                    b.HasOne("Llm.Core.Chat.Project", null)
+                    b.HasOne("Llm.Core.Chat.Assistant", null)
                         .WithMany()
-                        .HasForeignKey("ProjectId")
+                        .HasForeignKey("AssistantId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Llm.Core.Identity.AppUser", null)
@@ -1581,30 +1753,6 @@ namespace Llm.Core.Data.Migrations
                     b.HasOne("Llm.Core.Identity.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Llm.Core.Chat.Project", b =>
-                {
-                    b.HasOne("Llm.Core.Identity.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Llm.Core.Chat.ProjectFile", b =>
-                {
-                    b.HasOne("Llm.Core.Chat.ChatAttachment", null)
-                        .WithMany()
-                        .HasForeignKey("AttachmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Llm.Core.Chat.Project", null)
-                        .WithMany()
-                        .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
