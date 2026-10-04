@@ -150,6 +150,9 @@ namespace Llm.Core.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("AnswerMs")
+                        .HasColumnType("integer");
+
                     b.Property<string>("AttachmentsJson")
                         .HasColumnType("text");
 
@@ -225,7 +228,13 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("TraceJson")
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasFilter("\"AnswerMs\" IS NOT NULL");
 
                     b.HasIndex("ConversationId", "ParentId");
 
