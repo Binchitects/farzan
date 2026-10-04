@@ -40,10 +40,17 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("Scim")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -834,6 +841,10 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<string>("OidcSubject")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
 
@@ -842,6 +853,10 @@ namespace Llm.Core.Data.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("ScimExternalId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
@@ -865,6 +880,8 @@ namespace Llm.Core.Data.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
+
+                    b.HasIndex("OidcSubject");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
