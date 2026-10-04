@@ -336,6 +336,46 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("attachment_pages", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.BotThread", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("LastAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Thread")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Platform", "Thread", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("bot_threads", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.ChatAttachment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1022,6 +1062,54 @@ namespace Llm.Core.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("person_credentials", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PushSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Auth")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Device")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Endpoint")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("LastSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("P256dh")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Endpoint")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("push_subscriptions", (string)null);
                 });
 
             modelBuilder.Entity("Llm.Core.Chat.SafeguardMark", b =>
@@ -2211,6 +2299,21 @@ namespace Llm.Core.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.BotThread", b =>
+                {
+                    b.HasOne("Llm.Core.Chat.Conversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.ChatAttachment", b =>
                 {
                     b.HasOne("Llm.Core.Identity.AppUser", null)
@@ -2323,6 +2426,15 @@ namespace Llm.Core.Data.Migrations
                 });
 
             modelBuilder.Entity("Llm.Core.Chat.PersonCredential", b =>
+                {
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PushSubscription", b =>
                 {
                     b.HasOne("Llm.Core.Identity.AppUser", null)
                         .WithMany()
