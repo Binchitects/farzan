@@ -253,6 +253,12 @@ namespace Llm.Core.Data.Migrations
                     b.Property<Guid?>("ForkedFromId")
                         .HasColumnType("uuid");
 
+                    b.PrimitiveCollection<List<string>>("LoadedTools")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text[]")
+                        .HasDefaultValueSql("'{}'::text[]");
+
                     b.Property<int?>("MaxTokens")
                         .HasColumnType("integer");
 
