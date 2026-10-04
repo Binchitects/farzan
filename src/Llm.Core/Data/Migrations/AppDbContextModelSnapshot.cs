@@ -53,6 +53,10 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<string>("Moderation")
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
@@ -68,6 +72,9 @@ namespace Llm.Core.Data.Migrations
 
                     b.Property<int?>("RetentionDays")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("Scim")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("SecretScanning")
                         .HasMaxLength(10)
@@ -1268,6 +1275,10 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<string>("OidcSubject")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
 
@@ -1276,6 +1287,10 @@ namespace Llm.Core.Data.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("ScimExternalId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
@@ -1299,6 +1314,8 @@ namespace Llm.Core.Data.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
+
+                    b.HasIndex("OidcSubject");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
