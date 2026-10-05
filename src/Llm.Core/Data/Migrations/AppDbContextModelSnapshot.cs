@@ -1042,6 +1042,12 @@ namespace Llm.Core.Data.Migrations
                     b.Property<string>("Spec")
                         .HasColumnType("text");
 
+                    b.Property<int>("Tls")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TlsCa")
+                        .HasColumnType("text");
+
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasMaxLength(2000)
