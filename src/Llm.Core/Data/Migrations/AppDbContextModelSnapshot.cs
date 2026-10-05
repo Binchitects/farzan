@@ -1728,6 +1728,22 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("audit_events", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Identity.UsedSamlAssertion", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("saml_assertions", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Models.CachedAnswer", b =>
                 {
                     b.Property<long>("Id")
