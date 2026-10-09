@@ -73,6 +73,9 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
+                    b.Property<int?>("RequestsPerMinute")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("RetentionDays")
                         .HasColumnType("integer");
 
@@ -82,6 +85,9 @@ namespace Llm.Core.Data.Migrations
                     b.Property<string>("SecretScanning")
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
+
+                    b.Property<int?>("TokensPerMinute")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -1700,6 +1706,9 @@ namespace Llm.Core.Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("RequestsPerMinute")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ScimExternalId")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -1708,6 +1717,9 @@ namespace Llm.Core.Data.Migrations
                         .HasColumnType("text");
 
                     b.Property<int>("Source")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TokensPerMinute")
                         .HasColumnType("integer");
 
                     b.Property<bool>("TwoFactorEnabled")
