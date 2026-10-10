@@ -29,8 +29,14 @@ namespace Llm.Core.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("ApiCredit")
+                        .HasColumnType("numeric");
+
                     b.Property<bool?>("BlockedPatterns")
                         .HasColumnType("boolean");
+
+                    b.Property<decimal?>("ChatCredit")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("CostCentre")
                         .HasMaxLength(100)
@@ -38,9 +44,6 @@ namespace Llm.Core.Data.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("Credit")
-                        .HasColumnType("numeric");
 
                     b.Property<bool>("CreditPerMember")
                         .HasColumnType("boolean");
@@ -66,6 +69,9 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<decimal?>("PictureCredit")
+                        .HasColumnType("numeric");
+
                     b.Property<int>("Priority")
                         .HasColumnType("integer");
 
@@ -86,8 +92,14 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
+                    b.Property<decimal?>("SpeechCredit")
+                        .HasColumnType("numeric");
+
                     b.Property<int?>("TokensPerMinute")
                         .HasColumnType("integer");
+
+                    b.Property<decimal?>("VideoCredit")
+                        .HasColumnType("numeric");
 
                     b.HasKey("Id");
 
@@ -1680,8 +1692,17 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
 
+                    b.Property<decimal?>("ApiCredit")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("ApiOff")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("CacheApiAnswers")
                         .HasColumnType("boolean");
+
+                    b.Property<decimal?>("ChatCredit")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -1758,6 +1779,9 @@ namespace Llm.Core.Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<decimal?>("PictureCredit")
+                        .HasColumnType("numeric");
+
                     b.Property<int?>("RequestsPerMinute")
                         .HasColumnType("integer");
 
@@ -1771,6 +1795,9 @@ namespace Llm.Core.Data.Migrations
                     b.Property<int>("Source")
                         .HasColumnType("integer");
 
+                    b.Property<decimal?>("SpeechCredit")
+                        .HasColumnType("numeric");
+
                     b.Property<int?>("TokensPerMinute")
                         .HasColumnType("integer");
 
@@ -1780,6 +1807,9 @@ namespace Llm.Core.Data.Migrations
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<decimal?>("VideoCredit")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("Voice")
                         .HasColumnType("text");
