@@ -597,6 +597,10 @@ namespace Llm.Core.Data.Migrations
                     b.Property<string>("Summary")
                         .HasColumnType("text");
 
+                    b.Property<string>("SyncRef")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
                     b.Property<int?>("ThinkingMs")
                         .HasColumnType("integer");
 
@@ -730,6 +734,18 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("Origin")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("OriginPlace")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("OriginRef")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<Guid?>("ScheduledTaskId")
                         .HasColumnType("uuid");
 
@@ -766,6 +782,8 @@ namespace Llm.Core.Data.Migrations
                     b.HasIndex("AssistantId");
 
                     b.HasIndex("UserId", "UpdatedAt");
+
+                    b.HasIndex("UserId", "Origin", "OriginRef");
 
                     b.ToTable("conversations", (string)null);
                 });
