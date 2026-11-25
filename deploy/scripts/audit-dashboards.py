@@ -10,6 +10,7 @@ is never printed).
     python3 scripts/audit-dashboards.py              # metrics and logs over the last hour, as the pages open
     python3 scripts/audit-dashboards.py 6h           # another window (usage panels: 30 days)
     python3 scripts/audit-dashboards.py --json out.json
+    python3 scripts/audit-dashboards.py --truth 7d    # the numbers checked against each other (see TRUTH)
 
 Exit status: the number of queries that ERRORED. Empty panels are reported but
 do not fail: many are empty by design until the matching traffic exists.
@@ -90,6 +91,83 @@ def values(result):
     return nums, bad, len(result.get("logs") or [])
 
 
+# Two panels that count the same thing from sources of their own, which must agree within the share given: what the
+# engines say against what the gateway booked, the line's figures against each other. (dashboard, panel, how) twice: how is
+# "sum" (every point of every series, or every number of a table), "sum:LEGEND" (the points of that series), or
+# "col:NAME" (a table's column, summed).
+TRUTH = [
+    ("Tokens the engines made against tokens the gateway booked",
+     ("stack-performance", "Token volume (per window)", "sum:generated"), ("stack-performance", "Tokens generated, by model", "col:Tokens generated"), 0.10),
+    ("The stack's tokens a second now, two ways",
+     ("stack-performance", "Stack throughput (live)", "last"), ("stack-performance", "Making now (tokens a second)", "last"), 0.02),
+    ("Requests in the time window: LLM Overview against LLM and users",
+     ("llm-overview", "Requests", "last"), ("llm-users", "Requests", "last"), 0.0),
+]
+
+
+def figure(result, how):
+    """One number from a panel's targets, as the check says."""
+    total, found = 0.0, False
+    for t in result["results"]:
+        if how == "last":
+            for s in t.get("series") or []:
+                pts = [p[1] for p in s["points"] if len(p) > 1 and isinstance(p[1], (int, float)) and not math.isnan(p[1])]
+                if pts:
+                    total, found = total + pts[-1], True
+            tab = t.get("table")
+            if tab and tab["rows"]:
+                nums = [v for v in tab["rows"][0] if isinstance(v, (int, float))]
+                if nums:
+                    total, found = total + nums[-1], True
+        elif how.startswith("sum"):
+            legend = how[4:] if how.startswith("sum:") else None
+            for s in t.get("series") or []:
+                if legend is None or s.get("name") == legend:
+                    for p in s["points"]:
+                        if len(p) > 1 and isinstance(p[1], (int, float)) and not math.isnan(p[1]):
+                            total, found = total + p[1], True
+        elif how.startswith("col:"):
+            tab = t.get("table")
+            if tab:
+                names = [c["name"] for c in tab["columns"]]
+                if how[4:] in names:
+                    i = names.index(how[4:])
+                    for row in tab["rows"]:
+                        if isinstance(row[i], (int, float)):
+                            total, found = total + row[i], True
+    return total if found else None
+
+
+def truth(window):
+    now = time.time()
+    span = seconds(window)
+    panels = {}
+
+    def ask(uid, title, how):
+        if uid not in panels:
+            _, panels[uid] = call(f"/api/dashboards/{uid}")
+        p = next((x for x in panels[uid].get("panels", []) if x.get("title") == title), None)
+        if p is None:
+            return None, f"no panel {title!r} on {uid}"
+        code, r = call(f"/api/dashboards/{uid}/panels/{p['key']}/query", {"from": iso(now - span), "to": iso(now), "maxDataPoints": 2000})
+        if code != 200:
+            return None, f"HTTP {code}"
+        return figure(r, how), None
+
+    failed = 0
+    print(f"Truth over {window}: each pair counts the same thing from its own source")
+    for name, a, b, share in TRUTH:
+        (x, ex), (y, ey) = ask(*a), ask(*b)
+        if ex or ey or x is None or y is None:
+            print(f"  ?     {name}: {ex or ey or 'no number'} ({x}, {y})")
+            continue
+        gap = abs(x - y) / max(abs(x), abs(y), 1e-9)
+        ok = gap <= share + 1e-9
+        failed += not ok
+        print(f"  {'ok' if ok else 'GAP':5} {name}: {x:,.2f} against {y:,.2f}, {100 * gap:.1f}% apart (at most {100 * share:.0f}%)")
+    return failed
+
+
 def main():
     args = sys.argv[1:]
     dump = None
@@ -97,10 +175,15 @@ def main():
         i = args.index("--json")
         dump = args[i + 1]
         del args[i:i + 2]
+    checking = "--truth" in args
+    if checking:
+        args.remove("--truth")
     window = args[0].removeprefix("now-") if args else "1h"
     code, body = call("/api/auth/login", {"userName": "admin", "password": env("ADMIN_PASSWORD")})
     if code != 200 or body.get("status") != "ok":
         sys.exit(f"cannot sign in to the app: HTTP {code} {body.get('error', '')}")
+    if checking:
+        return truth(window)
 
     now = time.time()
     rows = []
