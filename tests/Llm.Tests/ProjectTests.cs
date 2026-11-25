@@ -288,6 +288,54 @@ public sealed class ProjectTests(AppFixture app)
     }
 
     [Fact]
+    [Trait("Control", "DAT-09")]
+    public async Task Every_figure_of_a_project_is_as_recomputed_by_hand_on_its_page_in_Accounting_and_against_its_budget()
+    {
+        var admin = await AdminAsync();
+        var (annId, ann, annEmail, _) = await PersonAsync(admin);
+        var id = await ProjectAsync(ann, new { name = "Ledger " + Guid.NewGuid().ToString("N")[..6] });
+        var chat = await ChatAsync(ann);
+        await StatusAssert.Is(HttpStatusCode.OK, await PutAsync(ann, $"/api/chat/conversations/{chat}/project", new { projectId = id }));
+        // The ledger, by hand: two requests of the chat at once (a sub-agent beside it), one by Ann's key tagged with the
+        // project and no chat, one refused (never a model's, never counted).
+        var t0 = DateTimeOffset.UtcNow.AddMinutes(-20);
+        GatewayRequest Row(int at, int seconds, int prompt, int cached, int completion, decimal cost, Guid? conversation, string status = GatewayRequest.Done) => new()
+        {
+            StartedAt = t0.AddSeconds(at), EndedAt = t0.AddSeconds(at + seconds), DurationMs = seconds * 1000, Surface = conversation is null ? "api" : "chat", Call = "chat",
+            Protocol = "openai", CreditKind = conversation is null ? "api" : "chat", UserId = annId, Person = annEmail, Model = "qwen", PromptTokens = prompt, CachedTokens = cached,
+            CompletionTokens = completion, Cost = cost, Status = status, HttpStatus = (short)(status == GatewayRequest.Refused ? 429 : 200), ConversationId = conversation, ProjectId = id,
+        };
+        await using (var scope = app.Factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.GatewayRequests.AddRange(
+                Row(0, 4, 1000, 400, 100, 0.01m, chat),
+                Row(1, 4, 500, 0, 50, 0.005m, chat),
+                Row(60, 4, 2000, 0, 200, 0.02m, null),
+                Row(70, 0, 3000, 0, 0, 0m, null, GatewayRequest.Refused));
+            await db.SaveChangesAsync();
+        }
+        // Recomputed here: 3 requests; input not cached 600 + 500 + 2000, cached 400, out 350; $0.035; the models' time 0–5 s
+        // (two at once, counted once) and 60–64 s: 9 s; tokens in and out 1,100 + 550 + 2,200.
+        var window = Window(t0.AddMinutes(-1), DateTimeOffset.UtcNow.AddMinutes(1));
+        var totals = (await ann.JsonAsync(await ann.GetAsync($"/api/projects/{id}/report?{window}"))).GetProperty("totals");
+        Assert.Equal((3, 3100L, 400L, 350L, 0.035m, 9d), (totals.GetProperty("requests").GetInt32(), totals.GetProperty("input").GetInt64(), totals.GetProperty("cached").GetInt64(),
+            totals.GetProperty("output").GetInt64(), totals.GetProperty("cost").GetDecimal(), totals.GetProperty("agentSeconds").GetDouble()));
+        // Accounting's line for the project says the same.
+        var accounting = await admin.JsonAsync(await admin.GetAsync($"/api/admin/accounting?{window}"));
+        var lines = accounting.GetProperty("projects").EnumerateArray().ToList();
+        var line = lines.SingleOrDefault(r => r.TryGetProperty("id", out var x) && x.ValueKind == JsonValueKind.String && x.GetGuid() == id);
+        Assert.True(line.ValueKind == JsonValueKind.Object, "not in Accounting's projects: " + accounting.GetProperty("projects").GetRawText()[..Math.Min(1500, accounting.GetProperty("projects").GetRawText().Length)]);
+        Assert.Equal((3L, 3850L, 0.035m), (line.GetProperty("requests").GetInt64(), line.GetProperty("tokens").GetInt64(), line.GetProperty("charged").GetDecimal()));
+        // And its month's spend, against which its budget is held.
+        await using (var scope = app.Factory.Services.CreateAsyncScope())
+        {
+            var spent = await Llm.Api.Projects.ProjectBudgets.SpentAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), [id], DateTimeOffset.UtcNow, default);
+            Assert.Equal(t0.Month == DateTimeOffset.UtcNow.Month ? 0.035m : 0m, spent.GetValueOrDefault(id));
+        }
+    }
+
+    [Fact]
     public async Task The_work_done_is_set_against_doing_it_by_hand_from_each_tasks_estimate_and_a_goals_own_when_its_tasks_have_none()
     {
         var admin = await AdminAsync();

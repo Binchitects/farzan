@@ -163,6 +163,9 @@ public static class Accounting
     /// <summary>How much b is more (or less) than a, as a fraction; null when a is nothing.</summary>
     public static double? Change(double before, double now) => before > 0 ? Math.Round((now - before) / before, 4) : null;
 
+    /// <summary>A uuid as the ledger's rows hold it: its text (LedgerSql gives every value it does not know as text).</summary>
+    private static Guid? Uuid(object? v) => v switch { Guid g => g, string s when Guid.TryParse(s, out var g) => g, _ => null };
+
     private sealed record Used(string? Person, Guid? Project, string Model, string Surface, string Kind, long Requests, long Tokens, double Seconds, decimal Charged, long Input, long Cached, long Output);
 
     private static async Task<IResult> JsonAsync(DateTimeOffset from, DateTimeOffset to, string? basis, LedgerSql sql, AppDbContext db, Credit credit, PromDatasource prom,
@@ -205,7 +208,7 @@ public static class Accounting
             where r.started_at >= @from and r.started_at < @to and r.status <> 'refused'
             group by 1, 2, 3, 4, 5
             """, window, ct);
-        var rows = table.Rows.Select(r => new Used(((string?)r[0])?.ToLowerInvariant(), r[1] is Guid g ? g : null, (string)r[2]!, (string)r[3]!, (string)r[4]!, Num(r[5]), Num(r[6]),
+        var rows = table.Rows.Select(r => new Used(((string?)r[0])?.ToLowerInvariant(), Uuid(r[1]), (string)r[2]!, (string)r[3]!, (string)r[4]!, Num(r[5]), Num(r[6]),
             Dbl(r[7]), Dec(r[8]), Num(r[9]), Num(r[10]), Num(r[11]))).ToList();
         var byTime = (await sql.QueryAsync("""
             select floor(extract(epoch from r.started_at)/@secs)*@secs, count(*), coalesce(sum(r.prompt_tokens),0) + coalesce(sum(r.completion_tokens),0), coalesce(sum(r.cost),0)
@@ -366,7 +369,7 @@ public static class Accounting
             from gateway.chat_times t
             where t.at >= @from and t.at < @to
             group by 1, 2, 3
-            """, window, ct)).Rows.Select(r => (Person: ((string?)r[0])?.ToLowerInvariant(), Project: r[1] is Guid g ? g : (Guid?)null, Part: (string)r[2]!, Hours: Dbl(r[3]))).ToList();
+            """, window, ct)).Rows.Select(r => (Person: ((string?)r[0])?.ToLowerInvariant(), Project: Uuid(r[1]), Part: (string)r[2]!, Hours: Dbl(r[3]))).ToList();
         static double H(IEnumerable<(string? Person, Guid? Project, string Part, double Hours)> some, string part) => Math.Round(some.Where(x => x.Part == part).Sum(x => x.Hours), 2);
         TimeRow Of(string kind, Guid? id, string name, string? email, IEnumerable<(string? Person, Guid? Project, string Part, double Hours)> some)
         {

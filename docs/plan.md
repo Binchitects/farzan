@@ -161,7 +161,10 @@ Headlines: **dashboards whose numbers are right, per GPU and per model**; **a pr
   tags 95,560 to the project; one of its chats (7 answers, 21,097 tokens, made 2026-10-26, before it was put in the
   project) counts nothing, and its Code Arena session's 3 answers before 2026-11-07 neither. A request is counted for a
   project only when it carried the project as it was asked: putting a chat in a project, or taking it out, never moves
-  its use.
+  its use. (Measured again: moving a chat does move its requests; the 26 October chat's requests were logged before
+  requests carried their chat, 810 such on live.) And **Accounting's projects were always "(in no project)"**: on live,
+  all 5,435 requests of the last 30 days, while the ledger tags 6 ($0.0108) to MDM. The ledger's reader gives a uuid
+  as text, and Accounting took only a Guid object.
 - **Fix.** A project's use is its chats' and keys' requests by conversation and key, whenever they were asked (the
   ledger's `project_id` kept only for requests with no conversation); moving a chat moves its numbers; people,
   models, surfaces, time and money all from the same rows; budgets and the live usage stream from the same query.
