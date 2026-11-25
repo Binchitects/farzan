@@ -6,9 +6,28 @@ import { Field } from '@/components/ui/field'
 import { Input, Textarea } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api, errorMessage } from '@/lib/api'
-import { layoutLabels, type Layout, type Slide } from './decks-api'
+import { chartLabels, layoutLabels, mostItems, type ChartType, type DeckItem, type Layout, type Slide } from './decks-api'
 
 const lines = (text: string) => text.split('\n').map((l) => l.trim()).filter(Boolean)
+
+/** Items one a line, their parts between bars: "42% | Growth | words" for big numbers, else "Title | words". */
+const itemsText = (items: DeckItem[] | null | undefined, figures: boolean) =>
+  (items ?? []).map((i) => [...(figures ? [i.value ?? ''] : []), i.title ?? '', i.text ?? ''].join(' | ').replace(/( \| )+$/, '')).join('\n')
+
+const parseItems = (text: string, figures: boolean): DeckItem[] =>
+  lines(text).map((l) => {
+    const parts = l.split('|').map((p) => p.trim())
+    const [value, title, words] = figures ? parts : [null, ...parts]
+    return { value: value || null, title: title || null, text: words || null }
+  })
+
+/** A table one row a line, its cells between bars; the first row its header. */
+const tableText = (t: Slide['table']) => (t ? [t.columns, ...t.rows].map((r) => r.join(' | ')).join('\n') : '')
+
+const parseTable = (text: string) => {
+  const rows = lines(text).map((l) => l.split('|').map((c) => c.trim()))
+  return rows.length > 0 ? { columns: rows[0]!, rows: rows.slice(1) } : null
+}
 
 /** A slide changed by hand: its layout, words, picture (described, or one's own) and chart (asked of a database). */
 export function SlideForm({ slide, number, sources, onSave, onClose }: { slide: Slide; number: number; sources: string[]; onSave: (s: Slide) => Promise<void>; onClose: () => void }) {
@@ -18,13 +37,17 @@ export function SlideForm({ slide, number, sources, onSave, onClose }: { slide: 
   const [bullets, setBullets] = useState((slide.bullets ?? []).join('\n'))
   const [left, setLeft] = useState((slide.left ?? []).join('\n'))
   const [right, setRight] = useState((slide.right ?? []).join('\n'))
+  const [leftTitle, setLeftTitle] = useState(slide.leftTitle ?? '')
+  const [rightTitle, setRightTitle] = useState(slide.rightTitle ?? '')
+  const [items, setItems] = useState(itemsText(slide.items, slide.layout === 'stats'))
+  const [table, setTable] = useState(tableText(slide.table))
   const [quote, setQuote] = useState(slide.quote ?? '')
   const [by, setBy] = useState(slide.by ?? '')
   const [prompt, setPrompt] = useState(slide.picture?.prompt ?? '')
   const [fileId, setFileId] = useState(slide.picture?.fileId ?? null)
   const [source, setSource] = useState(slide.chart?.ask?.source ?? sources[0] ?? '')
   const [question, setQuestion] = useState(slide.chart?.ask?.question ?? '')
-  const [chartType, setChartType] = useState<'bar' | 'line'>(slide.chart?.type ?? 'bar')
+  const [chartType, setChartType] = useState<ChartType>(slide.chart?.type ?? 'bar')
   const [notes, setNotes] = useState(slide.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,6 +78,10 @@ export function SlideForm({ slide, number, sources, onSave, onClose }: { slide: 
       await onSave({
         layout, title: title.trim() || null, subtitle: subtitle.trim() || null, bullets: lines(bullets), left: lines(left), right: lines(right), quote: quote.trim() || null,
         by: by.trim() || null, chart, picture: ['bullets', 'picture'].includes(layout) ? picture : null, notes: notes.trim() || null,
+        leftTitle: layout === 'comparison' ? leftTitle.trim() || null : null, rightTitle: layout === 'comparison' ? rightTitle.trim() || null : null,
+        items: mostItems[layout] ? parseItems(items, layout === 'stats') : null, table: layout === 'table' ? parseTable(table) : null,
+        // A slide changed here is the deck's own now, not the file's it was read from.
+        origin: slide.origin,
       })
       onClose()
     } catch (e) {
@@ -98,17 +125,40 @@ export function SlideForm({ slide, number, sources, onSave, onClose }: { slide: 
           </Field>
         )}
       </div>
-      {['title', 'section', 'picture'].includes(layout) && (
+      {['title', 'section', 'picture', 'closing'].includes(layout) && (
         <Field label={layout === 'picture' ? 'Caption' : 'Subtitle'}>
           <Input value={subtitle} maxLength={300} onChange={(e) => setSubtitle(e.target.value)} />
         </Field>
       )}
-      {['bullets', 'chart'].includes(layout) && (
-        <Field label={layout === 'chart' ? 'The takeaway (one a line)' : 'Points (one a line)'}>
+      {['bullets', 'chart', 'closing'].includes(layout) && (
+        <Field label={layout === 'chart' ? 'The takeaway (one a line)' : layout === 'closing' ? 'Under it: who to ask, what next (one a line)' : 'Points (one a line)'}>
           <Textarea rows={5} value={bullets} onChange={(e) => setBullets(e.target.value)} />
         </Field>
       )}
-      {layout === 'two' && (
+      {mostItems[layout] && (
+        <Field
+          label={`${layoutLabels[layout]}: one a line, at most ${mostItems[layout]}`}
+          hint={layout === 'stats' ? 'The figure | what it counts | a few words (optional), e.g. 42% | Growth | since last year' : layout === 'timeline' ? 'When | what happens then, e.g. Q1 | The pilot' : 'Its title | a few words (optional)'}
+        >
+          <Textarea rows={5} value={items} onChange={(e) => setItems(e.target.value)} />
+        </Field>
+      )}
+      {layout === 'table' && (
+        <Field label="The table: one row a line, its cells between bars" hint="The first row is its header, e.g. Office | People">
+          <Textarea rows={6} className="font-mono text-xs" value={table} onChange={(e) => setTable(e.target.value)} />
+        </Field>
+      )}
+      {layout === 'comparison' && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Left heading">
+            <Input value={leftTitle} maxLength={120} onChange={(e) => setLeftTitle(e.target.value)} placeholder="Before" />
+          </Field>
+          <Field label="Right heading">
+            <Input value={rightTitle} maxLength={120} onChange={(e) => setRightTitle(e.target.value)} placeholder="After" />
+          </Field>
+        </div>
+      )}
+      {(layout === 'two' || layout === 'comparison') && (
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Left (one a line)">
             <Textarea rows={5} value={left} onChange={(e) => setLeft(e.target.value)} />
@@ -174,13 +224,16 @@ export function SlideForm({ slide, number, sources, onSave, onClose }: { slide: 
             <p className="text-xs text-muted-foreground">No database is open to you: ask for its numbers in words below the slide, with the numbers.</p>
           )}
           <Field label="Drawn as">
-            <Select value={chartType} onValueChange={(v) => setChartType(v as 'bar' | 'line')}>
+            <Select value={chartType} onValueChange={(v) => setChartType(v as ChartType)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="bar">Bars</SelectItem>
-                <SelectItem value="line">A line</SelectItem>
+                {(Object.keys(chartLabels) as ChartType[]).map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {chartLabels[t]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>

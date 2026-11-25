@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowLeft, ArrowUp, Copy, Download, FileText, History, MoreHorizontal, Pencil, Play, Plus, Presentation, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Copy, Download, FileText, FolderOpen, History, MoreHorizontal, Palette, Pencil, Play, Plus, Presentation, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { PageHeader } from '@/components/app/page-header'
@@ -19,8 +19,8 @@ import { toast } from '@/components/ui/toaster'
 import { api, errorMessage, meQuery } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import {
-  BuiltIn, changeDeck, deckConfigQuery, deckQuery, decksQuery, deckVersionsQuery, editDeck, makeDeck, makePicture, refreshDeck, removeDeck, restoreDeck,
-  type Deck, type DeckTemplate, type Slide,
+  BuiltIn, changeDeck, deckConfigQuery, deckQuery, decksQuery, deckVersionsQuery, defaultLook, designLabels, editDeck, importDeck, makeDeck, makePicture, refreshDeck,
+  removeDeck, restoreDeck, themeFor, type Deck, type DeckLook, type DeckTemplate, type Slide,
 } from './decks-api'
 import { DeckPrint, Present } from './present'
 import { SlideForm } from './slide-form'
@@ -33,31 +33,73 @@ export function DecksPage() {
   const me = useQuery(meQuery)
   const navigate = useNavigate()
   const [about, setAbout] = useState('')
-  const [template, setTemplate] = useState<string | null>(null)
+  // A company template ("template:<id>") or a built-in design ("design:<name>").
+  const [look, setLook] = useState<string | null>(null)
+  const [file, setFile] = useState<{ id: string; name: string } | null>(null)
   const [templates, setTemplates] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const make = useMutation({
-    mutationFn: () => makeDeck({ about: about.trim(), templateId: template ?? undefined }),
+    mutationFn: () => {
+      const [kind, value] = (look ?? chosenLook).split(':') as [string, string]
+      return makeDeck({
+        about: about.trim(), fileId: file?.id,
+        templateId: kind === 'template' ? value : BuiltIn,
+        look: kind === 'design' ? { ...defaultLook, design: value } : undefined,
+      })
+    },
     onSuccess: (d) => navigate(`/decks/${d.id}`),
     onError: (e) => setError(errorMessage(e)),
   })
+  const open = useMutation({ mutationFn: importDeck, onSuccess: (d) => navigate(`/decks/${d.id}`), onError: (e) => setError(errorMessage(e)) })
+  const attach = async (f: File) => {
+    const form = new FormData()
+    form.append('file', f)
+    try {
+      const sent = await api<{ id: string }>('/api/chat/attachments', { body: form })
+      setFile({ id: sent.id, name: f.name })
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
   if (decks.isPending) return <PageSkeleton />
   if (decks.error) return <QueryError error={decks.error} retry={() => decks.refetch()} />
   const choices = config.data?.templates ?? []
-  const chosen = template ?? choices.find((t) => t.isDefault)?.id ?? BuiltIn
-  const themeOf = (id: string | null) => choices.find((t) => t.id === id)?.theme
+  const designs = config.data?.designs ?? []
+  const fallback = choices.find((t) => t.isDefault)
+  const chosenLook = fallback ? `template:${fallback.id}` : 'design:arena'
+  const outline = /^#{1,2}\s/m.test(about) && (about.match(/^#/gm)?.length ?? 0) >= 2
   const mayBrand = me.data?.isAdmin || me.data?.permissions?.includes('settings.branding')
   return (
     <>
       <PageHeader
         title="Decks"
-        description="Slides from a few words: the model writes them, with charts from the company's data and pictures from the picture model, in the company's look. Change them by asking, present them, download them as PowerPoint or PDF."
+        description="Slides from a few words, an outline or a document: the model writes them, with charts from the company's data and pictures from the picture model, in the company's look. Change them by asking, present them, download them as PowerPoint or PDF, or open a PowerPoint file to revise it."
         actions={
-          mayBrand && (
-            <Button variant="outline" onClick={() => setTemplates(true)}>
-              <Upload /> Templates
+          <>
+            <Button variant="outline" asChild>
+              <label className="cursor-pointer">
+                {open.isPending ? <RefreshCw className="animate-spin" /> : <FolderOpen />} Open a PowerPoint file
+                <input
+                  type="file"
+                  accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    e.target.value = ''
+                    if (f) {
+                      setError(null)
+                      open.mutate(f)
+                    }
+                  }}
+                />
+              </label>
             </Button>
-          )
+            {mayBrand && (
+              <Button variant="outline" onClick={() => setTemplates(true)}>
+                <Upload /> Templates
+              </Button>
+            )}
+          </>
         }
       />
       <Card>
@@ -70,7 +112,10 @@ export function DecksPage() {
               make.mutate()
             }}
           >
-            <Field label="Make a deck about…">
+            <Field
+              label="Make a deck about…"
+              hint={outline ? 'An outline: its slides are made as written (# the title, ## each slide), no model.' : file ? `From ${file.name}: say how, or leave it to the model.` : 'Or write an outline in Markdown (# the title, ## each slide), or make it from a document of yours.'}
+            >
               <Textarea
                 rows={3}
                 maxLength={20000}
@@ -79,26 +124,42 @@ export function DecksPage() {
                 placeholder="Our third quarter for the board: sales by region from Shop, the two new customers, hiring plans, and what we need from them."
               />
             </Field>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <label className="cursor-pointer text-primary underline-offset-4 hover:underline">
+                {file ? 'Another document' : 'From a document of yours'}
+                <input type="file" accept=".pdf,.docx,.pptx,.md,.txt,.html" className="sr-only" onChange={(e) => e.target.files?.[0] && void attach(e.target.files[0])} />
+              </label>
+              {file && (
+                <Badge variant="secondary">
+                  {file.name}
+                  <button type="button" className="ml-1" aria-label={`Not from ${file.name}`} onClick={() => setFile(null)}>
+                    ×
+                  </button>
+                </Badge>
+              )}
+            </div>
             {error && <Alert variant="destructive">{error}</Alert>}
             <div className="flex flex-wrap items-end justify-end gap-2">
-              {choices.length > 0 && (
-                <Field label="Look" className="mr-auto min-w-48">
-                  <Select value={chosen} onValueChange={setTemplate}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {choices.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value={BuiltIn}>Built-in</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
-              )}
-              <Button type="submit" loading={make.isPending} disabled={!about.trim()}>
+              <Field label="Look" className="mr-auto min-w-48">
+                <Select value={look ?? chosenLook} onValueChange={setLook}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {choices.map((t) => (
+                      <SelectItem key={t.id} value={`template:${t.id}`}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                    {designs.map((d) => (
+                      <SelectItem key={d.name} value={`design:${d.name}`}>
+                        {designLabels[d.name] ?? d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Button type="submit" loading={make.isPending} disabled={!about.trim() && !file}>
                 <Sparkles /> {make.isPending ? 'Writing the slides…' : 'Make it'}
               </Button>
             </div>
@@ -115,7 +176,7 @@ export function DecksPage() {
             <li key={d.id}>
               <Link to={`/decks/${d.id}`} className="group block rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring">
                 <div className="overflow-hidden rounded-xl border shadow-xs transition-shadow group-hover:shadow-md" aria-hidden="true">
-                  {d.first ? <SlideView slide={d.first} theme={themeOf(d.templateId)} thumbnail /> : <div className="aspect-video bg-muted" />}
+                  {d.first ? <SlideView slide={d.first} theme={themeFor(config.data, d.templateId, d.look)} look={d.look} thumbnail /> : <div className="aspect-video bg-muted" />}
                 </div>
                 <p className="mt-2 truncate text-sm font-medium">{d.title}</p>
                 <p className="text-xs text-muted-foreground">
@@ -255,7 +316,7 @@ export function DeckPage() {
   const config = useQuery(deckConfigQuery)
   const [chosen, setChosen] = useState(0)
   const [change, setChange] = useState('')
-  const [dialog, setDialog] = useState<'slide' | 'versions' | 'rename' | null>(null)
+  const [dialog, setDialog] = useState<'slide' | 'versions' | 'rename' | 'look' | null>(null)
   const [name, setName] = useState('')
   const [presenting, setPresenting] = useState<number | null>(null)
   const [printing, setPrinting] = useState(false)
@@ -304,7 +365,8 @@ export function DeckPage() {
   const d = deck.data
   const at = Math.min(chosen, d.slides.length - 1)
   const slide = d.slides[at]!
-  const theme = config.data?.templates.find((t) => t.id === d.templateId)?.theme
+  const theme = themeFor(config.data, d.templateId, d.look)
+  const total = d.slides.length
   const making = picture.isPending ? picture.variables : null
   const setSlides = (slides: Slide[], note: string, select?: number) => {
     edit.mutate({ slides, note })
@@ -326,7 +388,7 @@ export function DeckPage() {
     <>
       <PageHeader
         title={d.title}
-        description={`${d.slides.length} ${d.slides.length === 1 ? 'slide' : 'slides'} · version ${d.version}${theme ? '' : ' · the built-in look'}`}
+        description={`${d.slides.length} ${d.slides.length === 1 ? 'slide' : 'slides'} · version ${d.version}${d.source ? ` · opened from ${d.source}: the slides you do not change stay as they are in it` : d.templateId ? '' : ` · ${designLabels[d.look.design] ?? d.look.design}`}`}
         actions={
           <>
             <Button variant="outline" asChild>
@@ -368,20 +430,29 @@ export function DeckPage() {
                     <RefreshCw /> Ask the numbers again
                   </DropdownMenuItem>
                 )}
-                {(config.data?.templates.length ?? 0) > 0 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Look</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={d.templateId ?? BuiltIn} onValueChange={(v) => edit.mutate({ templateId: v })}>
-                      {config.data!.templates.map((t) => (
-                        <DropdownMenuRadioItem key={t.id} value={t.id}>
-                          {t.name}
-                        </DropdownMenuRadioItem>
-                      ))}
-                      <DropdownMenuRadioItem value={BuiltIn}>Built-in</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </>
-                )}
+                <DropdownMenuItem onSelect={() => setDialog('look')}>
+                  <Palette /> Footer, numbers and transition
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Look{d.source ? ' (lets go of the file it was opened from)' : ''}</DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={d.source ? '' : d.templateId ? `template:${d.templateId}` : `design:${d.look.design}`}
+                  onValueChange={(v) => {
+                    const [kind, value] = v.split(':') as [string, string]
+                    edit.mutate(kind === 'template' ? { templateId: value } : { templateId: BuiltIn, look: { ...d.look, design: value } })
+                  }}
+                >
+                  {(config.data?.templates ?? []).map((t) => (
+                    <DropdownMenuRadioItem key={t.id} value={`template:${t.id}`}>
+                      {t.name}
+                    </DropdownMenuRadioItem>
+                  ))}
+                  {(config.data?.designs ?? []).map((x) => (
+                    <DropdownMenuRadioItem key={x.name} value={`design:${x.name}`}>
+                      {designLabels[x.name] ?? x.name}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"
@@ -414,7 +485,7 @@ export function DeckPage() {
                 <span className="flex items-start gap-1">
                   <span className="w-4 pt-0.5 text-right text-[0.65rem] text-muted-foreground tabular-nums">{i + 1}</span>
                   <span className="min-w-0 flex-1 overflow-hidden rounded-sm border" aria-hidden="true">
-                    <SlideView slide={s} theme={theme} thumbnail making={making === i} />
+                    <SlideView slide={s} theme={theme} look={d.look} number={i + 1} total={total} thumbnail making={making === i} />
                   </span>
                 </span>
               </button>
@@ -423,7 +494,7 @@ export function DeckPage() {
         </ol>
         <div className="grid min-w-0 content-start gap-3">
           <section aria-label={`Slide ${at + 1}`} className="overflow-hidden rounded-xl border shadow-sm">
-            <SlideView slide={slide} theme={theme} making={making === at} />
+            <SlideView slide={slide} theme={theme} look={d.look} number={at + 1} total={total} making={making === at} />
           </section>
           <div className="flex flex-wrap items-center gap-1.5">
             <Button size="sm" variant="outline" onClick={() => setDialog('slide')}>
@@ -494,6 +565,7 @@ export function DeckPage() {
               onClose={() => setDialog(null)}
             />
           )}
+          {dialog === 'look' && <LookForm look={d.look} onSave={(look) => edit.mutate({ look }, { onSuccess: () => setDialog(null) })} saving={edit.isPending} />}
           {dialog === 'versions' && (
             <VersionsForm
               deck={d}
@@ -526,8 +598,53 @@ export function DeckPage() {
           )}
         </DialogContent>
       </Dialog>
-      {presenting !== null && <Present slides={d.slides} theme={theme} start={presenting} onClose={stopPresenting} />}
-      {printing && <DeckPrint slides={d.slides} theme={theme} onDone={stopPrinting} />}
+      {presenting !== null && <Present slides={d.slides} theme={theme} look={d.look} start={presenting} onClose={stopPresenting} />}
+      {printing && <DeckPrint slides={d.slides} theme={theme} look={d.look} onDone={stopPrinting} />}
     </>
+  )
+}
+
+/** A deck's footer, slide numbers and transition, as the PowerPoint file and the slides here show them. */
+function LookForm({ look, onSave, saving }: { look: DeckLook; onSave: (look: DeckLook) => void; saving: boolean }) {
+  const [footer, setFooter] = useState(look.footer ?? '')
+  const [numbers, setNumbers] = useState(look.numbers)
+  const [transition, setTransition] = useState(look.transition)
+  return (
+    <form
+      className="grid gap-4"
+      onSubmit={(e) => {
+        e.preventDefault()
+        onSave({ ...look, footer: footer.trim() || null, numbers, transition })
+      }}
+    >
+      <DialogHeader>
+        <DialogTitle>Footer, numbers and transition</DialogTitle>
+        <DialogDescription>On every slide but the first and the closing one, in the PowerPoint file and here.</DialogDescription>
+      </DialogHeader>
+      <Field label="Footer">
+        <Input value={footer} maxLength={120} onChange={(e) => setFooter(e.target.value)} placeholder="Company, November 2026" />
+      </Field>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={numbers} onChange={(e) => setNumbers(e.target.checked)} /> Slide numbers (3 / 12)
+      </label>
+      <Field label="From one slide to the next">
+        <Select value={transition} onValueChange={(v) => setTransition(v as DeckLook['transition'])}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">At once</SelectItem>
+            <SelectItem value="fade">Fade</SelectItem>
+            <SelectItem value="push">Push up</SelectItem>
+            <SelectItem value="wipe">Wipe</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      <DialogFooter>
+        <Button type="submit" loading={saving}>
+          Save
+        </Button>
+      </DialogFooter>
+    </form>
   )
 }

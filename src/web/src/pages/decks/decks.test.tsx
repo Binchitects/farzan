@@ -5,7 +5,7 @@ import { admin, fakeApi, member, renderApp } from '@/test/utils'
 import type { Deck, DeckConfig } from './decks-api'
 
 const deck: Deck = {
-  id: 'd1', title: 'Our quarter', templateId: null, version: 1, createdAt: '', updatedAt: '2026-10-22T08:00:00Z',
+  id: 'd1', title: 'Our quarter', templateId: null, look: { design: 'arena', footer: null, numbers: true, transition: 'none' }, version: 1, createdAt: '', updatedAt: '2026-10-22T08:00:00Z',
   slides: [
     { layout: 'title', title: 'Our quarter', subtitle: 'What went well', notes: 'Welcome everyone.' },
     { layout: 'bullets', title: 'Highlights', bullets: ['Sales grew', 'Two new customers'], picture: { prompt: 'A rising arrow over a city' } },
@@ -13,7 +13,10 @@ const deck: Deck = {
   ],
 }
 
-const config: DeckConfig = { pictures: true, templates: [{ id: 't1', name: 'Our brand', isDefault: true, theme: { colors: { accent1: '#C00000' } } }], sources: ['Shop'] }
+const config: DeckConfig = {
+  pictures: true, templates: [{ id: 't1', name: 'Our brand', isDefault: true, theme: { colors: { accent1: '#C00000' } } }], sources: ['Shop'],
+  designs: [{ name: 'arena', theme: { colors: { accent1: '#2A78D6' } } }, { name: 'midnight', theme: { colors: { lt1: '#0F172A', dk1: '#F1F5F9', accent1: '#38BDF8' } } }],
+}
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -33,7 +36,36 @@ describe('decks', () => {
     expect(screen.getByRole('combobox', { name: 'Look' })).toHaveTextContent('Our brand')
     await userEvent.click(screen.getByRole('button', { name: /Make it/ }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/decks/d1'))
-    expect(calls.find((c) => c.path === '/api/decks' && c.method === 'POST')?.body).toEqual({ about: 'Our quarter for the board' })
+    expect(calls.find((c) => c.path === '/api/decks' && c.method === 'POST')?.body).toEqual({ about: 'Our quarter for the board', templateId: 't1' })
+  })
+
+  it('a deck is made in a built-in design, from an outline as written, and a PowerPoint file is opened to revise', async () => {
+    const calls = fakeApi(member, {
+      'GET /api/decks': () => ({ json: [] }),
+      'GET /api/decks/config': () => ({ json: config }),
+      'POST /api/decks': () => ({ status: 201, json: deck }),
+      'POST /api/decks/import': () => ({ status: 201, json: { ...deck, id: 'd2', source: 'board.pptx' } }),
+      'GET /api/decks/d1': () => ({ json: deck }),
+      'GET /api/decks/d2': () => ({ json: { ...deck, id: 'd2', source: 'board.pptx' } }),
+    })
+    const { router } = renderApp('/decks')
+    const about = await screen.findByLabelText('Make a deck about…')
+    fireEvent.change(about, { target: { value: '# Plan\n## Steps\n1. Ask' } })
+    expect(screen.getByText(/An outline: its slides are made as written/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('combobox', { name: 'Look' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Midnight (dark)' }))
+    await userEvent.click(screen.getByRole('button', { name: /Make it/ }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/decks/d1'))
+    expect(calls.find((c) => c.path === '/api/decks' && c.method === 'POST')?.body).toEqual({
+      about: '# Plan\n## Steps\n1. Ask', templateId: '00000000-0000-0000-0000-000000000000', look: { design: 'midnight', footer: null, numbers: true, transition: 'none' },
+    })
+    // The deck's page drawn before going back: else the upload could go to the list page it is about to replace.
+    expect(await screen.findByRole('heading', { name: 'Our quarter', level: 1 })).toBeInTheDocument()
+    await router.navigate('/decks')
+    const file = new File([new Uint8Array([80, 75])], 'board.pptx', { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' })
+    await userEvent.upload(await screen.findByLabelText(/Open a PowerPoint file/), file)
+    await waitFor(() => expect(router.state.location.pathname).toBe('/decks/d2'))
+    expect(await screen.findByText(/opened from board.pptx: the slides you do not change stay as they are in it/)).toBeInTheDocument()
   })
 
   it('its pictures are made one by one, it changes by asking about the slide in view, and by hand', async () => {
