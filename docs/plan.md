@@ -221,9 +221,30 @@ Headlines: **dashboards whose numbers are right, per GPU and per model**; **a pr
 - **Proof.** Tests that a person without a right cannot do it through the assistant, that nothing changes without the
   yes, and Playwright on a few pages (find why a dashboard is empty, add a person to a project).
 
+### 9. Presentations worth showing, and the canvas (asked 2026-11-26)
+
+- **Today (the code; live has no deck and one 19-character canvas).** A deck has seven layouts (title, section,
+  bullets, two columns, chart, picture, quote), bar and line charts, at most 8 points a slide and 30 slides; one
+  built-in design or the company's template; no tables, shapes, timelines, process steps, big numbers, icons, slide
+  numbers, footers, transitions or sections. A deck is made only from words in Decks or the chat's deck tool: never
+  from a document, a canvas, a file (PDF, Word, Markdown, a .pptx), a report or a dashboard; an existing .pptx can be a
+  template but never opened and revised. Nothing checks that the words fit their boxes. The canvas holds a document or
+  code, exports Word, and its versions cannot be compared.
+- **Fix.** Decks: layouts for agenda, comparison, table, timeline, process, big numbers, cards, picture with text and
+  closing, drawn with PowerPoint's own tables and shapes so they stay editable; pie, doughnut, area, stacked and
+  scatter charts; several built-in designs (colour, fonts) beside the company's; slide numbers, footers, sections,
+  transitions, links; text fitted (a slide that overflows is split or shrunk, measured on the layout's boxes); made
+  from words, an outline, a canvas, a file, a report or a dashboard, the model planning the outline first; a .pptx
+  opened, read and revised in place (its slides kept, ours changed). Canvas: a slides kind (a deck in the chat, made
+  and changed beside it), versions compared, exports as Word, PDF, Markdown and PowerPoint, the model's edit to a
+  selection.
+- **Proof.** Tests that each layout and chart opens in a .pptx reader with its parts in place (OOXML schema checked,
+  text in its boxes), a revised .pptx keeps the slides it was not asked to change, decks made from each source, and
+  screenshots of a made deck in each design.
+
 ### Order
 
-1 (the baseline first: it is running), 2, 3, 4, 5, 6, 7, 8; each committed and pushed on v8.2, `origin/v8.1` merged in
+1 (the baseline first: it is running), 2, 3, 4, 5, 6, 7, 8, 9; each committed and pushed on v8.2, `origin/v8.1` merged in
 between; then every suite, the compliance check, release-scan, the upgrade from 7.x and 8.x, and (when the installer,
 compose or the bundle changed) the offline scenarios, before 8.2.0.
 
