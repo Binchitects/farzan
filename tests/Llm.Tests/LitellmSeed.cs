@@ -49,7 +49,8 @@ public static class LitellmSeed
                '{"user_api_key_user_id":"alice@example.test","user_api_key_alias":"app-alice"}', ''),
               ('r3', 'acompletion', 'hash-agent', 0.0005,  55,  50,  5, '2026-09-05 12:00:00', '2026-09-05 12:00:01', '2026-09-05 12:00:00.5', 'qwen', '',
                '{"user_api_key_alias":"coding-agent"}', 'bob@example.test'),
-              ('r4', 'acompletion', 'master',     0.0001,  11,  10,  1, '2026-09-07 09:00:00', '2026-09-07 09:00:01', '2026-09-07 09:00:00.2', 'qwen', '',
+              -- r4 not streamed: LiteLLM wrote its end as its first token.
+              ('r4', 'acompletion', 'master',     0.0001,  11,  10,  1, '2026-09-07 09:00:00', '2026-09-07 09:00:01', '2026-09-07 09:00:01', 'qwen', '',
                '{}', ''),
               ('r5', 'acompletion', 'hash-alice', 0.999,  1098, 999, 99, '2026-08-01 00:00:00', '2026-08-01 00:00:09', '2026-08-01 00:00:01', 'qwen', '',
                '{"user_api_key_user_id":"alice@example.test","usage_object":{"prompt_tokens_details":{"cached_tokens":99}}}', '');

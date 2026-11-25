@@ -336,7 +336,8 @@ public sealed partial class LedgerImport(IServiceScopeFactory scopes, IConfigura
         return new GatewayRequest
         {
             Id = Guid.CreateVersion7(new DateTimeOffset(start)), StartedAt = start, EndedAt = end,
-            FirstTokenAt = row.FirstToken is { } f ? DateTime.SpecifyKind(f, DateTimeKind.Utc) : null,
+            // LiteLLM put an answer's end as its first token when it was not streamed: no first token is known then.
+            FirstTokenAt = row.FirstToken is { } f && f < row.End.AddMilliseconds(-50) ? DateTime.SpecifyKind(f, DateTimeKind.Utc) : null,
             DurationMs = row.DurationMs ?? (int)Math.Max(0, (end - start).TotalMilliseconds),
             Surface = surface, Call = call, Protocol = booked ? "internal" : protocol, CreditKind = credit, UserId = userId, Person = person ?? Person(row),
             KeyHash = surface is "api" or "studio" && row.ApiKey.Length > 0 ? Cut(row.ApiKey, 64) : null, KeyAlias = Cut(row.Alias, 120), Tag = Cut(row.Tag, 64),

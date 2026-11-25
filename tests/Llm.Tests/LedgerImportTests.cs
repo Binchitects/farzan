@@ -116,6 +116,9 @@ public sealed class LedgerImportTests(AppFixture app)
         // A key with no person: the end user it was for. The master key's: no one.
         Assert.Equal("bob@example.test", rows[2].Person);
         Assert.Null(rows[3].Person);
+        // Not streamed (LiteLLM's first token at its end): no first token is known.
+        Assert.Null(rows[3].FirstTokenAt);
+        Assert.Equal(new DateTimeOffset(2026, 9, 5, 12, 0, 0, 500, TimeSpan.Zero), rows[2].FirstTokenAt);
         Assert.Equal(99, rows[4].CachedTokens);
     }
 
