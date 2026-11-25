@@ -22,7 +22,9 @@ longest carries on until it ends; the time of the model, the tools and the
 people is counted everywhere; Accounting and projects are live; a chat in a
 project keeps its goals and tasks; Code Arena runs schedules and Arena's
 agents, keeps checklists, and is tidier; a model is tested from its card,
-and every use a model has is said. And the logo: the A with its eyes.
+and every use a model has is said. Every image brought up to date and
+scanned for known vulnerabilities, a backup schedule and a maintenance mode
+from `arenactl`, and the logo: the A with its eyes.
 
 ### :rocket: Epics and highlights
 
@@ -97,9 +99,44 @@ and every use a model has is said. And the logo: the A with its eyes.
 - **The A with its eyes**: the logo is the Arena's A with two open eyes and
   nothing else in it; the sign-in's eyes are its eyes, and its outline is a
   pattern behind the pages.
+- **Every image up to date, and scanned.** Traefik 3.8.0, Prometheus 3.16.0,
+  Alertmanager 0.35.1, Loki 3.7.10, node-exporter 1.13.1, pgvector 0.8.7
+  (Postgres 16 on Debian bookworm, so the database's text keeps its
+  collation; the vector extension is updated in place), Valkey 9.2, the GPU
+  exporter 2.0.0 and DCGM exporter 4.9.0, Trivy 0.76.2 and opengrep 1.33.1;
+  our own images bring their base's packages up to date as they are built.
+  `tools/image-scan.py` runs Trivy over every image the stack runs before a
+  release: a critical finding fails it unless
+  `docs/compliance/accepted-vulnerabilities.yaml` accepts it, with why and
+  until when (four in Debian bookworm's packages have no fix, and are listed).
+- **Grafana Alloy in place of Promtail**, which has reached its end of life:
+  the same labels and parsing, through the engine's API.
+- **A speech image without its known vulnerabilities**: speaches 0.9.0-rc.3
+  with Pillow, urllib3, cryptography, starlette, python-multipart, protobuf
+  and Ubuntu's OpenSSL raised to their fixed versions (`arena-speaches`).
+- **`arenactl backup schedule`**: when backups run, through systemd's timer,
+  saved in `.env`: `03:30`, `hourly`, `"every 6h"`, `"Mon,Thu 02:00"`,
+  `weekly` or any systemd calendar (checked); with `--keep N` and
+  `--copy-dir DIR`; `schedule show` says the next run and how the last one
+  ended, `schedule off` stops it.
+- **`arenactl maintenance on|off|status`**: every address answers with a
+  maintenance page (503, `Retry-After`, `--message` on it) and the services
+  people use stop, while the database, Traefik and the monitoring stay up
+  (`--all` stops them too); `off` starts it all and takes the page down only
+  once every service is healthy. **`arenactl stop` and `start`**, for the
+  whole stack or the services named.
 
 ### :bug: Bugs fixed
 
+- **llama.cpp's log was dropped whole**: the rule meant to drop only its
+  per-request timing lines matched every line of it (Promtail's match stage
+  has no expression); only those lines go now.
+- The power caps ran in the GPU exporter's image, which has no shell since
+  its 1.19: they run in the stack's Python image.
+- The chart's copy of code-intel's config had drifted from deploy's.
+- The README's and the scripts guide's clone steps went into a folder the
+  clone does not make (`cd farzan` now); every Source link names the
+  repository's new home, Binchitects/farzan.
 - **The stack without a GitLab**: code-intel no longer stops at its start
   when GITLAB_URL and GITLAB_TOKEN are empty (its config's placeholder
   address was taken for a GitLab, then refused for want of a token): it

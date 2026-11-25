@@ -11,3 +11,21 @@
   package: golang:github.com/aquasecurity/trivy
   reason: "the Go database marks every Trivy release from 0.69.4 on; GitHub's advisory of the same compromise (GHSA-69fq-xp46-6x23) names 0.69.4 alone, and the scanners image pins 0.76.2 with its SHA-256 checked"
   until: 2027-04-30
+
+# The images' own (tools/image-scan.py, Trivy over each image the bundle carries): a critical one with no fix to apply.
+- id: CVE-2025-68121
+  package: "image:pgvector/pgvector:0.8.7-pg16-bookworm gosu (Go stdlib 1.24.6)"
+  reason: "crypto/tls session resumption: gosu only drops root to postgres once as the container starts and opens no TLS connection; gosu 1.19 is the newest, built with this Go"
+  until: 2027-02-28
+- id: CVE-2025-7458
+  package: "image:the Debian bookworm images (pgvector, scanners, the Python ones) deb:libsqlite3-0"
+  reason: "SQLite's integer overflow in its KeyInfo handling, reached only by SQL an attacker writes: Postgres does not use SQLite, and where Python's sqlite3 does (the scanners, the sandbox) it runs only the image's own statements or the person's own code in their own sandbox; Debian has no fixed package for bookworm"
+  until: 2027-02-28
+- id: CVE-2026-6653
+  package: "image:pgvector/pgvector:0.8.7-pg16-bookworm deb:libxml2"
+  reason: "a denial of service on crafted XML: the app sends no XML to Postgres's xml functions and no one else reaches the database; Debian has no fixed package for bookworm yet"
+  until: 2027-02-28
+- id: CVE-2023-45853
+  package: "image:the Debian bookworm images (pgvector, scanners, the Python ones) deb:zlib1g"
+  reason: "in zlib's minizip (zipOpenNewFileInZip4_64), which nothing in these images calls (minizip is not built into Debian's zlib1g); Debian marks it as not affecting its zlib package"
+  until: 2027-02-28

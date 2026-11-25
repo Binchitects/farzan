@@ -21,7 +21,7 @@ from pathlib import Path
 
 from support import COMPOSE, REPO, Sandbox
 
-SERVICES = "traefik\nweb\napp\npostgres\nvalkey\ncode-intel\ncpu-temp-exporter\nembed\nmaintenance\n"
+SERVICES = "traefik\nweb\napp\npostgres\nvalkey\ncode-intel\ncpu-temp-exporter\nembed\n"
 EMBED = "embed/nomic-embed-text-v1.5.f16.gguf"
 THIRD_PARTY = ["traefik:v3.8.0", "pgvector/pgvector:0.8.7-pg16-bookworm", "public.ecr.aws/valkey/valkey:9.2-alpine", "python:3.13-slim",
                "ghcr.io/ggml-org/llama.cpp:server-cuda"]
@@ -1995,7 +1995,8 @@ class InstallerTests(unittest.TestCase):
         before = self.running()
         self.assertNotIn("maintenance", before)
         installer = ["bash", str(self.dir / "deploy" / "scripts" / "installer.sh")]
-        quick = self.r.env({"MAINTENANCE_WAIT_S": "0"})
+        # The maintenance page is a service compose has (under its own profile): the fake lists it beside the rest.
+        quick = self.r.env({"MAINTENANCE_WAIT_S": "0", "FAKE_SERVICES": SERVICES + "maintenance\n"})
         r = subprocess.run(installer + ["maintenance", "on", "--yes", "--message", "Back at <b>14:00</b> & then some"],
                            env=quick, capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, self.output(r))

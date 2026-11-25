@@ -13,6 +13,8 @@ import yaml
 DEPLOY = Path(__file__).resolve().parents[2] / "deploy"
 # What always runs: no profile, no feature.
 CORE = {"traefik", "web", "app", "postgres"}
+# Services only the installer starts, by their own profile: the maintenance page (installer.sh maintenance on).
+INSTALLER_ONLY = {"maintenance": "maintenance"}
 
 
 def features() -> list[dict]:
@@ -38,6 +40,10 @@ class Features(unittest.TestCase):
             with self.subTest(name):
                 if name in CORE:
                     self.assertNotIn("profiles", service)
+                elif name in INSTALLER_ONLY:
+                    # Run by the installer alone (maintenance on), under a profile of its own that no feature names.
+                    self.assertEqual([INSTALLER_ONLY[name]], service.get("profiles"))
+                    self.assertNotIn(name, owner)
                 else:
                     self.assertIn(name, owner, f"{name} is in no feature of deploy/features")
                     self.assertEqual([owner[name]], service.get("profiles"))
