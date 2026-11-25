@@ -133,6 +133,23 @@ public sealed partial class ObserveTests(AppFixture app) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_log_stat_over_the_whole_window_is_asked_once_at_its_end_within_lokis_longest_query()
+    {
+        // Seen live 2026-11-26: Indexing's "Longest pass" over 30 days asked as a range query looked back 30 days at each
+        // step, 1,270 hours in all, and Loki refused it (its longest query: 30 days and an hour).
+        var b = await Admin();
+        var d = await b.JsonAsync(await b.GetAsync("/api/dashboards/stack-indexing"));
+        var stat = d.GetProperty("panels").EnumerateArray().First(p => p.TryGetProperty("title", out var t) && t.GetString() == "Longest pass");
+        app.Observe.Requests.Clear();
+        await StatusAssert.Is(HttpStatusCode.OK, await b.Http.PostAsJsonAsync(new Uri($"/api/dashboards/stack-indexing/panels/{stat.GetProperty("key").GetInt32()}/query", UriKind.Relative),
+            new { from = End.AddDays(-30), to = End }));
+        Assert.Empty(app.Observe.To("/loki/api/v1/query_range"));
+        var asked = app.Observe.To("/loki/api/v1/query").Single();
+        Assert.Equal(End.ToUnixTimeMilliseconds() + "000000", asked.Args["time"]);
+        Assert.Contains("[2592000s]", asked.Args["query"], StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void The_log_query_is_built_from_the_filters_with_every_value_escaped()
     {
         Assert.Equal("{container=~\".+\"}", LogEndpoints.Query(new LogFilter(null, null, null, null, null, null, null, null)));

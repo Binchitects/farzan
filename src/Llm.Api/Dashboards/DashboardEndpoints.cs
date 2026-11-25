@@ -350,9 +350,12 @@ public static partial class DashboardEndpoints
         {
             step = range / 11000;
         }
+        // Over the whole window ([$__range]): one value, the window's, asked once at its end. As a range query it is asked at
+        // every step, each looking back the whole window: twice the window, past Loki's longest query (30 days) at 15 days.
+        var instant = t.Instant || (panel.Type is "stat" or "gauge" && t.Expr!.Contains("[$__range]", StringComparison.Ordinal));
         // An instant query's $__auto is the whole range, as Grafana has it.
-        var expr = Interpolation.Expand(t.Expr!, q.From, q.To, step, o.ScrapeInterval, vars, loki: true, instant: t.Instant);
-        var (lines, series) = t.Instant
+        var expr = Interpolation.Expand(t.Expr!, q.From, q.To, step, o.ScrapeInterval, vars, loki: true, instant: instant);
+        var (lines, series) = instant
             ? await loki.InstantAsync(expr, q.To, o.MaxLogLines, ct)
             : await loki.RangeAsync(expr, q.From, q.To, step, o.MaxLogLines, ct);
         if (lines is not null)
@@ -361,7 +364,7 @@ public static partial class DashboardEndpoints
         }
         // Grafana names a Loki series without labels "{}" (a Prometheus one, by its query).
         var named = (series ?? []).Select(s => new Series(Interpolation.Legend(t.LegendFormat, s.Labels, "{}"), s.Points)).ToList();
-        return t.Instant && t.Format == "table"
+        return instant && t.Format == "table"
             ? new TargetResult(t.RefId, t.Format, InstantTable(series ?? [], t.RefId, panel.Targets.Count > 1), null, null)
             : new TargetResult(t.RefId, t.Format, null, named, null);
     }

@@ -141,15 +141,15 @@ Headlines: **dashboards whose numbers are right, per GPU and per model**; **a pr
   - The app's dashboard audit (`audit-dashboards.py 30d`) says 334 queries "ok", 34 NO DATA, 6 errors (Loki: the
     Indexing page asks 1,270 h, past Loki's 30-day limit), 5 with NaN (System's p95 by service: 370 NaN points). It
     checks that a query answers, never that its number is true.
-  - Exports take 0.03–1.3 s on live's small data (Hardware 1.3 s, Stack Performance 0.7 s); the GPU dashboard's
-    export answers 404.
+  - Exports take 0.03–1.3 s on live's small data (Hardware 1.3 s, Stack Performance 0.7 s). (A 404 for the GPU
+    dashboard's export was the measuring script's mistake: its uid is `gpu-hardware`.)
 - **Fix.** Each panel's query rewritten from the engines' own counters (llama.cpp, vLLM, SGLang, LMDeploy, Strata),
   with the unit and the range said in its title; capacity measured, not guessed: the test bench's (v8.1) highest
   decode rate at full batch per model on its GPUs, kept as a gauge (`arena_model_capacity_tokens_per_second`), with
   "making now" beside it for the loaded models only; the engines scraped per placement with `gpu` labels (the app
   knows which GPUs each model holds) so every panel has a GPU and a model variable; the ledger's first token kept
   null for an answer that was not streamed and decode speed read from the engines; the Loki ranges clamped to its
-  limit; the GPU export fixed. A second audit, `audit-dashboards.py --truth`, recomputes each number from the raw
+  limit. A second audit, `audit-dashboards.py --truth`, recomputes each number from the raw
   counters and the ledger and fails on a gap over 2%.
 - **Proof.** The truth audit run on live (before: the gaps above; after: none over 2%), screenshots of the pages, a
   test per rewritten query against a recorded Prometheus answer, and exports of every dashboard under 2 s on the
