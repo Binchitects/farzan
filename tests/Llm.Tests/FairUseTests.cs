@@ -142,6 +142,33 @@ public sealed class FairUseTests(AppFixture app)
     }
 
     [Fact]
+    public void A_loaded_models_measured_capacity_and_its_share_of_each_gpu_are_told_to_Prometheus()
+    {
+        var state = new Llm.Api.Models.EngineState(TimeProvider.System);
+        state.Set([new("split", "loaded"), new("tp", "loaded"), new("asleep", "unloaded")], 0);
+        state.Places = new Dictionary<string, Llm.Api.Models.EngineState.ModelPlace>
+        {
+            ["split"] = new("llamacpp", new Dictionary<int, long> { [0] = 30, [1] = 10 }),
+            ["tp"] = new("vllm", new Dictionary<int, long> { [2] = 70, [3] = 70 }),
+        };
+        var measured = new Dictionary<string, Llm.Api.Models.MeasuredCapacity>
+        {
+            ["split"] = new(412.5, 8, DateTimeOffset.UnixEpoch),
+            ["asleep"] = new(99, 1, DateTimeOffset.UnixEpoch),
+        };
+        var text = LineMetrics.RenderCapacity(state, measured);
+        // Measured and loaded: told; not loaded: not; loaded, not tested: no capacity.
+        Assert.Contains("arena_model_capacity_tokens_per_second{model=\"split\"} 412.5", text, StringComparison.Ordinal);
+        Assert.Contains("arena_model_capacity_at_once{model=\"split\"} 8", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("asleep", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("arena_model_capacity_tokens_per_second{model=\"tp\"}", text, StringComparison.Ordinal);
+        // Each GPU's share by the memory held there: three quarters and a quarter; halves for two the same.
+        Assert.Contains("arena_model_gpu_share{model=\"split\",gpu=\"0\"} 0.75", text, StringComparison.Ordinal);
+        Assert.Contains("arena_model_gpu_share{model=\"split\",gpu=\"1\"} 0.25", text, StringComparison.Ordinal);
+        Assert.Contains("arena_model_gpu_share{model=\"tp\",gpu=\"3\"} 0.5", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Someone_who_gives_up_waiting_leaves_the_line()
     {
         var gate = Gate(perPerson: 1, atOnce: 1);

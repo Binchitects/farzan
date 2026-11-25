@@ -28,7 +28,7 @@
   "panels": [
     {
       "type": "row",
-      "title": "Capacity: what the system can make, and makes, model by model",
+      "title": "Capacity: what each loaded model was measured to make, and makes now",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -42,29 +42,25 @@
     {
       "type": "stat",
       "title": "Capacity (tokens a second)",
-      "description": "What the system can make a second: each model's busiest minute in the last 7 days, added up. It grows as the models are used harder; a model not used this week counts nothing.",
+      "description": "The loaded models' capacity as their test bench measured it (Admin → Models → a model → Test → Capacity): the most tokens a second each made, added up. A loaded model not yet tested is not in it (see Not tested).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
+        "w": 5,
         "x": 0,
         "y": 1
       },
       "targets": [
         {
+          "refId": "A",
+          "expr": "sum(arena_model_capacity_tokens_per_second)",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum(max_over_time((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))[7d:1m])) or vector(0)",
-          "legendFormat": "",
-          "refId": "A",
-          "instant": true,
-          "range": false
+          }
         }
       ],
       "options": {
@@ -97,7 +93,7 @@
               }
             ]
           },
-          "noValue": "0"
+          "noValue": "Not tested: Admin → Models → Test"
         },
         "overrides": []
       },
@@ -107,29 +103,25 @@
     {
       "type": "stat",
       "title": "Making now (tokens a second)",
-      "description": "Tokens every model makes a second now, added up (each llama.cpp slot counted).",
+      "description": "Tokens every engine is making this minute, every model.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 6,
+        "w": 5,
+        "x": 5,
         "y": 1
       },
       "targets": [
         {
+          "refId": "A",
+          "expr": "sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))) or vector(0)",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))) or vector(0)",
-          "legendFormat": "",
-          "refId": "A",
-          "instant": true,
-          "range": false
+          }
         }
       ],
       "options": {
@@ -172,29 +164,25 @@
     {
       "type": "stat",
       "title": "Of capacity, now",
-      "description": "What is made now as a share of the capacity: room for more is the rest.",
+      "description": "What the tested models make now, of what they were measured to make.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 12,
+        "w": 5,
+        "x": 10,
         "y": 1
       },
       "targets": [
         {
+          "refId": "A",
+          "expr": "100 * sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m]))) and on (model) arena_model_capacity_tokens_per_second) / sum(arena_model_capacity_tokens_per_second)",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "100 * (sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))) or vector(0)) / (sum(max_over_time((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))[7d:1m])) > 0)",
-          "legendFormat": "",
-          "refId": "A",
-          "instant": true,
-          "range": false
+          }
         }
       ],
       "options": {
@@ -227,7 +215,7 @@
               }
             ]
           },
-          "noValue": "0"
+          "noValue": "Not tested"
         },
         "overrides": []
       },
@@ -237,29 +225,25 @@
     {
       "type": "stat",
       "title": "Room now (tokens a second)",
-      "description": "The capacity not used now: how many more tokens a second the system could make at its busiest this week.",
+      "description": "What the tested models could still make on top of what they make now.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 18,
+        "w": 5,
+        "x": 15,
         "y": 1
       },
       "targets": [
         {
+          "refId": "A",
+          "expr": "clamp_min(sum(arena_model_capacity_tokens_per_second) - (sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m]))) and on (model) arena_model_capacity_tokens_per_second) or vector(0)), 0)",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "clamp_min(sum(max_over_time((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))[7d:1m])) - (sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))) or vector(0)), 0)",
-          "legendFormat": "",
-          "refId": "A",
-          "instant": true,
-          "range": false
+          }
         }
       ],
       "options": {
@@ -292,7 +276,7 @@
               }
             ]
           },
-          "noValue": "0"
+          "noValue": "Not tested"
         },
         "overrides": []
       },
@@ -300,9 +284,70 @@
       "id": 69
     },
     {
+      "id": 76,
+      "type": "stat",
+      "title": "Loaded, not tested",
+      "description": "Loaded models with no capacity test yet: their tokens are in Making now, not in Capacity. Test them under Admin → Models.",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(max by (model) (arena_model_memory_bytes) unless on (model) arena_model_capacity_tokens_per_second) or vector(0)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "None"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "live": true
+    },
+    {
       "type": "timeseries",
-      "title": "Each model: tokens a second now, and the most it made (7 days)",
-      "description": "A line a model: what it makes a second now (solid), and its busiest minute in the last 7 days (dashed), its capacity as measured. The gap is its room.",
+      "title": "Each model: tokens a second now, and its tested capacity",
+      "description": "A line for each model's tokens a second, and a flat one at what its capacity test measured.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -315,24 +360,22 @@
       },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
+          "refId": "A",
           "expr": "(sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))",
           "legendFormat": "{{model}} now",
-          "refId": "A"
-        },
-        {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "max_over_time((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))[7d:1m])",
-          "legendFormat": "{{model}} most (7 days)",
-          "refId": "B"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "arena_model_capacity_tokens_per_second",
+          "legendFormat": "{{model}} capacity",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
         }
       ],
       "options": {
@@ -541,7 +584,7 @@
               }
             ]
           },
-          "noValue": "idle"
+          "noValue": "Idle: no answer in 5 minutes"
         },
         "overrides": []
       },
@@ -606,7 +649,7 @@
               }
             ]
           },
-          "noValue": "idle"
+          "noValue": "Idle: no prompt in 5 minutes"
         },
         "overrides": []
       },
@@ -817,7 +860,7 @@
               }
             ]
           },
-          "noValue": "off"
+          "noValue": "No drafts in 5 minutes"
         },
         "overrides": []
       },
@@ -1161,8 +1204,8 @@
     {
       "id": 63,
       "type": "timeseries",
-      "title": "Tokens a second, by model and its GPUs",
-      "description": "Tokens each model generates a second now, named with the GPUs its engine runs on (a vLLM or SGLang copy on its GPUs; a llama.cpp model on the GPUs it was given, 'all' for every one). Beside the GPU row below, it says which GPU's engine does the work.",
+      "title": "Tokens a second, by GPU",
+      "description": "Each model's tokens shared out over its GPUs by the memory it holds on each (arena_model_gpu_share): a model on two GPUs counts half on each.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1175,16 +1218,22 @@
       },
       "targets": [
         {
+          "refId": "A",
+          "expr": "sum by (gpu) ((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m]))) * on (model) group_right arena_model_gpu_share)",
+          "legendFormat": "GPU {{gpu}}",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum by (model, gpus) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model, gpus) (rate(vllm:generation_tokens_total[1m])) or sum by (model, gpus) (rate(sglang:generation_tokens_total[1m]))",
-          "legendFormat": "{{model}} · GPUs {{gpus}}",
-          "refId": "A",
-          "instant": false,
-          "range": true
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "(sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m]))) * on (model) group_right arena_model_gpu_share",
+          "legendFormat": "{{model}} on GPU {{gpu}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
         }
       ],
       "options": {

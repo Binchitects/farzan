@@ -369,6 +369,26 @@ public sealed partial class DashboardFileTests(Promtool promtool) : IClassFixtur
                     values: '0+15x40'
                   - series: 'sglang:num_running_reqs{model="swift",gpus="2",tp_rank="0",priority=""}'
                     values: '1x40'
+                  # As the app tells them: qwen and flash tested (500 and 200 a second at their best), swift not;
+                  # qwen on GPU 0, flash half on 0 and half on 1, swift on 2.
+                  - series: 'arena_model_capacity_tokens_per_second{model="qwen"}'
+                    values: '500x80'
+                  - series: 'arena_model_capacity_tokens_per_second{model="flash"}'
+                    values: '200x80'
+                  - series: 'arena_model_memory_bytes{model="qwen",on="GPU 0"}'
+                    values: '1x80'
+                  - series: 'arena_model_memory_bytes{model="flash",on="GPU 0"}'
+                    values: '1x80'
+                  - series: 'arena_model_memory_bytes{model="swift",on="GPU 2"}'
+                    values: '1x80'
+                  - series: 'arena_model_gpu_share{model="qwen",gpu="0"}'
+                    values: '1x80'
+                  - series: 'arena_model_gpu_share{model="flash",gpu="0"}'
+                    values: '0.5x80'
+                  - series: 'arena_model_gpu_share{model="flash",gpu="1"}'
+                    values: '0.5x80'
+                  - series: 'arena_model_gpu_share{model="swift",gpu="2"}'
+                    values: '1x80'
                 promql_expr_test:
                   - expr: {{Q("stack-performance", "Stack throughput (live)")}}
                     eval_time: 8m
@@ -379,25 +399,32 @@ public sealed partial class DashboardFileTests(Promtool promtool) : IClassFixtur
                       - { labels: '{model="qwen"}', value: 400 }
                       - { labels: '{model="flash"}', value: 150 }
                       - { labels: '{model="swift"}', value: 50 }
-                  - expr: {{Q("stack-performance", "Each model: tokens a second now, and the most it made (7 days)", "{{model}} most (7 days)")}}
+                  - expr: {{Q("stack-performance", "Each model: tokens a second now, and its tested capacity", "{{model}} capacity")}}
                     eval_time: 8m
                     exp_samples:
-                      - { labels: '{model="qwen"}', value: 400 }
-                      - { labels: '{model="flash"}', value: 150 }
-                      - { labels: '{model="swift"}', value: 50 }
+                      - { labels: '{model="qwen"}', value: 500 }
+                      - { labels: '{model="flash"}', value: 200 }
+                  # Capacity is what the tested models were measured to make (not the busiest minute, not untested ones).
                   - expr: {{Q("stack-performance", "Capacity (tokens a second)")}}
                     eval_time: 8m
-                    exp_samples: [{ labels: '{}', value: 600 }]
+                    exp_samples: [{ labels: '{}', value: 700 }]
                   - expr: {{Q("stack-performance", "Making now (tokens a second)")}}
                     eval_time: 8m
                     exp_samples: [{ labels: '{}', value: 600 }]
+                  # The tested ones make 400 + 150 of their 700.
                   - expr: {{Q("stack-performance", "Of capacity, now")}}
                     eval_time: 8m
-                    exp_samples: [{ labels: '{}', value: 100 }]
-                  # Idle now: nothing made, the capacity as it was measured, all of it room.
+                    exp_samples: [{ labels: '{}', value: 78.57 }]
+                  - expr: {{Q("stack-performance", "Room now (tokens a second)")}}
+                    eval_time: 8m
+                    exp_samples: [{ labels: '{}', value: 150 }]
+                  # Idle now: nothing made, all of the measured capacity room.
                   - expr: {{Q("stack-performance", "Room now (tokens a second)")}}
                     eval_time: 20m
-                    exp_samples: [{ labels: '{}', value: 600 }]
+                    exp_samples: [{ labels: '{}', value: 700 }]
+                  - expr: {{Q("stack-performance", "Loaded, not tested")}}
+                    eval_time: 8m
+                    exp_samples: [{ labels: '{}', value: 1 }]
                   - expr: {{Q("stack-performance", "Decode speed a request (5 min)")}}
                     eval_time: 8m
                     exp_samples: [{ labels: '{}', value: 75 }]
@@ -407,12 +434,13 @@ public sealed partial class DashboardFileTests(Promtool promtool) : IClassFixtur
                   - expr: {{Q("stack-performance", "Active requests")}}
                     eval_time: 8m
                     exp_samples: [{ labels: '{}', value: 8 }]
-                  - expr: {{Q("stack-performance", "Tokens a second, by model and its GPUs", "{{model}} · GPUs {{gpus}}")}}
+                  # Each GPU's tokens: a model's shared out by the memory it holds on each.
+                  - expr: {{Q("stack-performance", "Tokens a second, by GPU", "GPU {{gpu}}")}}
                     eval_time: 8m
                     exp_samples:
-                      - { labels: '{model="qwen",gpus="all"}', value: 400 }
-                      - { labels: '{model="flash",gpus="0,1"}', value: 150 }
-                      - { labels: '{model="swift",gpus="2"}', value: 50 }
+                      - { labels: '{gpu="0"}', value: 475 }
+                      - { labels: '{gpu="1"}', value: 75 }
+                      - { labels: '{gpu="2"}', value: 50 }
                   - expr: {{Q("stack-performance", "Decode speed a request, by model (5 min)", "{{model}}")}}
                     eval_time: 8m
                     exp_samples:

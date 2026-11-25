@@ -440,6 +440,7 @@ public static class IdentityWiring
         services.AddHostedService<Reports.UsageWatchStart>();
         // The model test bench (Admin → Models → Test): its runs go on in the background.
         services.AddSingleton<Models.ModelBench>();
+        services.AddSingleton<Models.ModelCapacity>();
         services.Configure<Chat.RoomCallOptions>(config.GetSection("Rooms:Calls"));
         services.AddSingleton<Chat.RoomCaptions>();
         services.AddSingleton<Code.ReviewEngine>();

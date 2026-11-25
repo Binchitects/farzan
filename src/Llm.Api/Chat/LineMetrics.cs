@@ -14,7 +14,7 @@ namespace Llm.Api.Chat;
 public static class LineMetrics
 {
     public static void MapLineMetrics(this IEndpointRouteBuilder app) =>
-        app.MapGet("/metrics", (HttpContext http, AnswerGate gate, Models.EngineState engine, Gateway.ModelGateway own) =>
+        app.MapGet("/metrics", async (HttpContext http, AnswerGate gate, Models.EngineState engine, Gateway.ModelGateway own, Models.ModelCapacity capacity) =>
         {
             // Through Traefik: X-Forwarded-For, which the forwarded-headers middleware takes in (keeping it as X-Original-For) and
             // whose client becomes the remote address. Only the stack's network (a private address, or none in tests) reads it.
@@ -23,7 +23,7 @@ public static class LineMetrics
             {
                 return Results.NotFound();
             }
-            return Results.Text(Render(gate) + RenderPlaces(engine) + own.Metrics(), "text/plain; version=0.0.4");
+            return Results.Text(Render(gate) + RenderPlaces(engine) + RenderCapacity(engine, await capacity.GetAsync(http.RequestAborted)) + own.Metrics(), "text/plain; version=0.0.4");
         }).AllowAnonymous("Prometheus, on the stack's network: numbers of the line, no names.");
 
     /// <summary>Loopback, or a private network's address (10/8, 172.16/12, 192.168/16, fc00::/7, link-local).</summary>
@@ -67,6 +67,42 @@ public static class LineMetrics
             else if (place is null || place.PerGpu.Count == 0)
             {
                 Line(gpus == 0 ? "RAM" : "not known", 0);
+            }
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// For each loaded model: its capacity as its test bench measured it (tokens a second at its best, and with how many
+    /// answers at once), for a model tested; and its share of each GPU it is on (its bytes there of its bytes on GPUs), so a
+    /// model's tokens are told per GPU on the dashboards: <c>sum by (gpu) (rate * on (model) group_right arena_model_gpu_share)</c>.
+    /// </summary>
+    public static string RenderCapacity(Models.EngineState engine, IReadOnlyDictionary<string, Models.MeasuredCapacity> measured)
+    {
+        var sb = new StringBuilder();
+        sb.Append("# HELP arena_model_capacity_tokens_per_second The most tokens a second a loaded model made in its test bench's capacity test.\n# TYPE arena_model_capacity_tokens_per_second gauge\n");
+        var loaded = engine.Now.Models.Where(m => m.Status == "loaded").Select(m => m.Name).Order(StringComparer.Ordinal).ToList();
+        foreach (var m in loaded.Where(measured.ContainsKey))
+        {
+            sb.Append(CultureInfo.InvariantCulture, $"arena_model_capacity_tokens_per_second{{model=\"{L(m)}\"}} {measured[m].TokensPerSecond}\n");
+        }
+        sb.Append("# HELP arena_model_capacity_at_once How many answers at once made a loaded model's most tokens a second in its capacity test.\n# TYPE arena_model_capacity_at_once gauge\n");
+        foreach (var m in loaded.Where(measured.ContainsKey))
+        {
+            sb.Append(CultureInfo.InvariantCulture, $"arena_model_capacity_at_once{{model=\"{L(m)}\"}} {measured[m].AtOnce}\n");
+        }
+        sb.Append("# HELP arena_model_gpu_share The share of a loaded model on each GPU it is on: its bytes there of its bytes on all its GPUs.\n# TYPE arena_model_gpu_share gauge\n");
+        foreach (var m in loaded)
+        {
+            if (engine.Places.GetValueOrDefault(m) is not { PerGpu.Count: > 0 } place)
+            {
+                continue;
+            }
+            var total = place.PerGpu.Values.Sum();
+            foreach (var (gpu, bytes) in place.PerGpu.OrderBy(g => g.Key))
+            {
+                var share = total > 0 ? (double)bytes / total : 1.0 / place.PerGpu.Count;
+                sb.Append(CultureInfo.InvariantCulture, $"arena_model_gpu_share{{model=\"{L(m)}\",gpu=\"{gpu}\"}} {Math.Round(share, 4)}\n");
             }
         }
         return sb.ToString();
