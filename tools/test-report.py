@@ -7,7 +7,7 @@
     tools/test-report.py --vitest src/web/coverage/coverage-final.json --vitest-times times.json
 
 A feature is the first folder under the project's root (src/Llm.Api/Gateway/X.cs -> Llm.Api/Gateway); a file at a
-project's root counts under the project.
+project's root counts under the project. Generated code (EF migrations, obj/) is left out: no test is written for it.
 """
 import argparse
 import json
@@ -41,6 +41,12 @@ def trx_times(paths):
     return tests
 
 
+def generated(filename: str) -> bool:
+    """Code no one writes: EF migrations and their snapshot, and what the compiler makes (obj/: source generators, razor)."""
+    f = filename.replace("\\", "/")
+    return "/obj/" in f or "/Migrations/" in f or f.endswith(".g.cs") or f.endswith(".Designer.cs")
+
+
 def feature(filename: str) -> str:
     parts = Path(filename.replace("\\", "/")).parts
     if "src" in parts:
@@ -61,6 +67,8 @@ def cobertura(paths):
             name = c.get("filename")
             if sources and not name.startswith("/"):
                 name = str(Path(sources[0]) / name)
+            if generated(name):
+                continue
             for ln in c.iter("line"):
                 n = int(ln.get("number"))
                 lines[name][n] = max(lines[name].get(n, 0), int(ln.get("hits", "0")))
@@ -122,6 +130,12 @@ def main(argv=None):
         tl = sum(v[0] for v in per.values()), sum(v[1] for v in per.values())
         tb = sum(v[2] for v in per.values()), sum(v[3] for v in per.values())
         print(f"\nCoverage: lines {tl[0]}/{tl[1]} = {pct(*tl):.1f}%, branches {tb[0]}/{tb[1]} = {pct(*tb):.1f}%")
+        projects = defaultdict(lambda: [0, 0, 0, 0])
+        for k, v in per.items():
+            for i in range(4):
+                projects[k.split("/")[0]][i] += v[i]
+        for k, (lc, lt, bc, bt) in sorted(projects.items(), key=lambda x: -x[1][1]):
+            print(f"  project {k}: lines {pct(lc, lt):.1f}% of {lt}, branches {pct(bc, bt):.1f}% of {bt}")
         for k, (lc, lt, bc, bt) in sorted(per.items(), key=lambda x: -x[1][1]):
             print(f"  {pct(lc, lt):5.1f}% of {lt:6d} lines  {pct(bc, bt):5.1f}% of {bt:6d} branches  {k}")
         out = {"tests": tests, "classes": {k: {"tests": v[0], "seconds": v[1]} for k, v in by.items()},
