@@ -58,7 +58,11 @@ const llamaAdvice = {
   hardware: { gpuName: 'NVIDIA RTX PRO 6000', gpus: 2, gpuTotal: 205e9, reserves: [], ramTotal: 66e9, gpuForModels: 200e9, ramForModels: 57e9 },
 }
 const vllmAdvice = {
-  limits: { context: { min: 4096, max: 131072 }, maxOutput: { min: 256, max: 130048 }, parallel: { min: 1, max: 1024 } },
+  // Every field the API's ModelLimits has: a form for another engine may draw from it before the engine changes.
+  limits: {
+    context: { min: 4096, max: 131072 }, maxOutput: { min: 256, max: 130048 }, parallel: { min: 1, max: 1024 }, gpuLayers: { min: 0, max: 37 }, cpuMoe: null,
+    draftMax: { min: 0, max: 0 }, cacheTypes: ['f16', 'q8_0'], ubatch: [512], mtp: false, yarn: false, projectors: [], draftHeads: [],
+  },
   recommended: { context: 65536, maxOutput: 32768, parallel: 16, kvType: 'fp8', devices: '1' },
   estimate: { gpuWeights: 16e9, gpuCache: 20e9, gpuTotal: 36e9, gpuBudget: 101e9, ramTotal: 0, fit: 'gpu', approximate: false },
   problems: [],

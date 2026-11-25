@@ -62,6 +62,8 @@ describe('the sign-in notice', () => {
     })
     renderApp('/login')
     expect(await screen.findByText('By signing in you accept: Acceptable use')).toBeInTheDocument()
-    expect(await screen.findByText('No customer data in prompts.')).toBeInTheDocument()
+    // Its text shows at once, then as formatted text when the Markdown reader has loaded: found and checked in one step, so
+    // the copy replaced in between is never the one checked.
+    await waitFor(() => expect(screen.getByText('No customer data in prompts.')).toBeInTheDocument())
   })
 })

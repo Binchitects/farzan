@@ -8,6 +8,21 @@ import { routes } from '@/app/routes'
 import type { Me } from '@/lib/api'
 import { productName } from '@/lib/brand'
 
+/**
+ * Loads the code of every page these paths open (each matched route's lazy part), so a test's first wait is for the
+ * page, never for its code: the chat's page takes a second to import alone and several under a full run's load.
+ */
+export async function preloadRoutes(paths: string[]) {
+  const { matchRoutes } = await import('react-router')
+  const lazies = new Set<() => unknown>()
+  for (const path of paths) {
+    for (const m of matchRoutes(routes, path.split(/[?#]/)[0]) ?? []) {
+      if (typeof m.route.lazy === 'function') lazies.add(m.route.lazy as () => unknown)
+    }
+  }
+  await Promise.all([...lazies].map((load) => load()))
+}
+
 /** The whole app at `path`, with its own query cache so tests never share data. */
 export function renderApp(path: string) {
   const client: QueryClient = makeQueryClient()

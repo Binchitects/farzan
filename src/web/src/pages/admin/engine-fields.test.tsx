@@ -27,7 +27,11 @@ const snapshots = [
   { path: 'hf/openai/gpt-oss-120b@main', repo: 'openai/gpt-oss-120b', revision: 'b5c939de8f754692c1647ca79fbf85e8c1e70f8a', size: 65.2e9, complete: true, why: null, architectures: ['GptOssForCausalLM'], usedBy: [] },
 ]
 const advice = {
-  limits: { context: { min: 4096, max: 131072 }, maxOutput: { min: 256, max: 31744 }, parallel: { min: 1, max: 1024 } },
+  // Every field the API's ModelLimits has: a form for another engine may draw from it before the engine changes.
+  limits: {
+    context: { min: 4096, max: 131072 }, maxOutput: { min: 256, max: 31744 }, parallel: { min: 1, max: 1024 }, gpuLayers: { min: 0, max: 37 }, cpuMoe: null,
+    draftMax: { min: 0, max: 0 }, cacheTypes: ['f16', 'q8_0'], ubatch: [512], mtp: false, yarn: false, projectors: [], draftHeads: [],
+  },
   recommended: { context: 131072, maxOutput: 32768, parallel: 41, kvType: 'fp8', devices: '1' },
   estimate: { gpuWeights: 65.2e9, gpuCache: 23.9e9, gpuTotal: 92.4e9, gpuBudget: 101.6e9, ramTotal: 65.2e9, fit: 'gpu', approximate: false },
   problems: [],
