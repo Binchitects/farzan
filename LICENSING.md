@@ -46,7 +46,7 @@ it (for example: private modifications, closed distribution, warranty,
 support), and is granted only in writing by Binchitects. Using the software
 in any of the ways above without one infringes the copyright. To ask for a
 commercial license, open an issue titled "Commercial license" at
-<https://github.com/Binchitects/argus/issues> or contact Binchitects through
+<https://github.com/Binchitects/farzan/issues> or contact Binchitects through
 <https://github.com/Binchitects>.
 
 If you are unsure whether your use needs a commercial license, ask before you

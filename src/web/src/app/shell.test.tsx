@@ -60,7 +60,7 @@ describe('shell', () => {
     expect(router.state.location.pathname).toBe('/admin/people')
   })
 
-  const source = 'https://github.com/Binchitects/argus'
+  const source = 'https://github.com/Binchitects/farzan'
   const withSource = { 'GET /api/info': () => ({ json: { name: 'Farzan Arena', version: '5.1.0', license: 'AGPL-3.0-only', source } }) }
 
   it('offers the source beside the version, as the AGPL asks', async () => {

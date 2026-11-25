@@ -58,7 +58,7 @@ public sealed class FoundationTests(AppFixture app)
         Assert.Matches(@"^\d+\.\d+\.\d+", info["version"]);
         // The AGPL offers the source to everyone who uses it over a network.
         Assert.Equal("AGPL-3.0-only", info["license"]);
-        Assert.Equal("https://github.com/Binchitects/argus", info["source"]);
+        Assert.Equal("https://github.com/Binchitects/farzan", info["source"]);
     }
 
     [Fact]

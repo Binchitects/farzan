@@ -37,7 +37,7 @@ them).
 ### From a checkout, on a host with the network
 
 ```bash
-git clone https://github.com/Binchitects/argus && cd code-intel
+git clone https://github.com/Binchitects/farzan && cd farzan
 ./arenactl doctor --for install          # what is missing, and how to get it
 ./arenactl install --domain chat.example.com --admin-email me@example.com
 ```

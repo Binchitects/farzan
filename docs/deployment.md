@@ -31,7 +31,7 @@ and no setup scripts.
 The short way, on a Linux host, from a clone of the repository:
 
 ```bash
-git clone https://github.com/Binchitects/argus && cd argus
+git clone https://github.com/Binchitects/farzan && cd farzan
 ./arenactl doctor --for install    # what the host lacks, each with what to do
 ./arenactl install                 # the images built, then the installer: .env, certificate, start
 ```
@@ -46,7 +46,7 @@ By hand, on a Linux host with Docker (or Podman, below) and an NVIDIA GPU with t
 container toolkit:
 
 ```bash
-git clone https://github.com/Binchitects/argus && cd argus/deploy
+git clone https://github.com/Binchitects/farzan && cd farzan/deploy
 cp .env.example .env
 ```
 

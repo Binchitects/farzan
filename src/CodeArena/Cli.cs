@@ -115,7 +115,7 @@ internal static partial class Cli
     /// show it, as LICENSING.md's additional terms ask. A modified version points
     /// it at its own source.
     /// </summary>
-    public const string Source = "https://github.com/Binchitects/argus";
+    public const string Source = "https://github.com/Binchitects/farzan";
 
     /// <summary>What --version prints: the version, the licence and the source.</summary>
     public static string About => $"""

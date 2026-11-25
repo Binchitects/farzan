@@ -534,7 +534,7 @@ Licence
   Copyright (C) 2026 Binchitects and contributors. There is no warranty.
   Code Arena is offered under the AGPL-3.0-only (LICENSE.md) with the
   additional terms in LICENSING.md, or under a commercial license from
-  Binchitects. Source: https://github.com/Binchitects/argus
+  Binchitects. Source: https://github.com/Binchitects/farzan
   {exe} --version prints the version, the licence and the source.
 """
 

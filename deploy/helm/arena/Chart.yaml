@@ -5,5 +5,5 @@ type: application
 # The chart's own version; appVersion is the app's (VERSION at the repository's root), the default tag of its images.
 version: 0.1.0
 appVersion: "8.0.0"
-home: https://github.com/Binchitects/argus
+home: https://github.com/Binchitects/farzan
 keywords: [llm, chat, model-gateway, llama.cpp, gitlab]

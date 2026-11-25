@@ -107,7 +107,7 @@ public static class PlatformApi
         });
 
     /// <summary>Where the source is, unless <c>CODE_INTEL_SOURCE_URL</c> says otherwise (a modified version points it at its own).</summary>
-    public const string DefaultSource = "https://github.com/Binchitects/argus";
+    public const string DefaultSource = "https://github.com/Binchitects/farzan";
 
     /// <summary>
     /// The version, its licence and where its complete source is, shown in the app's sidebar: the AGPL offers

@@ -9,5 +9,5 @@ public sealed class BrandingOptions
     public string? SupportContact { get; set; }
 
     /// <summary>Where this version's complete source is: the AGPL (section 13) has every user of it offered the source.</summary>
-    public string SourceUrl { get; set; } = "https://github.com/Binchitects/argus";
+    public string SourceUrl { get; set; } = "https://github.com/Binchitects/farzan";
 }

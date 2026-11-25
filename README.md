@@ -190,7 +190,7 @@ Windows users run `irm https://your-arena/api/downloads/code-arena/install.ps1 |
 On a Linux host with Docker (or rootless Podman) and an NVIDIA GPU:
 
 ```bash
-git clone https://github.com/Binchitects/argus && cd code-intel/deploy
+git clone https://github.com/Binchitects/farzan && cd farzan/deploy
 cp .env.example .env      # your domain, the models folder, the first model, six secrets
 docker compose up -d
 ```
