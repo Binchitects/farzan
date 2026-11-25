@@ -23,7 +23,8 @@ offline installer is made on Linux (or WSL2).
 | upgrade an installation to this checkout's release | `./arenactl upgrade` |
 | put an installation right | `./arenactl repair` |
 | see what is installed and how it is | `./arenactl status` |
-| back it up | `./arenactl backup` (daily: `sudo ./arenactl backup --install-timer`) |
+| back it up | `./arenactl backup`; when it runs: `sudo ./arenactl backup schedule 03:30` (or `hourly`, `"every 6h"`, `"Mon,Thu 02:00"`) |
+| take it down for work on the host | `./arenactl maintenance on --message "Back at 14:00"`, then `./arenactl maintenance off` |
 | know whether the running stack works | `./arenactl check functional` |
 | run the tests | `./arenactl test` |
 | see every script | `./arenactl scripts` |
@@ -99,6 +100,11 @@ sh arena-VERSION-offline.run install --dir /srv/arena
 | `./arenactl features` | the features, each on or off, with what they need |
 | `./arenactl verify` | the installation's files against their checksums |
 | `./arenactl remove` | the stack's containers and images; the data stays unless `--purge` |
+| `./arenactl stop [SERVICE...]` | the stack's services stopped (all, after a yes, or those named: `stop app web`); their data stays |
+| `./arenactl start [SERVICE...]` | the same started again from the images there (nothing pulled or built), then waited on until healthy |
+| `./arenactl maintenance on [--message TEXT] [--all]` | every address answers with a maintenance page (503, `Retry-After`, the message on it) and the services people use stop; the database, Traefik and the monitoring stay up for a backup, a restore or work on the host (`--all` stops them too). `on` again with `--message` changes the page's words |
+| `./arenactl maintenance off` | everything started again as the features have it, waited on until healthy, and only then the page taken down (it stays while something is not healthy) |
+| `./arenactl maintenance status` | on or off, since when, its message and what it stopped (`status` says it too) |
 
 With a bundle, the same commands run from the file: `sh arena-VERSION-offline.run upgrade --dir /srv/arena`.
 
@@ -165,7 +171,8 @@ installation; without it, `/srv/arena` or `~/arena`, else this checkout's
 
 | command | script | what |
 |---|---|---|
-| `./arenactl backup` | `backup.sh` | the databases, settings and files into `BACKUP_DIR`; `--list`, `--verify`, `--prune`, `--install-timer` (daily, through systemd), `--pitr` |
+| `./arenactl backup` | `backup.sh` | the databases, settings and files into `BACKUP_DIR`; `--list`, `--verify`, `--prune`, `--pitr` |
+| `sudo ./arenactl backup schedule WHEN [--keep N] [--copy-dir DIR]` | `backup.sh schedule` | when backups run, through systemd's timer, saved in `.env`: `03:30` (each day), `hourly`, `"every 6h"`, `"Mon,Thu 02:00"`, `weekly`, or a systemd calendar (`"*-*-01 04:00"`, the first of the month); `schedule show` the next run and how the last ended, `schedule off` no more (the backups stay) |
 | `./arenactl restore --from DIR` | `backup.sh --restore` | a backup put back (the stack stopped); `--with-config` also `.env` and the config files |
 | `./arenactl cert` | `make-cert.sh` | the certificate (above) |
 | `./arenactl sign` | `sign-code-arena.sh` | Code Arena's signature (above) |

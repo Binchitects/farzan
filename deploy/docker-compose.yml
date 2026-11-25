@@ -67,6 +67,24 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
 
+  # The maintenance page (installer.sh maintenance on): the web's own image with the page's nginx config, answering
+  # every path with 503; Traefik routes everything to it while config/traefik/maintenance.yml is there. Runs only then.
+  maintenance:
+    <<: *service
+    image: ${COMPOSE_PROJECT_NAME:-arena}-web
+    pull_policy: never
+    container_name: maintenance
+    profiles: [maintenance]
+    command: [nginx, -e, stderr, -c, /etc/maintenance/nginx.conf, -g, "daemon off;"]
+    volumes:
+      - ./config/maintenance/nginx.conf:/etc/maintenance/nginx.conf:ro
+      - ./config/maintenance/index.html:/srv/maintenance/index.html:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck: { test: [CMD, wget, -qO, /dev/null, "http://127.0.0.1:8080/healthz"], interval: 15s, timeout: 3s }
+
   app:
     <<: *service
     build: { context: .., dockerfile: src/Llm.Api/Dockerfile, args: { PRODUCT_NAME: "${PRODUCT_NAME:-}", CODE_INTEL_NAME: "${CODE_INTEL_NAME:-}" } }
@@ -446,7 +464,9 @@ services:
   audio:
     <<: *service
     profiles: [speech]
-    image: ghcr.io/speaches-ai/speaches:0.9.0-rc.3-cpu
+    # speaches' own image with its vulnerable packages brought up to date (services/speaches/Dockerfile).
+    build: ./services/speaches
+    image: arena-speaches
     container_name: audio
     # Plain HTTPS downloads: Hugging Face's Xet transfer stalls on flaky links. Its models stay loaded until the app
     # unloads them (unused for a while, Admin -> Models), not on a timer of its own.
@@ -677,15 +697,18 @@ services:
     command: -config.file=/etc/loki/loki.yml
     volumes: [./config/loki.yml:/etc/loki/loki.yml:ro, loki:/loki]
 
-  promtail:
+  # Grafana Alloy, Promtail's successor: each container's log through the engine's API into Loki (config/alloy.alloy).
+  # Where it has read to is kept in /tmp, as Promtail's was: a restart reads again from what Loki already has.
+  alloy:
     <<: *service
     profiles: [monitoring]
-    image: grafana/promtail:3.6.11
-    container_name: promtail
-    command: -config.file=/etc/promtail/promtail.yml
+    image: grafana/alloy:v1.22.0
+    container_name: alloy
+    command: [run, --storage.path=/tmp/alloy, --disable-reporting, /etc/alloy/config.alloy]
+    read_only: true
+    tmpfs: [/tmp]
     volumes:
-      - ./config/promtail.yml:/etc/promtail/promtail.yml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./config/alloy.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   node-exporter:

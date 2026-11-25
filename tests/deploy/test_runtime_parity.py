@@ -30,7 +30,7 @@ CHART = DEPLOY / "helm" / "arena"
 ALLOWED: dict[tuple[str, str, str], str] = {
     # Services compose runs that the chart leaves to the cluster.
     ("service", "traefik", "*"): "Kubernetes: the cluster's ingress controller and the Ingress (TLS from a Secret)",
-    ("service", "promtail", "*"): "Kubernetes: the cluster's log agent ships the pods' logs to Loki",
+    ("service", "alloy", "*"): "Kubernetes: the cluster's log agent ships the pods' logs to Loki",
     ("service", "gpu-exporter", "*"): "Kubernetes: GPU telemetry is the cluster's (DCGM exporter); GPU placement work",
     ("service", "power-limits", "*"): "privileged, writes the host's /sys: compose on Docker only",
     # Environment.
@@ -62,7 +62,6 @@ ALLOWED: dict[tuple[str, str, str], str] = {
 
 PODMAN_ALLOWED: dict[tuple[str, str, str], str] = {
     ("service", "power-limits", "*"): "needs the host's root",
-    ("mount", "promtail", "/var/lib/docker/containers"): "rootless Podman: its logs are read through its API",
 }
 
 # The chart's workloads; a compose service is the container of its name in one of them.

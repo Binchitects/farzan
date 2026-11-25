@@ -21,7 +21,7 @@ from pathlib import Path
 
 from support import COMPOSE, REPO, Sandbox
 
-SERVICES = "traefik\nweb\napp\npostgres\nvalkey\ncode-intel\ncpu-temp-exporter\nembed\n"
+SERVICES = "traefik\nweb\napp\npostgres\nvalkey\ncode-intel\ncpu-temp-exporter\nembed\nmaintenance\n"
 EMBED = "embed/nomic-embed-text-v1.5.f16.gguf"
 THIRD_PARTY = ["traefik:v3.8.0", "pgvector/pgvector:0.8.7-pg16-bookworm", "public.ecr.aws/valkey/valkey:9.2-alpine", "python:3.13-slim",
                "ghcr.io/ggml-org/llama.cpp:server-cuda"]
@@ -44,6 +44,8 @@ for svc, feature, after in (("code-intel", "code-intel", "    container_name: co
                             ("embed", "knowledge", "    container_name: embed\n"), ("llamacpp", "chat-models", "  llamacpp:\n    image: ghcr.io/ggml-org/llama.cpp:server-cuda\n")):
     assert COMPOSE_NEW.count(after) == 1, svc
     COMPOSE_NEW = COMPOSE_NEW.replace(after, after + f"    profiles: [{feature}]\n")
+# The maintenance page (installer.sh maintenance on): the web's image, only under its own profile.
+COMPOSE_NEW = COMPOSE_NEW.replace("volumes:\n", "  maintenance:\n    image: arena-web\n    container_name: maintenance\n    profiles: [maintenance]\nvolumes:\n", 1)
 FEATURES = """# id | default | services | needs | requires | title
 chat-models | on  | llamacpp | gpu | - | Chat models on this host
 knowledge   | on  | embed | - | - | Search by meaning
@@ -1984,6 +1986,65 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue(self.containers())
 
     # ----------------------------------------------------------------- status
+
+    def running(self) -> set[str]:
+        return {c["service"] for c in self.r.store()["containers"] if c["state"] == "running"}
+
+    def test_Maintenance_puts_up_the_page_stops_what_people_use_and_off_brings_it_all_back(self):
+        self.install()
+        before = self.running()
+        self.assertNotIn("maintenance", before)
+        installer = ["bash", str(self.dir / "deploy" / "scripts" / "installer.sh")]
+        quick = self.r.env({"MAINTENANCE_WAIT_S": "0"})
+        r = subprocess.run(installer + ["maintenance", "on", "--yes", "--message", "Back at <b>14:00</b> & then some"],
+                           env=quick, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, self.output(r))
+        deploy = self.dir / "deploy"
+        page = (deploy / "config" / "maintenance" / "index.html").read_text()
+        self.assertIn("Back at &lt;b&gt;14:00&lt;/b&gt; &amp; then some", page)
+        self.assertIn("return 503;", (deploy / "config" / "maintenance" / "nginx.conf").read_text())
+        route = (deploy / "config" / "traefik" / "maintenance.yml").read_text()
+        self.assertIn("rule: HostRegexp(`.+`)", route)
+        self.assertIn("priority: 2147483000", route)
+        # The page, Traefik, the database and the monitoring run; the services people use stopped.
+        now = self.running()
+        self.assertIn("maintenance", now)
+        self.assertTrue({"traefik", "postgres", "cpu-temp-exporter"} <= now, now)
+        self.assertFalse({"app", "web", "code-intel"} & now, now)
+        s = subprocess.run(installer + ["maintenance", "status"], env=quick, capture_output=True, text=True)
+        self.assertIn("in maintenance since", s.stdout)
+        self.assertIn("Back at <b>14:00</b> & then some", s.stdout)
+        self.assertIn("IN MAINTENANCE", subprocess.run(installer + ["status"], env=quick, capture_output=True, text=True).stdout)
+        # start with none named waits for maintenance off; one service may start in the meantime.
+        r = subprocess.run(installer + ["start"], env=quick, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 3, self.output(r))
+        self.assertIn("maintenance off", r.stderr)
+        r = subprocess.run(installer + ["maintenance", "off"], env=quick, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, self.output(r))
+        self.assertFalse((deploy / "config" / "traefik" / "maintenance.yml").exists())
+        self.assertEqual(self.running(), before)
+        self.assertIn("not in maintenance", subprocess.run(installer + ["maintenance", "status"], env=quick, capture_output=True, text=True).stdout)
+
+    def test_Stop_and_start_take_the_services_named_or_all_of_them(self):
+        self.install()
+        installer = ["bash", str(self.dir / "deploy" / "scripts" / "installer.sh")]
+        env = self.r.env()
+        before = self.running()
+        r = subprocess.run(installer + ["stop", "app", "web"], env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, self.output(r))
+        self.assertEqual(self.running(), before - {"app", "web"})
+        r = subprocess.run(installer + ["stop", "nothing-like-it"], env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 3, self.output(r))
+        self.assertIn("not one of this stack's services", r.stderr)
+        r = subprocess.run(installer + ["start", "app", "web"], env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, self.output(r))
+        self.assertEqual(self.running(), before)
+        r = subprocess.run(installer + ["stop", "--yes"], env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, self.output(r))
+        self.assertEqual(self.running(), set())
+        r = subprocess.run(installer + ["start"], env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, self.output(r))
+        self.assertEqual(self.running(), before)
 
     def test_Status_says_what_runs_and_what_does_not(self):
         self.install()

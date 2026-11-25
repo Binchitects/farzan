@@ -1,0 +1,114 @@
+// This stack's container logs into Loki, for the app's Logs page (Grafana Alloy, Promtail's successor).
+// Each container of this project, read through the engine's API (Docker's socket, or Podman's in its place),
+// labelled with its container, service, stream and project.
+
+discovery.docker "containers" {
+	host             = "unix:///var/run/docker.sock"
+	refresh_interval = "15s"
+}
+
+discovery.relabel "containers" {
+	targets = []
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_log_stream"]
+		target_label  = "stream"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		target_label  = "service"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+		target_label  = "project"
+	}
+
+	// Only this stack: not a test GitLab or another project on the same engine.
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+		regex         = "arena"
+		action        = "keep"
+	}
+}
+
+loki.source.docker "containers" {
+	host          = "unix:///var/run/docker.sock"
+	targets       = discovery.docker.containers.targets
+	relabel_rules = discovery.relabel.containers.rules
+	forward_to    = [loki.process.containers.receiver]
+}
+
+loki.process "containers" {
+	forward_to = [loki.write.loki.receiver]
+
+	// llama.cpp: "0.03.172.993 I srv ..." -- a single-letter level.
+	stage.match {
+		selector = "{container=\"llamacpp\"}"
+
+		stage.regex {
+			expression = "^[^ ]+ +(?P<level>[DIWE]) "
+		}
+
+		stage.labels {
+			values = { level = "" }
+		}
+	}
+
+	// Its per-request timing lines are in Prometheus already (only those: the rest of its log is kept).
+	stage.match {
+		selector = "{container=\"llamacpp\"} |= \"print_timing\""
+		action   = "drop"
+	}
+
+	stage.match {
+		selector = "{container=~\"prometheus|loki|alloy\"}"
+
+		stage.regex {
+			expression = "level=(?P<level>[a-zA-Z]+)"
+		}
+
+		stage.labels {
+			values = { level = "" }
+		}
+	}
+
+	// The app: one JSON object a line.
+	stage.match {
+		selector = "{container=\"app\"} |~ \"^[{]\""
+
+		stage.json {
+			expressions = { level = "LogLevel" }
+		}
+
+		stage.labels {
+			values = { level = "" }
+		}
+	}
+
+	// code-intel: one JSON object per tool call or refused request.
+	stage.match {
+		selector = "{container=\"code-intel\"} |~ \"^[{]\\\"ts\\\"\""
+
+		stage.json {
+			expressions = { event = "event", outcome = "outcome", tool = "tool" }
+		}
+
+		stage.labels {
+			values = { event = "", outcome = "", tool = "" }
+		}
+	}
+}
+
+loki.write "loki" {
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
+}

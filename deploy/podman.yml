@@ -38,9 +38,9 @@ services:
   dcgm-exporter: *gpu
 
   # Podman's API in place of Docker's.
-  promtail:
+  alloy:
     volumes: !override
-      - ./config/promtail.yml:/etc/promtail/promtail.yml:ro
+      - ./config/alloy.alloy:/etc/alloy/config.alloy:ro
       - ${XDG_RUNTIME_DIR}/podman/podman.sock:/var/run/docker.sock:ro
 
   # Power caps write /sys, which needs the host's root.

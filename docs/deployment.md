@@ -22,7 +22,7 @@ and no setup scripts.
 | `sandbox` | the chat's Python: no network, a read-only root, each run its own user |
 | `laya` | typed decisions on the CPU (the chat's Decide tool, Code Arena's look at commands); **off** until its feature is on ([below](#laya)) |
 | `searxng` | the chat's web search |
-| `prometheus`, `alertmanager`, `loki`, `promtail`, `node-exporter`, `gpu-exporter`, `cpu-temp-exporter` | what the app's dashboards, logs and alerts read |
+| `prometheus`, `alertmanager`, `loki`, `alloy`, `node-exporter`, `gpu-exporter`, `cpu-temp-exporter` | what the app's dashboards, logs and alerts read |
 | `dcgm-exporter` (profile `dcgm`, off by default) | NVIDIA DCGM's data-centre GPU detail for the GPU Hardware dashboard: PCIe and NVLink throughput, SM and tensor activity, XID errors, ECC and retired pages. Bare-metal Linux only, NVIDIA's own image on Docker Hub (`nvidia/dcgm-exporter`; nvcr.io has the same); the `dcgm` feature turns it on. Without it the dashboard's GPU detail section (clocks, throttling, PCIe link, fans, ECC) still comes from `gpu-exporter` |
 | `power-limits` | GPU and CPU power caps from `.env`, kept applied (privileged) |
 
@@ -228,7 +228,7 @@ on; its API answers 404; and its background work does not run.
 | `workspaces` | no | `workspaces` | Code Studio |
 | `laya` | no | `laya` | |
 | `scanners` | no | `scanners` (an image of about 700 MB) | Farzan Graph |
-| `monitoring` | yes | `prometheus`, `alertmanager`, `loki`, `promtail`, `node-exporter`, `cpu-temp-exporter` | |
+| `monitoring` | yes | `prometheus`, `alertmanager`, `loki`, `alloy`, `node-exporter`, `cpu-temp-exporter` | |
 | `gpu-monitoring` | yes | `gpu-exporter` | a GPU; monitoring |
 | `dcgm` | no | `dcgm-exporter` | a GPU; monitoring |
 | `power-limits` | yes | `power-limits` | a GPU |
@@ -472,7 +472,7 @@ the prompt log, the person's voice and language) and sends each on to its
 engine itself; no engine is reachable from outside. While no app pod is ready, the API is down too (502 or
 503): nothing goes around the app.
 External Postgres: `postgresql.enabled=false` and `externalDatabase`. Logs reach
-Loki only with a log agent of the cluster's (promtail, or another). The host's
+Loki only with a log agent of the cluster's (Grafana Alloy, or another). The host's
 figures come from the `host-exporters` DaemonSet (node-exporter and the CPU's
 temperature, as compose's), which runs with the host's processes and its `/`,
 `/proc` and `/sys` read only: a namespace at the `baseline` or `restricted` Pod
@@ -538,7 +538,7 @@ how). **no**: missing, with the reason.
 | `valkey` (LMCache's shared store) | off (the `valkey` feature) | the same | off (`valkey.enabled`) |
 | `dcgm-exporter` | off (the `dcgm` feature) | the same, CDI | no: the cluster's (GPU Operator) |
 | `node-exporter`, `cpu-temp-exporter` | yes | yes | yes: the `host-exporters` DaemonSet (`monitoring.hostExporters`) |
-| `promtail` | yes | differs: Podman's socket for Docker's | no: the cluster's log agent ships the pods' logs to Loki |
+| `alloy` | yes | differs: Podman's socket for Docker's | no: the cluster's log agent ships the pods' logs to Loki |
 | `gpu-exporter` | yes | yes, CDI | no: the cluster's (NVIDIA's DCGM exporter); until Prometheus scrapes one, `GpuExporterDown` fires |
 | `dcgm-exporter` | profile `dcgm` | profile `dcgm`, CDI | no: the cluster's (NVIDIA's GPU Operator runs it) |
 | `power-limits` | yes | no: it writes the host's `/sys` | no: privileged; the cluster's |
@@ -554,7 +554,7 @@ how). **no**: missing, with the reason.
 | **Configuration and scripts** | | | |
 | `code-intel.yaml`, `searxng.yml`, `alertmanager.yml`, `loki.yml`, `prometheus/` and its rules | mounted from `config/` | the same | the same files, from the chart's copies |
 | `services/llamacpp/router.sh` (the engine key by `LLAMA_API_KEY`), `services/sd-serve.sh`, `services/cpu-temp-exporter`, `services/vllm/` (the key by `VLLM_API_KEY`), `services/sglang/serve.py` (the key by `SGLANG_API_KEY`, handed to SGLang inside its process), `services/lmdeploy/serve.py` and `services/strata/serve.py` (the key by `VLLM_API_KEY`, handed over inside the process or by Strata's `--api-key-env`), `services/gpu-probe.py`, `tools/fake-vllm` | mounted | the same | the same files, from the chart's copies |
-| `promtail.yml`, `traefik/routes.yml` | mounted | the same | no: the cluster's log agent; the Ingress |
+| `alloy.alloy`, `traefik/routes.yml` | mounted | the same | no: the cluster's log agent; the Ingress |
 | `services/power-limits.sh` | mounted | no | no |
 | **Secrets** | `.env` | `.env` | the `arena-secrets` Secret, made at install and kept (or `existingSecret`): the same keys |
 | **Health checks** | the images' (app, web, Farzan Graph, Laya), Traefik's and Postgres's | the same (compose builds through Podman's Docker API keep them; a `podman build` by hand drops them) | probes: app, web, Postgres, Laya, Farzan Graph |
@@ -896,11 +896,28 @@ became fixed, or went away:
 | `PROMETHEUS_RETENTION_TIME`, `_SIZE`, `*_CPUS`, `*_MEM_LIMIT`, `SANDBOX_*`, `LITELLM_WORKERS`, `EMBED_CPUS` | fixed in `docker-compose.yml` (30 days or 20 GB of metrics; the sandbox's limits); change one in `docker-compose.override.yml`. The longest Python run is Settings → Python and web |
 | `LITELLM_SALT_KEY`, `SEARXNG_SECRET`, `ENGINE_API_BASE`, `LLAMACPP_ENGINE_URL` and `_SHA256`, `CODE_INTEL_VERSION`, `LLM_UID`, `LLM_GID`, `LLM_CONFIG_DIR`, `LLM_SERVICES_DIR`, `LLM_ENV_SAMPLES_DIR`, `COMPOSE_PROJECT_NAME`, `BIND_ADDRESS`, `DOCKER_SOCKET`, `HOST_*`, `LLAMACPP_RAM_RESERVE_GB`, `HOST_SWAPPINESS` | gone: the stack makes or knows them itself (the search secret is new at each start; no web app gets the Docker socket) |
 
+## Maintenance, stop and start
+
+`./arenactl maintenance on --message "Back at 14:00"` takes the stack down for work on the host: Traefik answers
+every address with a maintenance page (503 with `Retry-After`, the message on it, the product's name) and the
+services people use stop. The database, Traefik and the monitoring stay up, so a backup, a restore or a look at the
+dashboards still works; `--all` stops the database and the monitoring too. `./arenactl maintenance off` starts
+everything as the features have it, waits until every service is healthy, and only then takes the page down: while
+something is not healthy, the page stays and the command says what. `./arenactl maintenance status` (and `status`)
+say whether it is on, since when and with what message.
+
+`./arenactl stop` stops the whole stack (after a yes; `--yes` without asking) and `./arenactl start` starts it again
+from the images on the host, waiting until it is healthy. Both take services by name (`./arenactl stop app web`).
+The data stays; an installation's own copy does the same: `DIR/deploy/scripts/installer.sh stop --dir DIR`.
+
 ## Backups and restore
 
 `./arenactl backup` backs up the database (a consistent dump), every named
-volume and the configuration into `backups/`; `sudo ./arenactl backup
---install-timer` runs it daily. It runs the installation's own
+volume and the configuration into `backups/`; `sudo ./arenactl backup schedule
+03:30` runs it each day at 03:30 (or `hourly`, `"every 6h"`, `"Mon,Thu 02:00"`,
+`weekly`, any systemd calendar), `./arenactl backup schedule show` says when it
+runs next and how the last one ended, and `sudo ./arenactl backup schedule off`
+stops it. It runs the installation's own
 `scripts/backup.sh` (`--dir DIR` picks the installation); on a host with the
 installation and no checkout, run `scripts/backup.sh` in its `deploy/` with the
 same options. A new installation the installer made as root, on a host with

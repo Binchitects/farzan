@@ -17,7 +17,7 @@ company are in **bold**: each is one [Company] turns on and answers for.
                                     │   ├──────▶ sandbox (no network: code, ffmpeg)
                                     │   ├──────▶ code-intel (code questions, the person's GitLab membership)
                                     │   └──────▶ searxng, browser (the web)
-                                    └─ logs, masked ──▶ promtail ──▶ loki
+                                    └─ logs, masked ──▶ alloy ──▶ loki
 ```
 
 | Data | From | To | Protected by | At rest |

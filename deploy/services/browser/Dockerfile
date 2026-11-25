@@ -12,6 +12,11 @@ RUN apt-get update \
  && useradd --uid 10001 --create-home --home-dir /home/browser browser
 
 COPY --chmod=755 run.py /run.py
+# pip out of the image: nothing here installs at run time, and pip carries its own copies of urllib3, msgpack and
+# setuptools (with known vulnerabilities in the ones it bundles); Python's ensurepip wheel with it.
+RUN python3 -m pip uninstall -y pip \
+ && rm -rf /usr/local/lib/python3.13/ensurepip/_bundled /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.13
+
 USER 10001
 EXPOSE 9222
 ENTRYPOINT ["python", "-I", "-u", "/run.py"]

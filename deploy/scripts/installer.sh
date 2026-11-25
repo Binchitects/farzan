@@ -38,6 +38,14 @@
 #   verify    the bundle's checksums; with an installation, its files' too
 #   features  the features (deploy/features): each on or off here (or in a new installation), the
 #             disk its images take, what it needs and requires
+#   stop      stops the stack's services (all of them, or those named: stop app web); their data stays.
+#             start puts them back up as the features have them (all, or those named) and waits until healthy
+#   maintenance on|off|status
+#             on: every address answers with a maintenance page (503, --message TEXT on it, Retry-After)
+#             and the services people use stop; the database, Traefik and the monitoring stay up (--all
+#             stops the database and the monitoring too), so a backup, a restore or a host's work can be
+#             done. off: everything up again as before, waiting until it is healthy. status: on or off,
+#             since when, and its message
 #   config    the settings in .env an operator chooses (deploy/settings: the address, models, GitLab,
 #             backups, power and heat, the sandboxes' size, the network...), shown by group (secrets
 #             only as set or not), changed on a terminal or with --set, and the services they touch
@@ -228,14 +236,15 @@ confirm() {   # confirm QUESTION: yes or no (default no)
 CMD="${1:-}"
 [[ $# -gt 0 ]] && shift
 case "$CMD" in
-  install|upgrade|repair|remove|status|verify|requirements|features|config) ;;
+  install|upgrade|repair|remove|status|verify|requirements|features|config|stop|start|maintenance) ;;
   help|-h|--help) usage ;;
-  "") usage_error "say what to do: requirements, install, upgrade, repair, remove, status, verify, features or config" ;;
+  "") usage_error "say what to do: requirements, install, upgrade, repair, remove, status, verify, features, config, stop, start or maintenance" ;;
   *) usage_error "unknown command: $CMD" ;;
 esac
 SETS=()
 DIR="" BUNDLE_ARG="" ENGINE="" PROJECT_ARG="" YES=0 DRY=0 LOG_ARG="" TIMEOUT=15
 DOMAIN_ARG="" EMAIL_ARG="" MODELS_ARG="" DATA_ARG="" MODEL_ARG="" HTTP_ARG="" HTTPS_ARG="" ACME_ARG="" GITLAB_ARG="" GITLAB_TOKEN_FILE=""
+POS=() MESSAGE_ARG="" ALL_ARG=0
 CPU_ONLY=0 WITH_ARG="" WITHOUT_ARG="" KEEP_IMAGES=0 KEEP_FAILED=0 NO_CERT=0 HOSTS=0 SKIP_REQ=0 FIX_REQ=0 PURGE=0 CONFIRM_ARG="" FINAL_BACKUP="" ROLLBACK=0 DEFAULTS_ARG=""
 only() { local c; for c in "${@:2}"; do [[ $CMD == "$c" ]] && return 0; done; usage_error "$1 is for ${*:2}"; }
 value() { [[ $2 -gt 1 ]] || usage_error "$1 needs a value"; }
@@ -277,11 +286,20 @@ while [[ $# -gt 0 ]]; do
     --confirm) only "$1" remove; value "$1" $#; CONFIRM_ARG="$2"; shift ;;
     --final-backup) only "$1" remove; value "$1" $#; FINAL_BACKUP="$2"; shift ;;
     --set) only "$1" install upgrade repair config; value "$1" $#; [[ "$2" =~ ^[A-Z][A-Z0-9_]*= ]] || usage_error "--set is KEY=VALUE (KEY=@FILE reads the value from a file)"; SETS+=("$2"); shift ;;
+    --message) only "$1" maintenance; value "$1" $#; MESSAGE_ARG="$2"; shift ;;
+    --all) only "$1" maintenance; ALL_ARG=1 ;;
     -h|--help) usage ;;
-    *) usage_error "unknown option: $1" ;;
+    -*) usage_error "unknown option: $1" ;;
+    *) [[ $CMD == stop || $CMD == start || $CMD == maintenance ]] || usage_error "unknown option: $1"
+       [[ "$1" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || usage_error "a service is named with lowercase letters, digits, - and _: $1"
+       POS+=("$1") ;;
   esac
   shift
 done
+if [[ $CMD == maintenance ]]; then
+  [[ ${#POS[@]} -eq 1 && ( ${POS[0]} == on || ${POS[0]} == off || ${POS[0]} == status ) ]] || usage_error "maintenance on, off or status"
+fi
+[[ ${#MESSAGE_ARG} -le 500 ]] || usage_error "--message has at most 500 characters"
 for p in "$HTTP_ARG" "$HTTPS_ARG"; do
   [[ -z "$p" || ( "$p" =~ ^[0-9]+$ && $p -ge 1 && $p -le 65535 ) ]] || usage_error "a port is a number from 1 to 65535: $p"
 done
@@ -3956,6 +3974,7 @@ cmd_status() {
   elif [[ -f "$MARKER" ]]; then say "  an upgrade to $(marker_get to) was interrupted: that bundle's upgrade (or a newer release's) run again carries it on; upgrade --rollback goes back to $(marker_get from)"; fi
   [[ -n "$BUNDLE" ]] && say "  this bundle: $BVERSION ($(bundle_get commit)), upgrades $UPGRADES_FROM or newer"
   say "  https://$DOMAIN$([[ "$HTTPS_PORT" != 443 ]] && echo ":$HTTPS_PORT")"
+  [[ "$(state_get maintenance)" == on ]] && say "  IN MAINTENANCE since $(state_get maintenance-since) (maintenance off brings it back)"
   step "services"
   local -A seen=()
   local models
@@ -4029,6 +4048,219 @@ cmd_verify() {
   exit 6
 }
 
+# ============================================================= stop and start
+# The services named, or every one the features run; each named must be one of the stack's.
+# SVCS: those named (each checked here, in this shell, so a wrong one stops the command), or every one.
+named_services() {
+  local all svc
+  all=" $(dc config --services 2>/dev/null | tr '\n' ' ') "
+  SVCS=()
+  if [[ ${#POS[@]} -eq 0 ]]; then read -ra SVCS <<< "$all"; return 0; fi
+  for svc in "${POS[@]}"; do
+    [[ "$all" == *" $svc "* ]] || refuse "$svc is not one of this stack's services (on now: $(echo $all))"
+    SVCS+=("$svc")
+  done
+}
+cmd_stop() {
+  local -a svcs
+  [[ -f "$DEPLOY/docker-compose.yml" ]] || refuse "no installation in $DIR"
+  [[ -f "$MARKER" ]] && refuse "an upgrade was cut off here: run upgrade again to finish it first"
+  read_settings
+  named_services; svcs=("${SVCS[@]}")
+  say "Stop $([[ ${#POS[@]} -eq 0 ]] && echo "every service of $PRODUCT" || echo "${svcs[*]}") in $DIR ($ENGINE, project $PROJECT)$([[ $DRY -eq 1 ]] && echo " -- dry run: nothing is done")"
+  if [[ $DRY -eq 1 ]]; then would "stop ${svcs[*]} (their data stays; start brings them back)"; return 0; fi
+  if [[ ${#POS[@]} -eq 0 ]]; then confirm "Stop the whole stack (nobody can use it until start)?" || refuse "not confirmed"; fi
+  lock; start_log
+  step "stopping"
+  if [[ ${#POS[@]} -eq 0 ]]; then
+    dc stop >> "$LOG" 2>&1 || die "$ENGINE compose stop failed (its log: $LOG)"
+    state_set stopped "$(date -u +%FT%TZ)"
+  else
+    dc stop "${svcs[@]}" >> "$LOG" 2>&1 || die "$ENGINE compose stop ${svcs[*]} failed (its log: $LOG)"
+  fi
+  ok "stopped: ${svcs[*]}"
+  say "start (the same services, or none named for all) brings them back."
+}
+cmd_start() {
+  local -a svcs
+  [[ -f "$DEPLOY/docker-compose.yml" ]] || refuse "no installation in $DIR"
+  [[ -f "$MARKER" ]] && refuse "an upgrade was cut off here: run upgrade again to finish it first"
+  if [[ "$(state_get maintenance)" == on && ${#POS[@]} -eq 0 ]]; then
+    refuse "the stack is in maintenance: maintenance off brings it all back (start SERVICE starts one in the meantime)"
+  fi
+  read_settings
+  named_services; svcs=("${SVCS[@]}")
+  say "Start $([[ ${#POS[@]} -eq 0 ]] && echo "$PRODUCT" || echo "${svcs[*]}") in $DIR ($ENGINE, project $PROJECT)$([[ $DRY -eq 1 ]] && echo " -- dry run: nothing is done")"
+  if [[ $DRY -eq 1 ]]; then would "start ${svcs[*]} from the images here (nothing pulled or built), then wait until healthy"; return 0; fi
+  lock; start_log
+  step "starting"
+  if [[ ${#POS[@]} -eq 0 ]]; then
+    dc up -d --no-build --pull never --remove-orphans >> "$LOG" 2>&1 || die "$ENGINE compose up failed (its log: $LOG)"
+    state_set stopped ""
+  else
+    dc up -d --no-build --pull never --no-deps "${svcs[@]}" >> "$LOG" 2>&1 || die "$ENGINE compose up ${svcs[*]} failed (its log: $LOG)"
+  fi
+  wait_healthy || die "not every service is healthy: status says which, repair puts them right"
+}
+
+# ================================================================ maintenance
+MAINT_DIR_REL=config/maintenance
+MAINT_ROUTE_REL=config/traefik/maintenance.yml
+# The services kept up in maintenance: Traefik (it answers with the page), the database (a backup or a restore reads
+# it) and the monitoring (the dashboards and alerts see the host's work); --all keeps only Traefik and the page.
+maint_keep() {
+  if [[ $ALL_ARG -eq 1 ]]; then echo "traefik maintenance"; return 0; fi
+  echo "traefik maintenance postgres prometheus alertmanager loki alloy node-exporter gpu-exporter cpu-temp-exporter dcgm-exporter power-limits"
+}
+html_escape() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g' -e "s/'/\&#39;/g"; }
+maint_write_page() {   # maint_write_page MESSAGE SINCE
+  local dir="$DEPLOY/$MAINT_DIR_REL" msg since name
+  name="$(env_get PRODUCT_NAME)"; name="${name:-$PRODUCT}"
+  msg="$(printf '%s' "${1:-The service is being looked after and will be back soon.}" | html_escape)"
+  since="$(printf '%s' "$2" | html_escape)"
+  name="$(printf '%s' "$name" | html_escape)"
+  mkdir -p "$dir" || die "cannot write $dir"
+  cat > "$dir/index.html" <<EOF
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$name: maintenance</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f6f7f9; --ink: #1b1c1f; --muted: #62656d; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111317; --ink: #e8e9ec; --muted: #9a9ea8; } }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--ink);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 32rem; padding: 2rem 1rem; text-align: center; }
+  h1 { font-size: 1.5rem; margin: 0 0 .75rem; }
+  p { margin: .5rem 0; }
+  .since { color: var(--muted); font-size: .875rem; }
+</style></head>
+<body><main>
+  <h1>$name is under maintenance</h1>
+  <p>$msg</p>
+  <p class="since">Since $since. Try again in a few minutes.</p>
+</main></body></html>
+EOF
+  cat > "$dir/nginx.conf" <<'EOF'
+# The maintenance page (installer.sh maintenance on): every path answers 503 with it, and Retry-After.
+worker_processes 1;
+pid /tmp/nginx.pid;
+error_log /dev/stderr warn;
+events { worker_connections 256; }
+http {
+  server_tokens off;
+  access_log off;
+  client_body_temp_path /tmp/nginx-body;
+  proxy_temp_path /tmp/nginx-proxy;
+  fastcgi_temp_path /tmp/nginx-fastcgi;
+  uwsgi_temp_path /tmp/nginx-uwsgi;
+  scgi_temp_path /tmp/nginx-scgi;
+  server {
+    listen 8080;
+    root /srv/maintenance;
+    location = /healthz { default_type text/plain; return 200 "ok\n"; }
+    location / {
+      add_header Retry-After 300 always;
+      add_header Cache-Control "no-store" always;
+      error_page 503 /index.html;
+      return 503;
+    }
+    location = /index.html { internal; default_type text/html; add_header Retry-After 300 always; add_header Cache-Control "no-store" always; }
+  }
+}
+EOF
+  chmod 644 "$dir/index.html" "$dir/nginx.conf"
+}
+# Traefik's route to the page, over every other (the highest priority), for every name and path.
+maint_write_route() {
+  local acme; acme="$(env_get ACME_EMAIL)"
+  cat > "$DEPLOY/$MAINT_ROUTE_REL.tmp" <<EOF
+# Written by installer.sh maintenance on, removed by maintenance off: while it is here, every address answers
+# with the maintenance page.
+http:
+  routers:
+    maintenance:
+      rule: HostRegexp(\`.+\`)
+      priority: 2147483000
+      service: maintenance
+      tls: $([[ -n "$acme" ]] && echo "{ certResolver: letsencrypt }" || echo "{}")
+  services:
+    maintenance: { loadBalancer: { servers: [{ url: "http://maintenance:8080" }] } }
+EOF
+  mv "$DEPLOY/$MAINT_ROUTE_REL.tmp" "$DEPLOY/$MAINT_ROUTE_REL"
+}
+# Waits until Traefik answers with the page (503), up to a minute (MAINTENANCE_WAIT_S: its tests' shorter one).
+maint_until_page() {
+  local i code
+  for i in $(seq 1 $(( ${MAINTENANCE_WAIT_S:-60} / 2 + 1 ))); do
+    code="$(curl -sk -o /dev/null -w '%{http_code}' --resolve "$DOMAIN:$HTTPS_PORT:127.0.0.1" "https://$DOMAIN:$HTTPS_PORT/" 2>/dev/null || :)"
+    [[ $code == 503 ]] && return 0
+    sleep 2
+  done
+  return 1
+}
+cmd_maintenance() {
+  local what="${POS[0]}" since keep svc
+  local -a stop_list=()
+  [[ -f "$DEPLOY/docker-compose.yml" ]] || refuse "no installation in $DIR"
+  read_settings
+  case "$what" in
+    status)
+      if [[ "$(state_get maintenance)" == on ]]; then
+        say "$PRODUCT in $DIR: in maintenance since $(state_get maintenance-since)$([[ -n "$(state_get maintenance-message)" ]] && echo ": $(state_get maintenance-message)")"
+        say "  stopped then: $(state_get maintenance-stopped)"
+        say "  maintenance off brings them back."
+      else
+        say "$PRODUCT in $DIR: not in maintenance."
+      fi
+      return 0 ;;
+    on)
+      [[ -f "$MARKER" ]] && refuse "an upgrade was cut off here: run upgrade again to finish it first"
+      if [[ "$(state_get maintenance)" == on ]]; then
+        [[ -n "$MESSAGE_ARG" ]] || { say "Already in maintenance since $(state_get maintenance-since)."; return 0; }
+        if [[ $DRY -eq 1 ]]; then would "change the page's message"; return 0; fi
+        maint_write_page "$MESSAGE_ARG" "$(state_get maintenance-since)"
+        state_set maintenance-message "$MESSAGE_ARG"
+        ok "the page says now: $MESSAGE_ARG"; return 0
+      fi
+      keep=" $(maint_keep) "
+      for svc in $(dc config --services 2>/dev/null); do [[ "$keep" == *" $svc "* ]] || stop_list+=("$svc"); done
+      say "Maintenance for $PRODUCT in $DIR ($ENGINE, project $PROJECT)$([[ $DRY -eq 1 ]] && echo " -- dry run: nothing is done")"
+      if [[ $DRY -eq 1 ]]; then
+        would "answer every address with the maintenance page (503)$([[ -n "$MESSAGE_ARG" ]] && echo ", saying: $MESSAGE_ARG")"
+        would "stop ${stop_list[*]}"; return 0
+      fi
+      confirm "Put the stack in maintenance (people see the maintenance page until maintenance off)?" || refuse "not confirmed"
+      lock; start_log
+      since="$(date '+%Y-%m-%d %H:%M %Z')"
+      step "the maintenance page"
+      maint_write_page "$MESSAGE_ARG" "$since"
+      dc --profile maintenance up -d --no-build --pull never --no-deps maintenance >> "$LOG" 2>&1 || die "the maintenance page's container did not start (its log: $LOG)"
+      maint_write_route
+      if maint_until_page; then ok "every address answers with it (503)"; else note "Traefik did not answer with the page within a minute: status says what runs ($LOG)"; fi
+      state_set maintenance on maintenance-since "$since" maintenance-message "$MESSAGE_ARG" maintenance-stopped "${stop_list[*]}"
+      step "stopping the services people use"
+      if [[ ${#stop_list[@]} -gt 0 ]]; then dc stop "${stop_list[@]}" >> "$LOG" 2>&1 || bad "some did not stop: status says which"; fi
+      ok "stopped: ${stop_list[*]:-none}"
+      say "In maintenance. maintenance off brings everything back."
+      return 0 ;;
+    off)
+      if [[ "$(state_get maintenance)" != on && ! -f "$DEPLOY/$MAINT_ROUTE_REL" ]]; then say "$PRODUCT in $DIR is not in maintenance."; return 0; fi
+      say "Maintenance off for $PRODUCT in $DIR$([[ $DRY -eq 1 ]] && echo " -- dry run: nothing is done")"
+      if [[ $DRY -eq 1 ]]; then would "start every service as the features have them, wait until healthy, then take the page down"; return 0; fi
+      lock; start_log
+      step "starting the services"
+      dc up -d --no-build --pull never --remove-orphans >> "$LOG" 2>&1 || die "$ENGINE compose up failed: the page stays up (its log: $LOG)"
+      wait_healthy || die "not every service is healthy: the page stays up; status says which, repair puts them right, then maintenance off"
+      step "the maintenance page down"
+      rm -f -- "${DEPLOY:?}/${MAINT_ROUTE_REL:?}"
+      sleep 2
+      dc --profile maintenance rm -sf maintenance >> "$LOG" 2>&1 || :
+      state_set maintenance off maintenance-since "" maintenance-message "" maintenance-stopped ""
+      ok "$PRODUCT answers again"
+      return 0 ;;
+  esac
+}
+
 # ================================================================== requirements
 cmd_requirements() {
   HTTP_PORT="${HTTP_ARG:-$([[ $ENGINE == podman ]] && echo 8080 || echo 80)}" HTTPS_PORT="${HTTPS_ARG:-$([[ $ENGINE == podman ]] && echo 8443 || echo 443)}"
@@ -4058,4 +4290,7 @@ case "$CMD" in
   status) cmd_status ;;
   verify) cmd_verify ;;
   features) cmd_features ;;
+  stop) cmd_stop ;;
+  start) cmd_start ;;
+  maintenance) cmd_maintenance ;;
 esac

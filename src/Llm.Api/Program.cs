@@ -20,7 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 if (!builder.Environment.IsDevelopment())
 {
-    // One JSON object per line: promtail ships it to Loki as-is, with personal data masked first.
+    // One JSON object per line: Alloy ships it to Loki as-is, with personal data masked first.
     builder.Logging.ClearProviders()
         .AddConsole(o => o.FormatterName = ScrubbedJsonFormatter.FormatterName)
         .AddConsoleFormatter<ScrubbedJsonFormatter, Microsoft.Extensions.Logging.Console.ConsoleFormatterOptions>();

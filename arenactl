@@ -905,7 +905,7 @@ def cmd_bundle(a) -> int:
 
 
 # ----------------------------------------------------------------------------- the installer, from this checkout
-INSTALLER_COMMANDS = ("install", "upgrade", "repair", "remove", "status", "verify", "features", "requirements")
+INSTALLER_COMMANDS = ("install", "upgrade", "repair", "remove", "status", "verify", "features", "requirements", "stop", "start", "maintenance")
 
 
 def installation_dir(rest: list[str]) -> Path | None:
@@ -966,7 +966,7 @@ def cmd_installer(a) -> int:
 OPS = {
     "cert": ("make-cert.sh", "the stack's certificate: a CA of its own, or the company's (--cert, --key)"),
     "sign": ("sign-code-arena.sh", "sign the Code Arena builds the app serves with the stack's CA (--check)"),
-    "backup": ("backup.sh", "back up the databases, settings and files (--install-timer: daily)"),
+    "backup": ("backup.sh", "back up the databases, settings and files; backup schedule WHEN|show|off: when they run (03:30, hourly, \"every 6h\", \"Mon 02:00\")"),
     "restore": ("backup.sh", "restore a backup: arenactl restore --from BACKUP_DIR"),
     "hosts": ("setup-hosts.sh", "the stack's names in /etc/hosts (root)"),
     "kube": ("kube-install.sh", "install, upgrade, status and remove on Kubernetes with Helm"),

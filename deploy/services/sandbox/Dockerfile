@@ -93,4 +93,8 @@ RUN echo /opt/toolbox > "$(python -c 'import site; print(site.getsitepackages()[
  && python -c "import sandbox_tools, arena"
 
 COPY runner.py /runner.py
+# pip as new as there is (its own copies of urllib3 and msgpack with their fixes): code run here may use it.
+RUN pip install --no-cache-dir --upgrade "pip==26.3" \
+ && rm -rf /usr/local/lib/python3.13/ensurepip/_bundled
+
 ENTRYPOINT ["python", "-I", "-u", "/runner.py"]
