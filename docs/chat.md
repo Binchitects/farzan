@@ -517,8 +517,9 @@ chat tools too, with the same key: [Arena MCP](mcp.md) at `https://DOMAIN/mcp`.
 
     Bitstrings are Qiskit's (qubit 0 is the rightmost bit); a Pauli string's
     first letter acts on qubit 0.
-  - **Canvas**: documents and code beside the chat, which you and the model
-    both edit (see **Canvas** below).
+  - **Canvas**: documents, code and slides beside the chat, which you and the
+    model both edit (see **Canvas** below). Slides are a deck too: the
+    separate Decks tool of earlier releases is this.
   - **Reading files**: an attachment longer than a budget (30,000
     characters) goes into the question as its start and its outline (its
     headings, a PDF's pages, code's functions and classes, each with its
@@ -1775,15 +1776,26 @@ finger, then choose what it should become.
 
 ## Canvas
 
-Like ChatGPT's canvas and Claude's artifacts: a document (Markdown) or code (in
-a language) beside the chat, which you and the model both edit. A chat has as
-many as it needs (up to 50).
+Like ChatGPT's canvas and Claude's artifacts: a document (Markdown), code (in
+a language) or slides beside the chat, which you and the model both edit. A
+chat has as many as it needs (up to 50).
+
+- **Slides.** Ask for slides, a deck or a presentation and the model makes a
+  slides canvas: the deck written as Markdown (`# Title`, then
+  `## A slide {layout}` and what it holds, as [Decks](decks.md#an-outline)
+  reads it). It is a deck under Decks too, and each is the other: every saved
+  version of the canvas (yours or the model's) is a version of the deck, and a
+  change made in Decks comes back as your version of the canvas. The panel
+  shows **Slides** (the deck as it draws it), **Edit** (its Markdown) and
+  **Open in Decks to present**; export it as PowerPoint or Markdown. Numbers
+  the model gives a chart that no one gave it are left out, as in Decks.
+  Slides are for your own chats (not rooms) and need `feature.decks`.
 
 - **Opening it.** **Canvas** in the chat's header (with how many the chat has)
   opens the panel where the Files panel opens; one of the two shows at a time,
   and it takes half the page until narrowed. A canvas the model makes or
   changes opens by itself on a wide screen; its tool card has **Open** too.
-  **New document** and **New code** start one by hand.
+  **New document**, **New code** and **New slides** start one by hand.
 - **The model writes by changes.** The **Canvas** tool (on in new chats) has
   four functions. `canvas_create` writes a new canvas. `canvas_read` reads one
   as it is now (by lines for a long one), or lists them. `canvas_edit` replaces
