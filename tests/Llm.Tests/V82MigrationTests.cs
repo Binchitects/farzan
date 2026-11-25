@@ -9,7 +9,8 @@ namespace Llm.Tests;
 /// <summary>
 /// Upgrading a stack that has data to v8.2: decks keep their slides and get the built-in look; the Decks tool, now the
 /// canvas's slides, is "canvas" wherever it was chosen (once), and its settings, groups' settings and rules are gone;
-/// requests imported from LiteLLM whose first token was their end have none.
+/// requests imported from LiteLLM whose first token was their end have none; chat answers logged before requests carried
+/// their chat are linked to it, and to its project.
 /// </summary>
 [Collection(nameof(AppCollection))]
 public sealed class V82MigrationTests(AppFixture app)
@@ -27,6 +28,7 @@ public sealed class V82MigrationTests(AppFixture app)
         await db.GetService<IMigrator>().MigrateAsync(before);
 
         var (person, deck, chat, both, task, set, rule) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var (project, old) = (Guid.NewGuid(), Guid.NewGuid());
         await using (var conn = new NpgsqlConnection(cs))
         {
             await conn.OpenAsync();
@@ -48,6 +50,23 @@ public sealed class V82MigrationTests(AppFixture app)
                   ('01a1b3fb-0000-7000-8000-0000000000a3', '2026-10-01 10:00:00Z', '2026-10-01 10:00:09Z', '2026-10-01 10:00:09Z', 9000, 'api', 'chat', 'openai', 'api', 'qwen', 10, 0, 500, false, 0, 'done', 200, null)
                 """, conn);
             await ledger.ExecuteNonQueryAsync();
+            // A chat put in a project after its answers, from before requests carried their chat: its answer's request is
+            // found by its asker, model and tokens; another request of the same person, with other tokens, is not.
+            await V61MigrationTests.InsertAsync(conn, "work_projects", new() { ["Id"] = project, ["Name"] = "MDM", ["OwnerId"] = person });
+            await V61MigrationTests.InsertAsync(conn, "conversations", new() { ["Id"] = old, ["UserId"] = person, ["WorkProjectId"] = project });
+            await using var answered = new NpgsqlCommand("""
+                update "AspNetUsers" set "Email" = 'kim@example.test' where "Id" = @person;
+                insert into chat_messages ("Id", "ConversationId", "Role", "Content", "Status", "Sequence", "CreatedAt", "Model", "PromptTokens", "CompletionTokens")
+                  values ('01a1b3fb-0000-7000-8000-0000000000b1', @old, 'user', 'hi', 0, 0, '2026-10-26 17:23:15Z', null, null, null),
+                         ('01a1b3fb-0000-7000-8000-0000000000b2', @old, 'assistant', 'hello', 0, 1, '2026-10-26 17:23:16.5Z', 'qwen4', 2090, 67);
+                insert into gateway.requests (id, started_at, ended_at, duration_ms, surface, call, protocol, credit_kind, model, person, prompt_tokens,
+                  cached_tokens, completion_tokens, usage_estimated, cost, status, http_status, source_id) values
+                  ('01a1b3fb-0000-7000-8000-0000000000c1', '2026-10-26 17:23:16.545Z', '2026-10-26 17:23:18Z', 1500, 'chat', 'chat', 'openai', 'chat', 'qwen4', 'KIM@example.test', 2090, 0, 67, false, 0.002, 'done', 200, 'lite-c1'),
+                  ('01a1b3fb-0000-7000-8000-0000000000c2', '2026-10-26 17:23:16.6Z', '2026-10-26 17:23:18Z', 1500, 'chat', 'chat', 'openai', 'chat', 'qwen4', 'kim@example.test', 2090, 0, 68, false, 0.002, 'done', 200, 'lite-c2');
+                """, conn);
+            answered.Parameters.AddWithValue("person", person);
+            answered.Parameters.AddWithValue("old", old);
+            await answered.ExecuteNonQueryAsync();
         }
         await db.Database.MigrateAsync();
 
@@ -63,6 +82,10 @@ public sealed class V82MigrationTests(AppFixture app)
         Assert.False(await db.AccessRules.AsNoTracking().AnyAsync(r => r.Id == rule));
         // An imported answer not streamed has no first token; a streamed one keeps its own; the app's own rows are as they were.
         var firsts = await db.GatewayRequests.AsNoTracking().Where(r => r.Model == "qwen").OrderBy(r => r.Id).Select(r => r.FirstTokenAt).ToListAsync();
+        // The old answer's request is the chat's and its project's now; the other is as it was.
+        var linked = await db.GatewayRequests.AsNoTracking().Where(r => r.Model == "qwen4").OrderBy(r => r.Id).Select(r => new { r.ConversationId, r.ProjectId }).ToListAsync();
+        Assert.Equal((old, project), (linked[0].ConversationId!.Value, linked[0].ProjectId!.Value));
+        Assert.Equal((null, null), (linked[1].ConversationId, linked[1].ProjectId));
         Assert.Equal([null, new DateTimeOffset(2026, 10, 1, 10, 0, 1, TimeSpan.Zero), new DateTimeOffset(2026, 10, 1, 10, 0, 9, TimeSpan.Zero)], firsts);
     }
 }
