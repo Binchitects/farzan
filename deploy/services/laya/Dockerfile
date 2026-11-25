@@ -2,6 +2,9 @@
 # The weights are not in the image: the app fetches them into the model library
 # (MODELS_DIR/laya/english and multilingual), and this reads them from there.
 FROM python:3.13-slim
+# The base's own packages brought up to date first: a fix Debian has shipped is in the image even when the base
+# image on the registry is older than it.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 # PyPI over a slow or lossy link: a minute per read and ten tries before a package counts as missing (a read
 # that timed out read as "no matching distribution"). Only pip reads it.
 ENV PIP_DEFAULT_TIMEOUT=60 PIP_RETRIES=10

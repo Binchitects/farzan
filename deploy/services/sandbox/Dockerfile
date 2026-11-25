@@ -16,6 +16,7 @@ ENV PIP_DEFAULT_TIMEOUT=60 PIP_RETRIES=10
 # Tesseract OCR, poppler (PDF to text and pictures), Graphviz (diagrams), and
 # fonts for many scripts (Noto: Latin, Cyrillic, Greek, Arabic and Persian...).
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends \
       libreoffice-writer-nogui libreoffice-calc-nogui libreoffice-impress-nogui \
       pandoc ffmpeg imagemagick tesseract-ocr tesseract-ocr-eng poppler-utils graphviz \

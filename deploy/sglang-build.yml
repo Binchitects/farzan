@@ -9,9 +9,9 @@
 
 services:
   sglang:
-    image: arena-sglang:${SGLANG_VERSION:-0.5.21}
+    image: arena-sglang:${SGLANG_VERSION:-0.5.23}
     build:
       context: ./services
       dockerfile: sglang.Dockerfile
       args:
-        SGLANG_VERSION: ${SGLANG_VERSION:-0.5.21}
+        SGLANG_VERSION: ${SGLANG_VERSION:-0.5.23}

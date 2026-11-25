@@ -23,7 +23,7 @@ from support import COMPOSE, REPO, Sandbox
 
 SERVICES = "traefik\nweb\napp\npostgres\nvalkey\ncode-intel\ncpu-temp-exporter\nembed\n"
 EMBED = "embed/nomic-embed-text-v1.5.f16.gguf"
-THIRD_PARTY = ["traefik:v3.6.7", "pgvector/pgvector:0.8.0-pg16", "public.ecr.aws/valkey/valkey:8.1-alpine", "python:3.13-slim",
+THIRD_PARTY = ["traefik:v3.8.0", "pgvector/pgvector:0.8.7-pg16-bookworm", "public.ecr.aws/valkey/valkey:9.2-alpine", "python:3.13-slim",
                "ghcr.io/ggml-org/llama.cpp:server-cuda"]
 # What compose names with make-installer's release.yml on top: the release's own by version.
 IMAGES_NEW = "\n".join(THIRD_PARTY + ["arena-web:9.9.9", "arena-app:9.9.9", "arena-code-intel:9.9.9"])
@@ -731,7 +731,7 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue(self.r.s.called("load", "-q"))
         # Third-party images that were here before: recorded so, and remove leaves them.
         rows = [line.split("\t") for line in (self.dir / ".arena-install" / "IMAGES").read_text().splitlines()]
-        self.assertEqual([r_[2] for r_ in rows if r_[0] == "traefik:v3.6.7"], ["1"])
+        self.assertEqual([r_[2] for r_ in rows if r_[0] == "traefik:v3.8.0"], ["1"])
         self.assertEqual([r_[2] for r_ in rows if r_[0] == "arena-app:9.9.9"], ["0"])
         # Again: nothing breaks, nothing is loaded twice, .env kept.
         self.r.s.log.write_text("")
@@ -1690,9 +1690,9 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(self.containers(), [])
         for gone in ("arena-app:9.9.9", "arena-app:latest", "arena-web:9.9.9"):
             self.assertNotIn(gone, images)
-        for kept in ("traefik:v3.6.7", "python:3.13-slim"):
+        for kept in ("traefik:v3.8.0", "python:3.13-slim"):
             self.assertIn(kept, images)
-        self.assertIn("kept traefik:v3.6.7: on this host before Farzan Arena was installed", r.stdout)
+        self.assertIn("kept traefik:v3.8.0: on this host before Farzan Arena was installed", r.stdout)
         self.assertIn("arena_postgres", self.r.store()["volumes"])
         self.assertNotIn(anon, self.r.store()["volumes"])
         self.assertIn(other, self.r.store()["volumes"])
@@ -1732,7 +1732,7 @@ class InstallerTests(unittest.TestCase):
         self.assertNotIn("arena_postgres", self.r.store()["volumes"])
         self.assertFalse((self.dir / "deploy").exists())
         self.assertTrue(list((self.dir / ".arena-install" / "logs").glob("remove-*.log")))
-        self.assertIn("traefik:v3.6.7", self.r.store()["images"])
+        self.assertIn("traefik:v3.8.0", self.r.store()["images"])
 
     def test_Purge_keeps_the_files_of_a_folder_it_did_not_make(self):
         deploy = self.old_install()

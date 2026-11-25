@@ -12,6 +12,7 @@ ARG BLENDER_SHA256=9ba871ff2ecd36526b77432745980b7e6664ecd0c7ca11c48849073dcfe06
 # What Blender's binary links to, headless (no X server: --background), and Mesa's software OpenGL for
 # Workbench and EEVEE renders.
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends \
       ca-certificates curl xz-utils libx11-6 libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libice6 \
       libgl1 libegl1 libgl1-mesa-dri libglu1-mesa libxext6 libxinerama1 libxcursor1 libxrandr2 libwayland-client0 libdbus-1-3 \

@@ -5,6 +5,7 @@
 FROM python:3.13-slim-bookworm
 
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends chromium fonts-noto-core fonts-liberation \
  && rm -rf /var/lib/apt/lists/* \
  && find / -xdev -perm /6000 -type f -exec chmod a-s {} + \

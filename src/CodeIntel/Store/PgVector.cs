@@ -74,6 +74,18 @@ public static class PgVector
     public static void EnsureSchema(int dim)
     {
         using var conn = Source().OpenConnection();
+        // An older pgvector's SQL brought up to the library's after an image upgrade; only its owner may, so a company
+        // Postgres another owns keeps its own.
+        try
+        {
+            using var update = conn.CreateCommand();
+            update.CommandText = "CREATE EXTENSION IF NOT EXISTS vector; ALTER EXTENSION vector UPDATE";
+            update.ExecuteNonQuery();
+        }
+        catch (Npgsql.PostgresException)
+        {
+            // Not the owner, or no newer version: the one there serves (CREATE below says if there is none at all).
+        }
         foreach (var sql in new[]
                  {
                      "CREATE EXTENSION IF NOT EXISTS vector",

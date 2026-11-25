@@ -62,30 +62,30 @@ images:
   scanners: { repository: arena-scanners, tag: "" }
   studio: { repository: arena-studio, tag: "" }
   workspaces: { repository: arena-workspaces, tag: "" }
-  postgres: { repository: pgvector/pgvector, tag: 0.8.0-pg16 }
+  postgres: { repository: pgvector/pgvector, tag: 0.8.7-pg16-bookworm }
   llamacpp: { repository: ghcr.io/ggml-org/llama.cpp, tag: server-cuda }
   # A build that is known to work: master-cuda moves under its flags.
   sdcpp: { repository: ghcr.io/leejet/stable-diffusion.cpp, digest: "sha256:1aee2217d5e20ddfb19dfcbca21db3cbe1dcb0ae3b9bc4151773e503dca8aede" }
   audio: { repository: ghcr.io/speaches-ai/speaches, tag: 0.9.0-rc.3-cpu }
   searxng: { repository: ghcr.io/searxng/searxng, tag: latest }
-  prometheus: { repository: prom/prometheus, tag: v3.1.0 }
-  alertmanager: { repository: prom/alertmanager, tag: v0.28.0 }
-  loki: { repository: grafana/loki, tag: 3.4.1 }
-  nodeExporter: { repository: prom/node-exporter, tag: v1.9.0 }
+  prometheus: { repository: prom/prometheus, tag: v3.16.0 }
+  alertmanager: { repository: prom/alertmanager, tag: v0.35.1 }
+  loki: { repository: grafana/loki, tag: 3.7.10 }
+  nodeExporter: { repository: prom/node-exporter, tag: v1.13.1 }
   # The CPU temperature exporter's (services/cpu-temp-exporter, from the chart's files).
   python: { repository: python, tag: 3.13-slim }
-  valkey: { repository: public.ecr.aws/valkey/valkey, tag: 8.1-alpine }
+  valkey: { repository: public.ecr.aws/valkey/valkey, tag: 9.2-alpine }
   # vLLM (vllm.enabled): arena-vllm, built from deploy/services/vllm.Dockerfile (vLLM's own image with its GGUF plugin, which
   # GGUF files from the library need) and pushed with the others; vLLM's own or NGC's image serves snapshots only. Nothing is
   # pulled while it is off.
   vllm: { repository: arena-vllm, tag: "" }
-  # SGLang (sglang.enabled): its own image (ROCm: lmsysorg/sglang v0.5.21-rocm720-mi30x), or arena-sglang built from
+  # SGLang (sglang.enabled): its own image (ROCm: lmsysorg/sglang v0.5.23-rocm720-mi30x), or arena-sglang built from
   # deploy/services/sglang.Dockerfile and pushed to your registry; nothing is pulled while it is off.
-  sglang: { repository: lmsysorg/sglang, tag: v0.5.21-cu130-runtime }
+  sglang: { repository: lmsysorg/sglang, tag: v0.5.23-cu130-runtime }
   # LMDeploy (lmdeploy.enabled): arena-lmdeploy, built from deploy/services/lmdeploy.Dockerfile and pushed to your registry.
   lmdeploy: { repository: arena-lmdeploy, tag: "0.18.0" }
   # Strata (strata.enabled): its own image, from GitHub's registry.
-  strata: { repository: ghcr.io/niko1221/strata, tag: 0.2.11-cuda13 }
+  strata: { repository: ghcr.io/niko1221/strata, tag: 0.2.22-cuda13 }
   pullPolicy: IfNotPresent
   pullSecrets: []
 

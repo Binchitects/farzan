@@ -576,7 +576,7 @@ how). **no**: missing, with the reason.
 - **vLLM** is off until asked for: the `vllm` feature, `--with vllm` on install,
   upgrade or repair. Its image is arena-vllm, the release's own:
   `services/vllm.Dockerfile` builds it on `VLLM_IMAGE`, vLLM's own image
-  (`vllm/vllm-openai:v0.31.0` by default), with vLLM's GGUF plugin
+  (`vllm/vllm-openai:v0.34.0` by default), with vLLM's GGUF plugin
   (vllm-gguf-plugin 0.0.5 and gguf 0.19.0, pinned by hash, in a layer of their
   own) and the supervisor. `./arenactl build` builds it with the feature on, and
   the offline bundle carries it as `arena-vllm:VERSION`; nothing is built or
@@ -604,7 +604,7 @@ how). **no**: missing, with the reason.
   ([admin.md](admin.md#models)).
 - **SGLang** is off until asked for: the `sglang` feature, `--with sglang` on
   install, upgrade or repair. `SGLANG_IMAGE` is SGLang's own image
-  (`lmsysorg/sglang:v0.5.21-cu130-runtime` by default, about 14 GB;
+  (`lmsysorg/sglang:v0.5.23-cu130-runtime` by default, about 14 GB;
   `SGLANG_ROCM_IMAGE` with `rocm.yml`), or arena-sglang, built from PyPI by
   `sglang-build.yml` where Docker Hub cannot be reached. The same supervisor
   runs it (`ENGINE_SERVER=sglang`): one SGLang server per model the app wants,
@@ -635,7 +635,7 @@ how). **no**: missing, with the reason.
   `lmdeploy.enabled`.
 - **Strata** is off until asked for: the `strata` feature, `--with strata`.
   `STRATA_IMAGE` is Strata's own image from GitHub's registry
-  (`ghcr.io/niko1221/strata:0.2.11-cuda13`, 2.5 GB). Strata (MIT,
+  (`ghcr.io/niko1221/strata:0.2.22-cuda13`, 2.5 GB). Strata (MIT,
   github.com/Niko1221/Strata) is an engine on llama.cpp's for a few large MoE
   families as GGUF files (Qwen3.8-Flash-Next, Qwen3.6-35B-A3B): the experts that
   do not fit the GPUs stay in RAM and are read as each token needs them. The

@@ -10,18 +10,19 @@ FROM python:3.13-slim-bookworm
 # that timed out read as "no matching distribution"). Only pip reads it.
 ENV PIP_DEFAULT_TIMEOUT=60 PIP_RETRIES=10
 
-ARG OPENGREP_VERSION=1.31.0
-ARG OPENGREP_SHA256=02328d41e710a0305d7407de255bf556f7901f515b6cc3637f68999c54800f6c
+ARG OPENGREP_VERSION=1.33.1
+ARG OPENGREP_SHA256=1a78593c369cd58a8545a1dfb2ce548139f028a1af4ea7d08bc5ce8385cde243
 ARG GITLEAKS_VERSION=8.30.1
 ARG GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
-ARG TRIVY_VERSION=0.75.0
-ARG TRIVY_SHA256=c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f
+ARG TRIVY_VERSION=0.76.2
+ARG TRIVY_SHA256=bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf
 
 # git, to check out a bundle's commit and for gitleaks to read its history (its C commands only: Perl, which only
 # git's interactive and mail commands use, is removed again); opengrep's engine alone (LGPL-2.1: its command-line
 # wrapper unpacks some 250 MB of Python at each start, and the scanner gives the engine its rules and files itself);
 # gitleaks (MIT) and Trivy (Apache-2.0). curl only while building. One layer, so what is removed takes no room.
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends git ca-certificates curl \
  && curl -fsSL -o /tmp/opengrep.tgz "https://github.com/opengrep/opengrep/releases/download/v${OPENGREP_VERSION}/opengrep-core_linux_x86.tar.gz" \
  && echo "${OPENGREP_SHA256}  /tmp/opengrep.tgz" | sha256sum -c - \

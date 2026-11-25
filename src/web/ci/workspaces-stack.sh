@@ -42,7 +42,7 @@ up() {
   cp "$here/routes.yml" "$run/routes.yml"
   docker network create "$net" >/dev/null
   docker run -d --name wse2e-postgres --network "$net" --network-alias postgres -e POSTGRES_USER=app -e POSTGRES_PASSWORD=ci \
-    --health-cmd "pg_isready -U app" --health-interval 2s pgvector/pgvector:0.8.0-pg16 >/dev/null
+    --health-cmd "pg_isready -U app" --health-interval 2s pgvector/pgvector:0.8.7-pg16-bookworm >/dev/null
   until [ "$(docker inspect -f '{{.State.Health.Status}}' wse2e-postgres)" = healthy ]; do sleep 1; done
   docker exec wse2e-postgres psql -U app -d postgres -qc "create database litellm"
   docker exec -i wse2e-postgres psql -U app -d litellm -q < "$root/tests/Llm.Tests/Resources/litellm-schema.sql"
@@ -64,7 +64,7 @@ up() {
   docker run -d --name wse2e-web --network "$net" --network-alias web --read-only --tmpfs /tmp --cap-drop ALL \
     --security-opt no-new-privileges:true "$web" >/dev/null
   docker run -d --name wse2e-traefik --network "$net" -p "$port:8443" -v "$run:/certs:ro" \
-    -v "$run/traefik.yml:/etc/traefik/traefik.yml:ro" -v "$run/routes.yml:/etc/traefik/routes.yml:ro" traefik:v3.6.7 >/dev/null
+    -v "$run/traefik.yml:/etc/traefik/traefik.yml:ro" -v "$run/routes.yml:/etc/traefik/routes.yml:ro" traefik:v3.8.0 >/dev/null
   i=0
   while [ $i -lt 90 ]; do
     if [ "$(docker inspect -f '{{.State.Health.Status}}' wse2e-app)" = healthy ] && [ "$(docker inspect -f '{{.State.Health.Status}}' wse2e-web)" = healthy ] \

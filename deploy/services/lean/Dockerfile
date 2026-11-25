@@ -19,6 +19,7 @@ ENV PATH=/opt/elan/bin:$PATH
 # elan, and the toolchain from Lean's GitHub release unpacked where elan keeps it (elan itself would fetch it from
 # release.lean-lang.org); both checked against their release's SHA-256.
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends ca-certificates curl git zstd \
  && curl -fsSL -o /tmp/elan.tar.gz "https://github.com/leanprover/elan/releases/download/v${ELAN_VERSION}/elan-x86_64-unknown-linux-gnu.tar.gz" \
  && echo "${ELAN_SHA256}  /tmp/elan.tar.gz" | sha256sum -c - \

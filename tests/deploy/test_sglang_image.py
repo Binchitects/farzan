@@ -65,10 +65,10 @@ class SglangImageTests(unittest.TestCase):
         self.assertEqual(0, plain.returncode, plain.stderr)
         self.assertEqual(0, built.returncode, built.stderr)
         self.assertNotIn("build:", plain.stdout)
-        self.assertIn("image: lmsysorg/sglang:v0.5.21-cu130-runtime", plain.stdout)
+        self.assertIn("image: lmsysorg/sglang:v0.5.23-cu130-runtime", plain.stdout)
         self.assertIn("ENGINE_SERVER: sglang", plain.stdout)
         self.assertIn("dockerfile: sglang.Dockerfile", built.stdout)
-        self.assertIn("image: arena-sglang:0.5.21", built.stdout)
+        self.assertIn("image: arena-sglang:0.5.23", built.stdout)
 
 
 if __name__ == "__main__":

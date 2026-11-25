@@ -20,7 +20,7 @@ SCRIPTS = ["airgap.sh", "backup.sh", "test-project.sh", "restore-test.sh", "roll
 COMPOSE = """name: arena
 services:
   traefik:
-    image: traefik:v3.6.7
+    image: traefik:v3.8.0
     container_name: traefik
   web:
     build: { context: .., dockerfile: src/web/Dockerfile }
@@ -29,10 +29,10 @@ services:
     build: { context: .., dockerfile: src/Llm.Api/Dockerfile }
     container_name: app
   postgres:
-    image: pgvector/pgvector:0.8.0-pg16
+    image: pgvector/pgvector:0.8.7-pg16-bookworm
     container_name: postgres
   valkey:
-    image: public.ecr.aws/valkey/valkey:8.1-alpine
+    image: public.ecr.aws/valkey/valkey:9.2-alpine
     container_name: valkey
   # A comment at two spaces.
   code-intel:

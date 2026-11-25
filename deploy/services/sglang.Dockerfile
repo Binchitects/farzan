@@ -6,14 +6,14 @@
 # Build arguments:
 #   BASE_IMAGE      the base: python:3.13-slim (SGLang's wheels bring PyTorch with its own CUDA libraries, so no CUDA
 #                   base is needed: the host's driver, >= R580 for CUDA 13, is all it takes)
-#   SGLANG_VERSION  the SGLang release, pinned (0.5.21: CUDA 13 by default)
+#   SGLANG_VERSION  the SGLang release, pinned (0.5.23: CUDA 13 by default)
 #
 # It runs one SGLang server per model the app wants. Models come from the library (HF_HUB_OFFLINE: SGLang never
 # fetches one itself).
 ARG BASE_IMAGE=python:3.13-slim
 FROM ${BASE_IMAGE}
 
-ARG SGLANG_VERSION=0.5.21
+ARG SGLANG_VERSION=0.5.23
 
 # gcc and the C headers for the kernels compiled as they are first used (Triton, FlashInfer's JIT); procps for the supervisor.
 RUN apt-get update \

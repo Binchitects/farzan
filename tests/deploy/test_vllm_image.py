@@ -54,7 +54,7 @@ def compose(*files: str, profiles: str = "vllm") -> list[str]:
 class VllmImageTests(unittest.TestCase):
     def test_arena_vllm_is_vllms_own_image_pinned_with_the_gguf_plugin_in_a_layer_of_its_own(self):
         text = IMAGE.read_text()
-        self.assertIn("ARG VLLM_IMAGE=vllm/vllm-openai:v0.31.0\nFROM ${VLLM_IMAGE}", text)
+        self.assertIn("ARG VLLM_IMAGE=vllm/vllm-openai:v0.34.0\nFROM ${VLLM_IMAGE}", text)
         [plugin] = [r for r in runs(text) if "vllm-gguf-plugin" in r]
         self.assertIn(PLUGIN, plugin)
         self.assertIn(GGUF, plugin)
@@ -116,7 +116,7 @@ class VllmImageTests(unittest.TestCase):
         self.assertEqual(0, built.returncode, built.stderr)
         self.assertIn("image: arena-vllm\n", plain.stdout)
         self.assertIn("dockerfile: vllm.Dockerfile", plain.stdout)
-        self.assertIn("VLLM_IMAGE: vllm/vllm-openai:v0.31.0", plain.stdout)
+        self.assertIn("VLLM_IMAGE: vllm/vllm-openai:v0.34.0", plain.stdout)
         self.assertIn("VLLM_BIN: python3 /vllm/serve.py", plain.stdout)
         self.assertIn("image: arena-vllm\n", built.stdout)
         self.assertIn("dockerfile: vllm-pypi.Dockerfile", built.stdout)
@@ -124,7 +124,7 @@ class VllmImageTests(unittest.TestCase):
     def test_the_fake_and_amd_run_another_image_and_build_nothing(self):
         if shutil.which("docker") is None:
             self.skipTest("no docker here")
-        for overlay, image in (("fake-gpu.yml", "python:3.13-slim"), ("rocm.yml", "vllm/vllm-openai-rocm:v0.31.0")):
+        for overlay, image in (("fake-gpu.yml", "python:3.13-slim"), ("rocm.yml", "vllm/vllm-openai-rocm:v0.34.0")):
             out = subprocess.run(compose(overlay) + ["config", "vllm"], capture_output=True, text=True, timeout=120)
             self.assertEqual(0, out.returncode, out.stderr)
             self.assertIn(f"image: {image}\n", out.stdout, overlay)

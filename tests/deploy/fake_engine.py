@@ -78,7 +78,7 @@ PODMAN = os.path.basename(sys.argv[0]) == "podman"
 
 
 def is_short(ref: str) -> bool:
-    """A name with no registry in it (offtest-app, grafana/loki:3.4.1)."""
+    """A name with no registry in it (offtest-app, grafana/loki:3.7.10)."""
     first = ref.split("/", 1)[0]
     return "/" not in ref or ("." not in first and ":" not in first and first != "localhost")
 

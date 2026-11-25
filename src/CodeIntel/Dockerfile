@@ -91,6 +91,7 @@ ENV CODE_INTEL_VERSION="${CODE_INTEL_VERSION}" \
     DOTNET_TieredPGO=1
 
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends git universal-ctags ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
  && ctags --version | grep -q "Universal Ctags"
