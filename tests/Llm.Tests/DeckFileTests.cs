@@ -289,4 +289,19 @@ public sealed class DeckFileTests
         Assert.Equal(4, order.Count);
         Assert.Contains("Georgia", Text(after, "ppt/theme/theme1.xml"), StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void A_deck_written_as_Markdown_reads_back_to_the_same_slides()
+    {
+        var slides = EveryLayout();
+        slides[3].Notes = "Say this.\n\nThen that.";
+        slides[3].Origin = new DeckOrigin { Slide = 4, Read = "0123456789ABCDEF0123456789ABCDEF" };
+        slides[6].Table!.Rows[0][0] = "North | East";
+        var text = DeckOutline.Write("The year", slides);
+        var (title, read) = DeckOutline.Parse(text);
+        Assert.Equal("The year", title);
+        Assert.Equal(DeckModel.Write(slides), DeckModel.Write(read));
+        // And a deck whose name is not its first slide's says it before any slide.
+        Assert.Equal("Board pack", DeckOutline.Parse(DeckOutline.Write("Board pack", slides)).Title);
+    }
 }
