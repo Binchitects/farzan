@@ -46,6 +46,13 @@ public sealed class DeckItem
     public string? Value { get; set; }
 }
 
+/// <summary>Where a slide read from a PowerPoint file came from: its number there, and what it was as read (to tell it unchanged).</summary>
+public sealed class DeckOrigin
+{
+    public int Slide { get; set; }
+    public string? Read { get; set; }
+}
+
 /// <summary>A table: its column names and rows of cells.</summary>
 public sealed class DeckTable
 {
@@ -85,6 +92,8 @@ public sealed class DeckSlide
     public DeckChart? Chart { get; set; }
     public DeckPicture? Picture { get; set; }
     public string? Notes { get; set; }
+    /// <summary>The slide of the PowerPoint file it was read from, when the deck is one opened to revise.</summary>
+    public DeckOrigin? Origin { get; set; }
 }
 
 /// <summary>The slides as kept and sent, and the model's JSON made safe: known layouts, words cut to size, at most 30 slides.</summary>
@@ -170,6 +179,7 @@ public static class DeckModel
             Chart = chart,
             Picture = picture,
             Notes = Cut(s.Notes, 4000),
+            Origin = s.Origin is { Slide: > 0 } o ? new DeckOrigin { Slide = o.Slide, Read = Cut(o.Read, 64) } : null,
         };
     }
 
@@ -225,6 +235,7 @@ public static class DeckModel
                         part.Title = slide.Title is { } t ? t + " (continued)" : null;
                         part.Picture = null;
                         part.Notes = null;
+                        part.Origin = null;
                     }
                     kept.Add(part);
                 }
@@ -236,6 +247,24 @@ public static class DeckModel
         }
         return [.. kept.Take(MostSlides)];
     }
+
+    /// <summary>What a slide holds, as a short fingerprint (its origin left out): the same words, numbers and pictures, the same print.</summary>
+    public static string Fingerprint(DeckSlide s)
+    {
+        var origin = s.Origin;
+        s.Origin = null;
+        try
+        {
+            return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(s, Json))))[..32];
+        }
+        finally
+        {
+            s.Origin = origin;
+        }
+    }
+
+    /// <summary>Whether a slide read from a PowerPoint file is still as it was read: kept as it is in the file.</summary>
+    public static bool Unchanged(DeckSlide s) => s.Origin is { Read: { } read } && read == Fingerprint(s);
 
     /// <summary>A look as it may be kept: a known design and transition, a short footer.</summary>
     public static DeckLook Clean(DeckLook? look) => new()

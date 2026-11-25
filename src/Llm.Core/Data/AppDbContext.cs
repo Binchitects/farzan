@@ -83,6 +83,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Decks.Deck> Decks => Set<Decks.Deck>();
     public DbSet<Decks.DeckVersion> DeckVersions => Set<Decks.DeckVersion>();
     public DbSet<Decks.DeckTemplate> DeckTemplates => Set<Decks.DeckTemplate>();
+    public DbSet<Decks.DeckSource> DeckSources => Set<Decks.DeckSource>();
     public DbSet<Studio.Workflow> Workflows => Set<Studio.Workflow>();
     public DbSet<Studio.WorkflowRun> WorkflowRuns => Set<Studio.WorkflowRun>();
     public DbSet<Studio.WorkflowRunStep> WorkflowRunSteps => Set<Studio.WorkflowRunStep>();
@@ -187,6 +188,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.Entity<ChatAttachment>().Property(a => a.Text).HasConversion(v => sealer.SealText(v), v => sealer.OpenText(v));
         builder.Entity<AttachmentPage>().Property(p => p.Data).HasConversion(files, sameFile);
         builder.Entity<Decks.DeckTemplate>().Property(t => t.Data).HasConversion(files, sameFile);
+        builder.Entity<Decks.DeckSource>().Property(t => t.Data).HasConversion(files, sameFile);
         builder.UseOpenIddict<Guid>();
 
         builder.Entity<SiteImage>(e =>
@@ -842,6 +844,13 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.Property(x => x.Note).HasMaxLength(500);
             e.HasIndex(x => new { x.DeckId, x.Version }).IsUnique();
             e.HasOne<Decks.Deck>().WithMany().HasForeignKey(x => x.DeckId).OnDelete(DeleteBehavior.Cascade);
+        });
+        builder.Entity<Decks.DeckSource>(e =>
+        {
+            e.ToTable("deck_sources");
+            e.HasKey(x => x.DeckId);
+            e.Property(x => x.FileName).HasMaxLength(200);
+            e.HasOne<Decks.Deck>().WithOne().HasForeignKey<Decks.DeckSource>(x => x.DeckId).OnDelete(DeleteBehavior.Cascade);
         });
         builder.Entity<Decks.DeckTemplate>(e =>
         {

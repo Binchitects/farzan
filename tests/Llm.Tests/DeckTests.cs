@@ -185,6 +185,44 @@ public sealed class DeckTests(AppFixture app)
     }
 
     [Fact]
+    public async Task A_PowerPoint_file_is_opened_to_revise_and_comes_back_with_only_the_changed_slide_made_anew_and_an_outline_needs_no_model()
+    {
+        await using var f = NewApp();
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        var kim = await PersonAsync(admin, f);
+        var lee = await PersonAsync(admin, f);
+        var file = DeckPptx.Build("Board", [new DeckSlide { Layout = "title", Title = "Board", Subtitle = "November" }, new DeckSlide { Layout = "bullets", Title = "Risks", Bullets = ["Late", "Costly"] }],
+            new Dictionary<Guid, DeckImage>(), null, DateTimeOffset.UtcNow, new DeckLook { Design = "bold" });
+        JsonElement opened;
+        using (var form = new MultipartFormDataContent { { new ByteArrayContent(file), "file", "board.pptx" } })
+        {
+            opened = await kim.JsonAsync(await kim.Http.PostAsync(new Uri("/api/decks/import", UriKind.Relative), form));
+        }
+        var id = opened.GetProperty("id").GetGuid();
+        Assert.Equal(("Board", "board.pptx", 2), (opened.GetProperty("title").GetString(), opened.GetProperty("source").GetString(), opened.GetProperty("slides").GetArrayLength()));
+        // The second slide changed by hand; the first left as it was.
+        var slides = JsonSerializer.Deserialize<List<DeckSlide>>(opened.GetProperty("slides").GetRawText(), DeckModel.Json)!;
+        slides[1].Bullets = ["Late", "Costly", "Understaffed"];
+        await StatusAssert.Is(HttpStatusCode.OK, await kim.Http.PutAsJsonAsync(new Uri($"/api/decks/{id}", UriKind.Relative), new { slides }, DeckModel.Json));
+        using var before = new ZipArchive(new MemoryStream(file));
+        using var after = new ZipArchive(new MemoryStream(await (await kim.GetAsync($"/api/decks/{id}/pptx")).Content.ReadAsByteArrayAsync()));
+        string Text(ZipArchive z, string path) => new StreamReader(z.GetEntry(path)!.Open()).ReadToEnd();
+        Assert.Equal(Text(before, "ppt/slides/slide1.xml"), Text(after, "ppt/slides/slide1.xml"));
+        Assert.Null(after.GetEntry("ppt/slides/slide2.xml"));
+        Assert.Contains("Understaffed", Text(after, "ppt/slides/deckSlide1.xml"), StringComparison.Ordinal);
+        // Someone else's deck is not theirs to download.
+        await StatusAssert.Is(HttpStatusCode.NotFound, await lee.GetAsync($"/api/decks/{id}/pptx"));
+
+        // An outline is made as written, not by the model (whose deck here is another).
+        var outlined = await kim.JsonAsync(await kim.PostAsync("/api/decks", new { about = "# Plan\n## Steps\n1. Ask\n2. Build\n## Done" }));
+        Assert.Equal("Plan", outlined.GetProperty("title").GetString());
+        Assert.Equal(["title", "process", "section"], outlined.GetProperty("slides").EnumerateArray().Select(x => x.GetProperty("layout").GetString()));
+        // A deck from a canvas or a file must be from the person's own.
+        await StatusAssert.Is(HttpStatusCode.NotFound, await lee.PostAsync("/api/decks", new { fileId = Guid.NewGuid() }));
+        await StatusAssert.Is(HttpStatusCode.NotFound, await lee.PostAsync("/api/decks", new { canvasId = Guid.NewGuid() }));
+    }
+
+    [Fact]
     public async Task In_a_chat_the_Decks_tool_makes_a_deck_and_answers_with_its_link()
     {
         await using var f = NewApp();

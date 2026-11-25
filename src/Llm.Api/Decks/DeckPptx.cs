@@ -312,25 +312,47 @@ public static partial class DeckPptx
         /// <summary>The template's own slides out: their parts, notes and charts, their place in the presentation, custom shows and sections.</summary>
         public void RemoveSlides()
         {
-            var presentation = Xml("ppt/presentation.xml")!;
-            var rels = Xml(RelsOf("ppt/presentation.xml"));
-            foreach (var (id, _, target) in Rels("ppt/presentation.xml").Where(r => r.Type == "slide"))
+            foreach (var (id, target) in SlidesInOrder())
             {
-                foreach (var part in Rels(target).Where(r => r.Type is "notesSlide" or "chart").Select(r => r.Target))
-                {
-                    foreach (var embedded in Rels(part).Where(r => r.Type is "package" or "chartUserShapes" or "chartStyle" or "chartColorStyle").Select(r => r.Target))
-                    {
-                        Remove(embedded);
-                    }
-                    Remove(part);
-                }
-                Remove(target);
-                rels?.Root?.Elements(Rel + "Relationship").Where(r => (string?)r.Attribute("Id") == id).Remove();
+                RemoveSlide(id, target);
             }
+            ClearSlideList();
+        }
+
+        /// <summary>The presentation's slides in the order it shows them: each one's relationship id and part.</summary>
+        public List<(string Id, string Target)> SlidesInOrder()
+        {
+            var rels = Rels("ppt/presentation.xml").Where(r => r.Type == "slide").ToDictionary(r => r.Id, r => r.Target, StringComparer.Ordinal);
+            var listed = Xml("ppt/presentation.xml")!.Root!.Element(P + "sldIdLst")?.Elements(P + "sldId").Select(e => (string?)e.Attribute(R + "id")).OfType<string>().ToList() ?? [];
+            return [.. listed.Where(rels.ContainsKey).Select(id => (id, rels[id])).Concat(rels.Where(r => !listed.Contains(r.Key)).Select(r => (r.Key, r.Value)))];
+        }
+
+        /// <summary>One slide out: its part, its notes and charts (and what they embed), and its relationship.</summary>
+        public void RemoveSlide(string id, string target)
+        {
+            foreach (var part in Rels(target).Where(r => r.Type is "notesSlide" or "chart").Select(r => r.Target))
+            {
+                foreach (var embedded in Rels(part).Where(r => r.Type is "package" or "chartUserShapes" or "chartStyle" or "chartColorStyle").Select(r => r.Target))
+                {
+                    Remove(embedded);
+                }
+                Remove(part);
+            }
+            Remove(target);
+            Xml(RelsOf("ppt/presentation.xml"))?.Root?.Elements(Rel + "Relationship").Where(r => (string?)r.Attribute("Id") == id).Remove();
+        }
+
+        /// <summary>The list of slides, custom shows and sections emptied (the slides' parts stay): to be listed again in a new order.</summary>
+        public void ClearSlideList()
+        {
+            var presentation = Xml("ppt/presentation.xml")!;
             presentation.Root!.Element(P + "sldIdLst")?.Remove();
             presentation.Root.Element(P + "custShowLst")?.Remove();
             presentation.Root.Element(P + "extLst")?.Elements().Where(e => e.Elements().Any(x => x.Name.LocalName == "sectionLst")).Remove();
         }
+
+        /// <summary>A part's bytes as they are, or null.</summary>
+        public byte[]? Bytes(string path) => _parts.TryGetValue(path, out var b) ? b : null;
 
         public List<Layout> Layouts()
         {
@@ -355,7 +377,6 @@ public static partial class DeckPptx
         /// <summary>A slide of ours into the presentation's list, after its masters and before its size.</summary>
         public long AddSlide(string target)
         {
-            var presentation = Xml("ppt/presentation.xml")!;
             var relsPath = RelsOf("ppt/presentation.xml");
             var rels = Xml(relsPath)!;
             string id;
@@ -365,6 +386,13 @@ public static partial class DeckPptx
             }
             while (rels.Root!.Elements(Rel + "Relationship").Any(r => (string?)r.Attribute("Id") == id));
             rels.Root.Add(new XElement(Rel + "Relationship", new XAttribute("Id", id), new XAttribute("Type", RelBase + "slide"), new XAttribute("Target", target)));
+            return ListSlide(id);
+        }
+
+        /// <summary>A slide already related to the presentation put next in its list; its number in the list.</summary>
+        public long ListSlide(string id)
+        {
+            var presentation = Xml("ppt/presentation.xml")!;
             var list = presentation.Root!.Element(P + "sldIdLst");
             if (list is null)
             {

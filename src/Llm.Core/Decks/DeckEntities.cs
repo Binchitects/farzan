@@ -34,6 +34,15 @@ public sealed class DeckVersion
 }
 
 /// <summary>A company template an admin uploaded (.pptx): its masters, layouts, theme and logo carry into every deck made in it.</summary>
+/// <summary>The PowerPoint file a deck was opened from, to revise in place: its unchanged slides are kept from it as they were.</summary>
+public sealed class DeckSource
+{
+    public Guid DeckId { get; set; }
+    public required string FileName { get; set; }
+    public required byte[] Data { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
 public sealed class DeckTemplate
 {
     public Guid Id { get; set; } = Guid.CreateVersion7();

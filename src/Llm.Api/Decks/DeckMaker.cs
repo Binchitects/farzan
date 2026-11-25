@@ -88,12 +88,39 @@ public sealed partial class DeckMaker(OneQuestion one, DataQuestions data, Image
     public const int MostDecks = 200;
 
     /// <summary>A new deck about what the person says, its charts' numbers asked, kept as its first version (in the default template, or the one chosen).</summary>
-    public async Task<(Deck? Deck, List<DeckSlide> Slides, IResult? Problem)> CreateAsync(AppUser me, string about, Guid? templateId, CancellationToken ct, DeckLook? look = null)
+    /// <summary>The most of a file's or a canvas's words a deck is made from.</summary>
+    public const int MostSourceChars = 60_000;
+
+    public async Task<(Deck? Deck, List<DeckSlide> Slides, IResult? Problem)> CreateAsync(AppUser me, string about, Guid? templateId, CancellationToken ct, DeckLook? look = null,
+        Guid? fileId = null, Guid? canvasId = null)
     {
         about = about.Trim();
-        if (about.Length is 0 or > 20_000)
+        // A file or a canvas of the person's: what the deck is made from, their words (if any) saying how.
+        string? source = null;
+        if (fileId is { } f)
+        {
+            if (await db.ChatAttachments.AsNoTracking().Where(a => a.Id == f && a.UserId == me.Id && a.Kind == "text").Select(a => new { a.FileName, a.Text }).SingleOrDefaultAsync(ct) is not { } file)
+            {
+                return (null, [], AuthEndpoints.Problem(404, "file", "That file is not one of yours, or it has no words to make a deck from."));
+            }
+            source = $"The document \"{file.FileName}\":\n{file.Text}";
+        }
+        else if (canvasId is { } c)
+        {
+            if (await db.Canvases.AsNoTracking().Where(x => x.Id == c && db.Conversations.Any(v => v.Id == x.ConversationId && v.UserId == me.Id))
+                .Select(x => new { x.Title, x.Content }).SingleOrDefaultAsync(ct) is not { } canvas)
+            {
+                return (null, [], AuthEndpoints.Problem(404, "canvas", "That canvas is not one of yours."));
+            }
+            source = $"The canvas \"{canvas.Title}\":\n{canvas.Content}";
+        }
+        if (source is null && about.Length is 0 or > 20_000)
         {
             return (null, [], AuthEndpoints.Problem(400, "about", "Say what the deck is about, up to 20,000 characters."));
+        }
+        if (about.Length > 4000 && source is not null)
+        {
+            return (null, [], AuthEndpoints.Problem(400, "about", "Say how to make it from the file in up to 4,000 characters."));
         }
         if (await db.Decks.CountAsync(d => d.OwnerId == me.Id, ct) >= MostDecks)
         {
@@ -104,7 +131,20 @@ public sealed partial class DeckMaker(OneQuestion one, DataQuestions data, Image
         {
             return (null, [], AuthEndpoints.Problem(400, "template", "That template is not here."));
         }
-        var made = await MakeAsync(me, about, ct);
+        MadeDeck made;
+        if (source is null && DeckOutline.Looks(about))
+        {
+            // An outline is made into slides as written: nothing for the model to guess.
+            var (title, slides) = DeckOutline.Parse(about);
+            made = new MadeDeck(title, slides, null);
+        }
+        else
+        {
+            var asked = source is null ? about
+                : (about.Length > 0 ? about : "Make a deck that presents this, its main points and figures.") + "\n\n"
+                  + (source.Length > MostSourceChars ? source[..MostSourceChars] + "\n[the rest left out]" : source);
+            made = await MakeAsync(me, asked, ct);
+        }
         if (made.Problem is not null)
         {
             return (null, [], made.Problem);
@@ -113,7 +153,8 @@ public sealed partial class DeckMaker(OneQuestion one, DataQuestions data, Image
         await FillChartsAsync(me, made.Slides, false, ct);
         var deck = new Deck { OwnerId = me.Id, Title = made.Title, Slides = DeckModel.Write(made.Slides), TemplateId = template == Guid.Empty ? null : template, Look = DeckModel.Write(DeckModel.Clean(look)) };
         db.Decks.Add(deck);
-        db.DeckVersions.Add(new DeckVersion { DeckId = deck.Id, Version = 1, Title = deck.Title, Slides = deck.Slides, Note = about.Length > 500 ? about[..499] + "…" : about });
+        var note = about.Length > 0 ? about : fileId is not null ? "From a file" : "From a canvas";
+        db.DeckVersions.Add(new DeckVersion { DeckId = deck.Id, Version = 1, Title = deck.Title, Slides = deck.Slides, Note = note.Length > 500 ? note[..499] + "…" : note });
         await db.SaveChangesAsync(ct);
         return (deck, made.Slides, null);
     }

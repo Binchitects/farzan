@@ -5526,6 +5526,28 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("decks", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Decks.DeckSource", b =>
+                {
+                    b.Property<Guid>("DeckId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("DeckId");
+
+                    b.ToTable("deck_sources", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Decks.DeckTemplate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -9419,6 +9441,15 @@ namespace Llm.Core.Data.Migrations
                         .WithMany()
                         .HasForeignKey("TemplateId")
                         .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Llm.Core.Decks.DeckSource", b =>
+                {
+                    b.HasOne("Llm.Core.Decks.Deck", null)
+                        .WithOne()
+                        .HasForeignKey("Llm.Core.Decks.DeckSource", "DeckId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Llm.Core.Decks.DeckVersion", b =>

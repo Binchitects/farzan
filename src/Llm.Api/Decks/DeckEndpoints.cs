@@ -5,6 +5,7 @@ using Llm.Api.Chat.Tools;
 using Llm.Api.Endpoints;
 using Llm.Api.Identity;
 using Llm.Api.Insights;
+using Llm.Core.Chat;
 using Llm.Core.Data;
 using Llm.Core.Decks;
 using Llm.Core.Identity;
@@ -13,7 +14,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Llm.Api.Decks;
 
-public sealed record NewDeck(string? About, Guid? TemplateId = null, DeckLook? Look = null);
+/// <param name="About">What it is about, in the person's words; or an outline in Markdown (# and ## headings), made into slides as written.</param>
+/// <param name="FileId">One of the person's files (a PDF, Word or PowerPoint document, text): the deck is made from what it says.</param>
+/// <param name="CanvasId">One of the person's canvases: the deck is made from it.</param>
+public sealed record NewDeck(string? About, Guid? TemplateId = null, DeckLook? Look = null, Guid? FileId = null, Guid? CanvasId = null);
 
 /// <param name="Slide">The slide the person is looking at (from 0): "this slide".</param>
 public sealed record DeckChange(string? Change, int? Slide = null);
@@ -38,6 +42,7 @@ public static class DeckEndpoints
         g.MapGet("", ListAsync);
         g.MapGet("/config", ConfigAsync);
         g.MapPost("", MakeAsync);
+        g.MapPost("/import", ImportAsync).DisableAntiforgery();
         g.MapGet("/{id:guid}", GetAsync);
         g.MapPut("/{id:guid}", EditAsync);
         g.MapDelete("/{id:guid}", RemoveAsync);
@@ -59,7 +64,8 @@ public static class DeckEndpoints
 
     private static object Brief(Deck d) => new { d.Id, d.Title, d.TemplateId, d.Version, d.CreatedAt, d.UpdatedAt };
 
-    private static object Full(Deck d, List<DeckSlide> slides) => new { d.Id, d.Title, d.TemplateId, look = DeckModel.ReadLook(d.Look), d.Version, d.CreatedAt, d.UpdatedAt, slides };
+    private static object Full(Deck d, List<DeckSlide> slides, string? source = null) =>
+        new { d.Id, d.Title, d.TemplateId, look = DeckModel.ReadLook(d.Look), source, d.Version, d.CreatedAt, d.UpdatedAt, slides };
 
     private static async Task<IResult> ListAsync(ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, CancellationToken ct)
     {
@@ -93,7 +99,7 @@ public static class DeckEndpoints
     private static async Task<IResult> MakeAsync(NewDeck body, ClaimsPrincipal p, UserManager<AppUser> users, DeckMaker maker, CancellationToken ct)
     {
         var me = await Me(p, users);
-        var (deck, slides, problem) = await maker.CreateAsync(me, body.About ?? "", body.TemplateId, ct, body.Look);
+        var (deck, slides, problem) = await maker.CreateAsync(me, body.About ?? "", body.TemplateId, ct, body.Look, body.FileId, body.CanvasId);
         return problem ?? Results.Created($"/api/decks/{deck!.Id}", Full(deck, slides));
     }
 
@@ -102,7 +108,9 @@ public static class DeckEndpoints
     private static async Task<IResult> GetAsync(Guid id, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, CancellationToken ct)
     {
         var me = await Me(p, users);
-        return await db.Decks.AsNoTracking().SingleOrDefaultAsync(d => d.Id == id && d.OwnerId == me.Id, ct) is { } d ? Results.Ok(Full(d, DeckModel.Read(d.Slides))) : Results.NotFound();
+        return await db.Decks.AsNoTracking().SingleOrDefaultAsync(d => d.Id == id && d.OwnerId == me.Id, ct) is { } d
+            ? Results.Ok(Full(d, DeckModel.Read(d.Slides), await db.DeckSources.AsNoTracking().Where(x => x.DeckId == d.Id).Select(x => x.FileName).SingleOrDefaultAsync(ct)))
+            : Results.NotFound();
     }
 
     /// <summary>A new version of the deck: its slides, title or template changed.</summary>
@@ -130,6 +138,8 @@ public static class DeckEndpoints
             }
             d.TemplateId = template == Guid.Empty ? null : template;
             d.UpdatedAt = DateTimeOffset.UtcNow;
+            // A deck opened from a file and put in a look of ours is made in that look from now on: the file is let go.
+            await db.DeckSources.Where(x => x.DeckId == d.Id).ExecuteDeleteAsync(ct);
         }
         if (body.Look is { } look)
         {
@@ -306,10 +316,14 @@ public static class DeckEndpoints
             .Where(a => ids.Contains(a.Id) && a.UserId == me.Id && a.Data != null && (a.ContentType == "image/png" || a.ContentType == "image/jpeg" || a.ContentType == "image/gif"))
             .ToDictionaryAsync(a => a.Id, a => new DeckImage(a.Data!, a.ContentType), ct);
         var template = d.TemplateId is { } t ? await db.DeckTemplates.AsNoTracking().Where(x => x.Id == t).Select(x => x.Data).SingleOrDefaultAsync(ct) : null;
+        var source = await db.DeckSources.AsNoTracking().Where(x => x.DeckId == d.Id).Select(x => x.Data).SingleOrDefaultAsync(ct);
         byte[] file;
         try
         {
-            file = DeckPptx.Build(d.Title, slides, images, template, clock.GetUtcNow(), DeckModel.ReadLook(d.Look));
+            // Opened from a file: that file, revised; else made in its template or look.
+            file = source is not null
+                ? DeckPptx.Revise(source, d.Title, slides, images, clock.GetUtcNow(), DeckModel.ReadLook(d.Look))
+                : DeckPptx.Build(d.Title, slides, images, template, clock.GetUtcNow(), DeckModel.ReadLook(d.Look));
         }
         catch (DeckTemplateException ex)
         {
@@ -326,6 +340,70 @@ public static class DeckEndpoints
     }
 
     /// <summary>A company template (.pptx or .potx): read now (its masters, layouts and theme), so a broken one is found here.</summary>
+    /// <summary>
+    /// A PowerPoint file of the person's opened as a deck, to revise: its slides read (words, tables, charts, notes; each
+    /// slide's first picture kept as their file), the file kept, and downloaded again as that file with only the slides they
+    /// changed made anew. Its numbers are the file's own, so they are kept (no made-up check).
+    /// </summary>
+    private static async Task<IResult> ImportAsync(HttpRequest request, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, CancellationToken ct)
+    {
+        var me = await Me(p, users);
+        if (request.HttpContext.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
+        {
+            limit.MaxRequestBodySize = MostTemplateBytes + 1024 * 1024;
+        }
+        if (!request.HasFormContentType || (await request.ReadFormAsync(ct)) is not { Files: [var upload] })
+        {
+            return AuthEndpoints.Problem(400, "file", "Send one .pptx file.");
+        }
+        if (upload.Length is 0 or > MostTemplateBytes)
+        {
+            return AuthEndpoints.Problem(400, "file", "A PowerPoint file to revise is at most 30 MB.");
+        }
+        if (await db.Decks.CountAsync(d => d.OwnerId == me.Id, ct) >= DeckMaker.MostDecks)
+        {
+            return AuthEndpoints.Problem(409, "decks", $"You have {DeckMaker.MostDecks} decks, the most: remove one first.");
+        }
+        using var m = new MemoryStream();
+        await upload.CopyToAsync(m, ct);
+        var data = m.ToArray();
+        string title;
+        List<ReadSlide> read;
+        try
+        {
+            (title, read) = DeckPptx.Read(data);
+        }
+        catch (Exception ex) when (ex is DeckTemplateException or System.Xml.XmlException)
+        {
+            return AuthEndpoints.Problem(400, "file", ex is DeckTemplateException ? ex.Message : $"The file's XML does not read: {ex.Message}");
+        }
+        if (read.Count is 0 or > DeckModel.MostSlides)
+        {
+            return AuthEndpoints.Problem(400, "file", $"A deck here has 1 to {DeckModel.MostSlides} slides; that file has {read.Count}.");
+        }
+        foreach (var (slide, picture) in read.Where(r => r.Picture is not null))
+        {
+            var file = new ChatAttachment { UserId = me.Id, FileName = $"slide-{slide.Origin!.Slide}{(picture!.ContentType == "image/jpeg" ? ".jpg" : picture.ContentType == "image/gif" ? ".gif" : ".png")}",
+                ContentType = picture.ContentType, Size = picture.Data.Length, Text = "", Kind = "image", Data = picture.Data, Origin = "deck" };
+            db.ChatAttachments.Add(file);
+            slide.Picture!.FileId = file.Id;
+        }
+        // Each slide as kept, with what it was when read: the same, and its slide in the file is kept as it is there.
+        var slides = read.Select(r => DeckModel.Clean(r.Slide)).ToList();
+        foreach (var s in slides.Where(s => s.Origin is not null))
+        {
+            s.Origin!.Read = DeckModel.Fingerprint(s);
+        }
+        title = title.Length > 200 ? title[..200] : title;
+        var deck = new Deck { OwnerId = me.Id, Title = title, Slides = DeckModel.Write(slides) };
+        db.Decks.Add(deck);
+        var name = Path.GetFileName(upload.FileName) is { Length: > 0 } f ? (f.Length > 200 ? f[..200] : f) : "deck.pptx";
+        db.DeckSources.Add(new DeckSource { DeckId = deck.Id, FileName = name, Data = data });
+        db.DeckVersions.Add(new DeckVersion { DeckId = deck.Id, Version = 1, Title = deck.Title, Slides = deck.Slides, Note = $"Opened {name}" });
+        await db.SaveChangesAsync(ct);
+        return Results.Created($"/api/decks/{deck.Id}", Full(deck, slides, name));
+    }
+
     private static async Task<IResult> UploadAsync(HttpRequest request, AppDbContext db, Audit audit, CancellationToken ct)
     {
         if (request.HttpContext.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)

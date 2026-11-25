@@ -191,4 +191,102 @@ public sealed class DeckFileTests
             Assert.Equal(1, scale);
         }
     }
+
+    [Fact]
+    public void An_outline_is_made_into_slides_as_written()
+    {
+        const string Outline = """
+            # The year
+            What we did, and what is next
+
+            ## Agenda
+            1. Results
+            2. Plans: for next year
+
+            ## Results
+            - Sales grew
+            - Costs fell
+            Notes: Thank the teams.
+            Then the numbers.
+
+            ## Offices
+            | Office | People |
+            |---|---|
+            | North | 120 |
+
+            ## How we work
+            1. Ask
+            2. Build: in small steps
+
+            > Less is more
+            — Mies
+
+            ## Next
+            """;
+        Assert.True(DeckOutline.Looks(Outline));
+        Assert.False(DeckOutline.Looks("A deck about our year, with the numbers."));
+        var (title, slides) = DeckOutline.Parse(Outline);
+        Assert.Equal("The year", title);
+        Assert.Equal(["title", "agenda", "bullets", "table", "process", "section"], slides.Select(x => x.Layout));
+        Assert.Equal("What we did, and what is next", slides[0].Subtitle);
+        Assert.Equal(("Plans", "for next year"), (slides[1].Items![1].Title!, slides[1].Items![1].Text!));
+        Assert.Equal(["Sales grew", "Costs fell"], slides[2].Bullets);
+        Assert.Equal("Thank the teams.\nThen the numbers.", slides[2].Notes);
+        Assert.Equal([["North", "120"]], slides[3].Table!.Rows);
+        // A quote under steps stays with them: steps are what that slide shows.
+        Assert.Equal("Less is more", slides[4].Quote);
+    }
+
+    [Fact]
+    public void A_file_read_and_revised_keeps_the_slides_no_one_changed_exactly_as_they_were()
+    {
+        // A file of PowerPoint's kind (ours, in another design): a title, points with a picture, a table, a chart, notes.
+        var made = DeckModel.Clean(
+        [
+            new() { Layout = "title", Title = "The year", Subtitle = "What we did", Notes = "Welcome." },
+            new() { Layout = "bullets", Title = "Points", Bullets = ["One", "Two"], Picture = new() { Prompt = "x", FileId = PictureId } },
+            new() { Layout = "table", Title = "Offices", Table = new() { Columns = ["Office", "People"], Rows = [["North", "120"]] } },
+            new() { Layout = "chart", Title = "Sales", Chart = Numbers("line") },
+        ]);
+        var original = DeckPptx.Build("The year", made, Pictures, null, DateTimeOffset.UnixEpoch, new DeckLook { Design = "paper", Numbers = false });
+        var (title, read) = DeckPptx.Read(original);
+        Assert.Equal("The year", title);
+        Assert.Equal(["title", "bullets", "table", "chart"], read.Select(r => r.Slide.Layout));
+        Assert.Equal("What we did", read[0].Slide.Subtitle);
+        Assert.Equal("Welcome.", read[0].Slide.Notes);
+        Assert.Equal(["One", "Two"], read[1].Slide.Bullets);
+        Assert.Equal(FakeModel.Png, read[1].Picture!.Data);
+        Assert.Equal([["North", "120"]], read[2].Slide.Table!.Rows);
+        Assert.Equal(("line", 2, 8d), (read[3].Slide.Chart!.Type, read[3].Slide.Chart!.Series.Count, read[3].Slide.Chart!.Series[0].Values[2]!.Value));
+
+        // As the import keeps them: cleaned, each with what it was when read.
+        var slides = read.Select(r => DeckModel.Clean(r.Slide)).ToList();
+        foreach (var x in slides)
+        {
+            x.Origin!.Read = DeckModel.Fingerprint(x);
+        }
+        Assert.All(slides, x => Assert.True(DeckModel.Unchanged(x)));
+        // The person changes the table, removes the points, moves the chart first and adds a closing slide.
+        slides[2].Table!.Rows[0][1] = "125";
+        Assert.False(DeckModel.Unchanged(slides[2]));
+        List<DeckSlide> revised = [slides[3], slides[0], slides[2], new DeckSlide { Layout = "closing", Title = "Thanks" }];
+        var file = DeckPptx.Revise(original, "The year", revised, Pictures, DateTimeOffset.UnixEpoch);
+        var parts = Checked(file);
+        using var before = new ZipArchive(new MemoryStream(original));
+        using var after = new ZipArchive(new MemoryStream(file));
+        string Text(ZipArchive z, string path) => new StreamReader(z.GetEntry(path)!.Open()).ReadToEnd();
+        // In the deck's order; the unchanged chart and title slides are the same parts, byte for byte, the chart's too.
+        var order = parts["ppt/presentation.xml"].Root!.Element(P + "sldIdLst")!.Elements().Select(e => e.Attribute(XName.Get("id", "http://schemas.openxmlformats.org/officeDocument/2006/relationships"))!.Value)
+            .Select(id => parts["ppt/_rels/presentation.xml.rels"].Root!.Elements().Single(r => r.Attribute("Id")!.Value == id).Attribute("Target")!.Value).ToList();
+        Assert.Equal(["slides/slide4.xml", "slides/slide1.xml"], order[..2]);
+        Assert.Equal(Text(before, "ppt/slides/slide4.xml"), Text(after, "ppt/slides/slide4.xml"));
+        Assert.Equal(Text(before, "ppt/slides/slide1.xml"), Text(after, "ppt/slides/slide1.xml"));
+        Assert.Equal(Text(before, "ppt/charts/deckChart1.xml"), Text(after, "ppt/charts/deckChart1.xml"));
+        // The changed table is made anew with its new number; the removed slide and its picture's slide are gone; the file's design stays.
+        Assert.Contains("125", Text(after, "ppt/slides/" + Path.GetFileName(order[2])), StringComparison.Ordinal);
+        Assert.Null(after.GetEntry("ppt/slides/slide2.xml"));
+        Assert.Null(after.GetEntry("ppt/slides/slide3.xml"));
+        Assert.Equal(4, order.Count);
+        Assert.Contains("Georgia", Text(after, "ppt/theme/theme1.xml"), StringComparison.Ordinal);
+    }
 }
