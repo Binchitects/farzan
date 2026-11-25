@@ -5489,6 +5489,13 @@ namespace Llm.Core.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Look")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasDefaultValue("{}");
+
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
 

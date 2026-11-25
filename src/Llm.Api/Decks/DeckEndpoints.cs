@@ -13,13 +13,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Llm.Api.Decks;
 
-public sealed record NewDeck(string? About, Guid? TemplateId = null);
+public sealed record NewDeck(string? About, Guid? TemplateId = null, DeckLook? Look = null);
 
 /// <param name="Slide">The slide the person is looking at (from 0): "this slide".</param>
 public sealed record DeckChange(string? Change, int? Slide = null);
 
 /// <param name="TemplateId">Guid.Empty: the built-in look.</param>
-public sealed record DeckEdit(string? Title = null, List<DeckSlide>? Slides = null, Guid? TemplateId = null, string? Note = null);
+/// <param name="Look">Its design (used without a template), footer, slide numbers and transition.</param>
+public sealed record DeckEdit(string? Title = null, List<DeckSlide>? Slides = null, Guid? TemplateId = null, string? Note = null, DeckLook? Look = null);
 
 public sealed record TemplateChange(string? Name = null, bool? IsDefault = null);
 
@@ -58,14 +59,14 @@ public static class DeckEndpoints
 
     private static object Brief(Deck d) => new { d.Id, d.Title, d.TemplateId, d.Version, d.CreatedAt, d.UpdatedAt };
 
-    private static object Full(Deck d, List<DeckSlide> slides) => new { d.Id, d.Title, d.TemplateId, d.Version, d.CreatedAt, d.UpdatedAt, slides };
+    private static object Full(Deck d, List<DeckSlide> slides) => new { d.Id, d.Title, d.TemplateId, look = DeckModel.ReadLook(d.Look), d.Version, d.CreatedAt, d.UpdatedAt, slides };
 
     private static async Task<IResult> ListAsync(ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, CancellationToken ct)
     {
         var me = await Me(p, users);
         var decks = await db.Decks.AsNoTracking().Where(d => d.OwnerId == me.Id).OrderByDescending(d => d.UpdatedAt).Take(DeckMaker.MostDecks).ToListAsync(ct);
         // The first slide of each, for its card.
-        return Results.Ok(decks.Select(d => DeckModel.Read(d.Slides) is var s ? new { d.Id, d.Title, d.TemplateId, d.Version, d.UpdatedAt, slides = s.Count, first = s.FirstOrDefault() } : null));
+        return Results.Ok(decks.Select(d => DeckModel.Read(d.Slides) is var s ? new { d.Id, d.Title, d.TemplateId, look = DeckModel.ReadLook(d.Look), d.Version, d.UpdatedAt, slides = s.Count, first = s.FirstOrDefault() } : null));
     }
 
     /// <summary>What a deck can have here: pictures (a picture model this person may use), the company's templates, the databases they may ask.</summary>
@@ -78,6 +79,10 @@ public static class DeckEndpoints
         {
             pictures = await PicturesAsync(me, registry, access, images, ct),
             templates = templates.Select(t => new { t.Id, t.Name, t.IsDefault, theme = JsonNode.Parse(t.Theme) }),
+            designs = DeckModel.Designs.Select(name => new { name, theme = JsonNode.Parse(DeckPptx.DesignTheme(name)) }),
+            layouts = DeckModel.Layouts,
+            charts = DeckModel.Charts,
+            transitions = DeckModel.Transitions,
             sources = (await data.SourcesForAsync(me, ct)).Select(s => s.Name),
         });
     }
@@ -88,7 +93,7 @@ public static class DeckEndpoints
     private static async Task<IResult> MakeAsync(NewDeck body, ClaimsPrincipal p, UserManager<AppUser> users, DeckMaker maker, CancellationToken ct)
     {
         var me = await Me(p, users);
-        var (deck, slides, problem) = await maker.CreateAsync(me, body.About ?? "", body.TemplateId, ct);
+        var (deck, slides, problem) = await maker.CreateAsync(me, body.About ?? "", body.TemplateId, ct, body.Look);
         return problem ?? Results.Created($"/api/decks/{deck!.Id}", Full(deck, slides));
     }
 
@@ -124,6 +129,11 @@ public static class DeckEndpoints
                 return AuthEndpoints.Problem(400, "template", "That template is not here.");
             }
             d.TemplateId = template == Guid.Empty ? null : template;
+            d.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+        if (body.Look is { } look)
+        {
+            d.Look = DeckModel.Write(DeckModel.Clean(look));
             d.UpdatedAt = DateTimeOffset.UtcNow;
         }
         var title = body.Title?.Trim() is { Length: > 0 } t ? Cut(t, 200) : d.Title;
@@ -299,7 +309,7 @@ public static class DeckEndpoints
         byte[] file;
         try
         {
-            file = DeckPptx.Build(d.Title, slides, images, template, clock.GetUtcNow());
+            file = DeckPptx.Build(d.Title, slides, images, template, clock.GetUtcNow(), DeckModel.ReadLook(d.Look));
         }
         catch (DeckTemplateException ex)
         {

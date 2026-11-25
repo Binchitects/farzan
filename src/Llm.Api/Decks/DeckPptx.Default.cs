@@ -9,9 +9,23 @@ public static partial class DeckPptx
     private const long W = 12192000;
     private const long H = 6858000;
 
-    /// <summary>The built-in look, as a template like any other: white, the app's blue, Calibri; a title, content, title-only, two-column and section layout.</summary>
-    private static Dictionary<string, byte[]> Default()
+    /// <summary>A built-in design: its colours (dark text, paper, title, a light tint, six accents, links) and its two fonts.</summary>
+    private sealed record Design(string Name, string Dk1, string Lt1, string Dk2, string Lt2, string[] Accents, string Major, string Minor, bool Band = false);
+
+    private static readonly Dictionary<string, Design> Designs = new(StringComparer.Ordinal)
     {
+        ["arena"] = new("Arena", "1B1C1F", "FFFFFF", "1E3A5F", "EEF1F5", ["2A78D6", "EB6834", "1BAF7A", "EDA100", "E87BA4", "4A3AA7"], "Calibri", "Calibri"),
+        // Dark paper, light words: the scheme's own light and dark swapped, so every shape follows.
+        ["midnight"] = new("Midnight", "F1F5F9", "0F172A", "E2E8F0", "1E293B", ["38BDF8", "F472B6", "34D399", "FBBF24", "A78BFA", "FB923C"], "Calibri", "Calibri"),
+        ["paper"] = new("Paper", "2B2622", "FBF8F1", "7A2E12", "F1EADB", ["B4532A", "2F6F62", "C49A2C", "5B4B8A", "8C6A4F", "3E7CB1"], "Georgia", "Georgia"),
+        ["bold"] = new("Bold", "111111", "FFFFFF", "111111", "F3F3F3", ["E4572E", "17BEBB", "FFC914", "2E282A", "76B041", "5D2E8C"], "Arial Black", "Arial", Band: true),
+        ["minimal"] = new("Minimal", "222222", "FFFFFF", "222222", "F5F5F5", ["222222", "5A5A5A", "2F6FDE", "8A8A8A", "3D3D3D", "707070"], "Arial", "Arial"),
+    };
+
+    /// <summary>The built-in look, as a template like any other, in one of <see cref="DeckModel.Designs"/>: a title, content, title-only, two-column and section layout.</summary>
+    private static Dictionary<string, byte[]> Default(string design = "arena")
+    {
+        var d = Designs.GetValueOrDefault(design) ?? Designs["arena"];
         var files = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["[Content_Types].xml"] = ContentTypes,
@@ -23,9 +37,9 @@ public static partial class DeckPptx
             ["ppt/presProps.xml"] = $"""<p:presentationPr xmlns:a="{A}" xmlns:r="{R}" xmlns:p="{P}"/>""",
             ["ppt/viewProps.xml"] = $"""<p:viewPr xmlns:a="{A}" xmlns:r="{R}" xmlns:p="{P}"><p:normalViewPr><p:restoredLeft sz="15620"/><p:restoredTop sz="94660"/></p:normalViewPr><p:gridSpacing cx="76200" cy="76200"/></p:viewPr>""",
             ["ppt/tableStyles.xml"] = $$"""<a:tblStyleLst xmlns:a="{{A}}" def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"/>""",
-            ["ppt/theme/theme1.xml"] = ThemeXml($"{Brand.Product}"),
-            ["ppt/theme/theme2.xml"] = ThemeXml($"{Brand.Product} notes"),
-            ["ppt/slideMasters/slideMaster1.xml"] = Master,
+            ["ppt/theme/theme1.xml"] = ThemeXml($"{Brand.Product} {d.Name}", d),
+            ["ppt/theme/theme2.xml"] = ThemeXml($"{Brand.Product} notes", Designs["arena"]),
+            ["ppt/slideMasters/slideMaster1.xml"] = MasterXml(d.Band),
             ["ppt/slideMasters/_rels/slideMaster1.xml.rels"] = Rels(("rId1", "slideLayout", "../slideLayouts/slideLayout1.xml"), ("rId2", "slideLayout", "../slideLayouts/slideLayout2.xml"),
                 ("rId3", "slideLayout", "../slideLayouts/slideLayout3.xml"), ("rId4", "slideLayout", "../slideLayouts/slideLayout4.xml"), ("rId5", "slideLayout", "../slideLayouts/slideLayout5.xml"),
                 ("rId6", "theme", "../theme/theme1.xml")),
@@ -99,6 +113,11 @@ public static partial class DeckPptx
         $"<a:lvl{n}pPr marL=\"{left}\" indent=\"-285750\" algn=\"l\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:lnSpc><a:spcPct val=\"100000\"/></a:lnSpc><a:spcBef><a:spcPts val=\"1000\"/></a:spcBef>" +
         $"<a:buClr><a:schemeClr val=\"accent1\"/></a:buClr><a:buFont typeface=\"Arial\"/><a:buChar char=\"{(n % 2 == 1 ? "•" : "–")}\"/><a:defRPr sz=\"{size}\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl{n}pPr>";
 
+    /// <summary>The bold design's band down the left in the accent colour; the others' thin bar across the top.</summary>
+    private static string MasterXml(bool band) => band
+        ? Master.Replace($"<a:ext cx=\"{W}\" cy=\"73152\"/>", "<a:ext cx=\"274320\" cy=\"" + H + "\"/>", StringComparison.Ordinal)
+        : Master;
+
     private static readonly string Master = $"""
         <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
         <p:sldMaster xmlns:a="{A}" xmlns:r="{R}" xmlns:p="{P}"><p:cSld><p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg><p:spTree>{Group}{Ph(2, "<p:ph type=\"title\"/>", 731520, 342900, 10728960, 1097280, "b", null)}{Ph(3, "<p:ph type=\"body\" idx=\"1\"/>", 731520, 1714500, 10728960, 4663440, "t", null)}<p:sp><p:nvSpPr><p:cNvPr id="7" name="Accent"/><p:cNvSpPr/><p:nvPr userDrawn="1"/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{W}" cy="73152"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:schemeClr val="accent1"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp></p:spTree></p:cSld>{ClrMap}<p:sldLayoutIdLst>{string.Concat(Enumerable.Range(1, 5).Select(i => $"<p:sldLayoutId id=\"{2147483648L + i}\" r:id=\"rId{i}\"/>"))}</p:sldLayoutIdLst><p:txStyles><p:titleStyle><a:lvl1pPr algn="l" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc><a:spcBef><a:spcPct val="0"/></a:spcBef><a:buNone/><a:defRPr sz="3600" b="1" kern="1200"><a:solidFill><a:schemeClr val="tx2"/></a:solidFill><a:latin typeface="+mj-lt"/><a:ea typeface="+mj-ea"/><a:cs typeface="+mj-cs"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle>{Level(1, 285750, 2200)}{Level(2, 685800, 2000)}{Level(3, 1085850, 1800)}</p:bodyStyle><p:otherStyle><a:defPPr><a:defRPr lang="en-US"/></a:defPPr><a:lvl1pPr marL="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1"><a:defRPr sz="1800" kern="1200"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill><a:latin typeface="+mn-lt"/><a:ea typeface="+mn-ea"/><a:cs typeface="+mn-cs"/></a:defRPr></a:lvl1pPr></p:otherStyle></p:txStyles></p:sldMaster>
@@ -111,7 +130,7 @@ public static partial class DeckPptx
 
     private static string Fill(string color) => $"<a:solidFill><a:schemeClr val=\"{color}\"/></a:solidFill>";
 
-    private static string ThemeXml(string name)
+    private static string ThemeXml(string name, Design d)
     {
         static string C(string slot, string hex) => $"<a:{slot}><a:srgbClr val=\"{hex}\"/></a:{slot}>";
         var line = new StringBuilder();
@@ -121,7 +140,7 @@ public static partial class DeckPptx
         }
         return $"""
             <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-            <a:theme xmlns:a="{A}" name="{name}"><a:themeElements><a:clrScheme name="{Brand.Product}"><a:dk1><a:srgbClr val="1B1C1F"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>{C("dk2", "1E3A5F")}{C("lt2", "EEF1F5")}{C("accent1", "2A78D6")}{C("accent2", "EB6834")}{C("accent3", "1BAF7A")}{C("accent4", "EDA100")}{C("accent5", "E87BA4")}{C("accent6", "4A3AA7")}{C("hlink", "2A78D6")}{C("folHlink", "4A3AA7")}</a:clrScheme><a:fontScheme name="{Brand.Product}"><a:majorFont><a:latin typeface="Calibri"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme><a:fmtScheme name="{Brand.Product}"><a:fillStyleLst>{Fill("phClr")}{Fill("phClr")}{Fill("phClr")}</a:fillStyleLst><a:lnStyleLst>{line}</a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst>{Fill("phClr")}{Fill("phClr")}{Fill("phClr")}</a:bgFillStyleLst></a:fmtScheme></a:themeElements><a:objectDefaults/><a:extraClrSchemeLst/></a:theme>
+            <a:theme xmlns:a="{A}" name="{name}"><a:themeElements><a:clrScheme name="{d.Name}">{C("dk1", d.Dk1)}{C("lt1", d.Lt1)}{C("dk2", d.Dk2)}{C("lt2", d.Lt2)}{string.Concat(d.Accents.Select((a, i) => C($"accent{i + 1}", a)))}{C("hlink", d.Accents[0])}{C("folHlink", d.Accents[5])}</a:clrScheme><a:fontScheme name="{d.Name}"><a:majorFont><a:latin typeface="{d.Major}"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont><a:minorFont><a:latin typeface="{d.Minor}"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme><a:fmtScheme name="{Brand.Product}"><a:fillStyleLst>{Fill("phClr")}{Fill("phClr")}{Fill("phClr")}</a:fillStyleLst><a:lnStyleLst>{line}</a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst>{Fill("phClr")}{Fill("phClr")}{Fill("phClr")}</a:bgFillStyleLst></a:fmtScheme></a:themeElements><a:objectDefaults/><a:extraClrSchemeLst/></a:theme>
             """;
     }
 }

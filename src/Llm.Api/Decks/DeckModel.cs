@@ -6,7 +6,7 @@ namespace Llm.Api.Decks;
 /// <summary>A chart's numbers: from the person's words, or asked of a database (<see cref="Ask"/>) and filled in here.</summary>
 public sealed class DeckChart
 {
-    /// <summary>bar or line.</summary>
+    /// <summary>bar, hbar (bars across), stacked, line, area, pie, doughnut or scatter (its categories the x numbers).</summary>
     public string Type { get; set; } = "bar";
     public List<string> Categories { get; set; } = [];
     public List<DeckSeries> Series { get; set; } = [];
@@ -36,16 +36,50 @@ public sealed class DeckPicture
     public Guid? FileId { get; set; }
 }
 
+/// <summary>One of a slide's items: an agenda's or timeline's step, a process step, a card, a big number.</summary>
+public sealed class DeckItem
+{
+    /// <summary>Its heading: a step's name, a card's title, a number's label, a timeline's date.</summary>
+    public string? Title { get; set; }
+    public string? Text { get; set; }
+    /// <summary>A big number's figure, as written ("42%", "3.2M").</summary>
+    public string? Value { get; set; }
+}
+
+/// <summary>A table: its column names and rows of cells.</summary>
+public sealed class DeckTable
+{
+    public List<string> Columns { get; set; } = [];
+    public List<List<string>> Rows { get; set; } = [];
+}
+
+/// <summary>A deck's look: a built-in design (when it has no company template), its footer, slide numbers and transition.</summary>
+public sealed class DeckLook
+{
+    /// <summary>arena, midnight, paper, bold or minimal.</summary>
+    public string Design { get; set; } = "arena";
+    public string? Footer { get; set; }
+    public bool Numbers { get; set; } = true;
+    /// <summary>none, fade, push or wipe.</summary>
+    public string Transition { get; set; } = "none";
+}
+
 /// <summary>One slide: its layout and what it holds.</summary>
 public sealed class DeckSlide
 {
-    /// <summary>title, section, bullets, two, chart, picture or quote.</summary>
+    /// <summary>One of <see cref="DeckModel.Layouts"/>.</summary>
     public string Layout { get; set; } = "bullets";
     public string? Title { get; set; }
     public string? Subtitle { get; set; }
     public List<string>? Bullets { get; set; }
     public List<string>? Left { get; set; }
     public List<string>? Right { get; set; }
+    /// <summary>A comparison's two headings, over <see cref="Left"/> and <see cref="Right"/>.</summary>
+    public string? LeftTitle { get; set; }
+    public string? RightTitle { get; set; }
+    /// <summary>An agenda's, timeline's, process's, cards' or big numbers' items.</summary>
+    public List<DeckItem>? Items { get; set; }
+    public DeckTable? Table { get; set; }
     public string? Quote { get; set; }
     public string? By { get; set; }
     public DeckChart? Chart { get; set; }
@@ -57,7 +91,15 @@ public sealed class DeckSlide
 public static class DeckModel
 {
     public const int MostSlides = 30;
-    public static readonly string[] Layouts = ["title", "section", "bullets", "two", "chart", "picture", "quote"];
+    /// <summary>The most points a slide shows; more go on a slide after it, its title continued.</summary>
+    public const int MostPoints = 6;
+    public static readonly string[] Layouts = ["title", "section", "agenda", "bullets", "two", "comparison", "chart", "table", "timeline", "process", "stats", "cards", "picture", "quote", "closing"];
+    public static readonly string[] Charts = ["bar", "hbar", "stacked", "line", "area", "pie", "doughnut", "scatter"];
+    public static readonly string[] Designs = ["arena", "midnight", "paper", "bold", "minimal"];
+    public static readonly string[] Transitions = ["none", "fade", "push", "wipe"];
+
+    /// <summary>How many items each layout of items shows at most.</summary>
+    public static int MostItems(string layout) => layout switch { "stats" => 4, "cards" => 4, "process" => 5, "timeline" => 6, "agenda" => 8, _ => 0 };
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -93,14 +135,36 @@ public static class DeckModel
         {
             layout = "bullets";
         }
+        var items = s.Items?.Select(i => new DeckItem { Title = Cut(i.Title, 120), Text = Cut(i.Text, 300), Value = Cut(i.Value, 24) })
+            .Where(i => i.Title is not null || i.Text is not null || i.Value is not null).ToList();
+        // An agenda written as points is its items.
+        if (layout == "agenda" && items is not { Count: > 0 } && Lines(s.Bullets, 8) is { } agenda)
+        {
+            items = [.. agenda.Select(a => new DeckItem { Title = a })];
+        }
+        var most = MostItems(layout);
+        items = most > 0 && items is { Count: > 0 } ? [.. items.Take(most)] : null;
+        if (most > 0 && items is null)
+        {
+            layout = "bullets";
+        }
+        var table = s.Table is { } t ? CleanTable(t) : null;
+        if (layout == "table" && table is null)
+        {
+            layout = "bullets";
+        }
         return new DeckSlide
         {
             Layout = layout,
             Title = Cut(s.Title, 200),
             Subtitle = Cut(s.Subtitle, 300),
-            Bullets = Lines(s.Bullets),
-            Left = Lines(s.Left),
-            Right = Lines(s.Right),
+            Bullets = Lines(s.Bullets, layout == "bullets" ? 30 : MostPoints),
+            Left = Lines(s.Left, MostPoints),
+            Right = Lines(s.Right, MostPoints),
+            LeftTitle = Cut(s.LeftTitle, 120),
+            RightTitle = Cut(s.RightTitle, 120),
+            Items = items,
+            Table = layout == "table" ? table : null,
             Quote = Cut(s.Quote, 500),
             By = Cut(s.By, 200),
             Chart = chart,
@@ -121,8 +185,68 @@ public static class DeckModel
         {
             return null;
         }
-        return new DeckChart { Type = c.Type is "line" ? "line" : "bar", Categories = categories, Series = series, Ask = ask, Note = Cut(c.Note, 1000) };
+        var type = c.Type?.Trim().ToLowerInvariant() is { } k && Charts.Contains(k) ? k : "bar";
+        // A pie or doughnut shows one series.
+        if (type is "pie" or "doughnut")
+        {
+            series = [.. series.Take(1)];
+        }
+        return new DeckChart { Type = type, Categories = categories, Series = series, Ask = ask, Note = Cut(c.Note, 1000) };
     }
 
-    public static List<DeckSlide> Clean(IEnumerable<DeckSlide> slides) => [.. slides.Take(MostSlides).Select(Clean)];
+    private static DeckTable? CleanTable(DeckTable t)
+    {
+        var columns = t.Columns.Select(c => Cut(c, 80) ?? "").Take(8).ToList();
+        if (columns.Count == 0)
+        {
+            return null;
+        }
+        var rows = t.Rows.Take(12).Select(r => r.Select(c => Cut(c, 200) ?? "").Take(columns.Count).Concat(Enumerable.Repeat("", columns.Count)).Take(columns.Count).ToList()).ToList();
+        return rows.Count == 0 ? null : new DeckTable { Columns = columns, Rows = rows };
+    }
+
+    /// <summary>
+    /// The slides as kept: each cleaned; a slide with more than <see cref="MostPoints"/> points split, the rest on slides
+    /// after it (its title continued), so no slide is crowded and no point is lost; at most <see cref="MostSlides"/>.
+    /// </summary>
+    public static List<DeckSlide> Clean(IEnumerable<DeckSlide> slides)
+    {
+        var kept = new List<DeckSlide>();
+        foreach (var slide in slides.Take(MostSlides).Select(Clean))
+        {
+            if (slide.Layout == "bullets" && slide.Bullets is { Count: > MostPoints } points)
+            {
+                for (var at = 0; at < points.Count; at += MostPoints)
+                {
+                    var part = Clean(slide);
+                    part.Bullets = [.. points.Skip(at).Take(MostPoints)];
+                    if (at > 0)
+                    {
+                        part.Title = slide.Title is { } t ? t + " (continued)" : null;
+                        part.Picture = null;
+                        part.Notes = null;
+                    }
+                    kept.Add(part);
+                }
+            }
+            else
+            {
+                kept.Add(slide);
+            }
+        }
+        return [.. kept.Take(MostSlides)];
+    }
+
+    /// <summary>A look as it may be kept: a known design and transition, a short footer.</summary>
+    public static DeckLook Clean(DeckLook? look) => new()
+    {
+        Design = look?.Design?.Trim().ToLowerInvariant() is { } d && Designs.Contains(d) ? d : "arena",
+        Footer = Cut(look?.Footer, 120),
+        Numbers = look?.Numbers ?? true,
+        Transition = look?.Transition?.Trim().ToLowerInvariant() is { } t && Transitions.Contains(t) ? t : "none",
+    };
+
+    public static string Write(DeckLook look) => JsonSerializer.Serialize(look, Json);
+
+    public static DeckLook ReadLook(string? json) => string.IsNullOrWhiteSpace(json) ? new DeckLook() : Clean(JsonSerializer.Deserialize<DeckLook>(json, Json));
 }

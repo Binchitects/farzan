@@ -32,7 +32,15 @@ public sealed partial class DeckMaker(OneQuestion one, DataQuestions data, Image
           {"layout": "chart", "title": "…", "chart": {"type": "bar", "categories": ["A", "B"], "series": [{"name": "…", "values": [1, 2]}]}, "notes": "…"},
           {"layout": "picture", "title": "…", "picture": {"prompt": "a concrete, visual description in English"}, "subtitle": "a caption", "notes": "…"},
           {"layout": "section", "title": "…", "subtitle": "…"},
-          {"layout": "quote", "quote": "…", "by": "…"}
+          {"layout": "agenda", "title": "Agenda", "items": [{"title": "a part of the talk", "text": "optional, a few words"}]},
+          {"layout": "comparison", "title": "…", "leftTitle": "Before", "left": ["…"], "rightTitle": "After", "right": ["…"]},
+          {"layout": "table", "title": "…", "table": {"columns": ["…", "…"], "rows": [["…", "…"]]}},
+          {"layout": "stats", "title": "…", "items": [{"value": "42%", "title": "what it counts", "text": "optional"}]},
+          {"layout": "cards", "title": "…", "items": [{"title": "…", "text": "a sentence or two"}]},
+          {"layout": "process", "title": "…", "items": [{"title": "a step", "text": "what happens"}]},
+          {"layout": "timeline", "title": "…", "items": [{"title": "a date or phase", "text": "what happens then"}]},
+          {"layout": "quote", "quote": "…", "by": "…"},
+          {"layout": "closing", "title": "Thank you, or the call to act", "subtitle": "who to ask, what to do next"}
         ]}
         """;
 
@@ -54,9 +62,14 @@ public sealed partial class DeckMaker(OneQuestion one, DataQuestions data, Image
 
     private string Rules(string sources) => $"""
         Today is {clock.GetUtcNow().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}.
-        Answer with JSON only, no other words, in this shape (the layouts: title, section, bullets, two, chart, picture, quote):
+        Answer with JSON only, no other words, in this shape (the layouts: {string.Join(", ", DeckModel.Layouts)}):
         {Shape}
-        The first slide is a title slide. Short points: at most 6 on a slide, each under 12 words. Speaker notes on every slide: what to say, two to four sentences.
+        Chart types: {string.Join(", ", DeckModel.Charts)} (pie and doughnut: one series of parts of a whole; scatter: the categories are x numbers).
+        Choose the layout that shows the idea, not points for everything: steps are a process, dates a timeline, a few figures
+        are stats, options side by side a comparison, rows of facts a table, a talk of more than 6 slides has an agenda.
+        The first slide is a title slide; a talk may end on a closing slide. Short points: at most 6 on a slide, each under
+        12 words; at most 4 stats or cards, 5 process steps, 6 timeline items, 8 table rows. Speaker notes on every slide:
+        what to say, two to four sentences.
         At most 3 pictures in a deck, unless the person asks for more; never a picture of text, a chart or a logo.
         Never make up numbers: a chart's numbers come from the person's words, or from a database it asks.
         {sources}
@@ -75,7 +88,7 @@ public sealed partial class DeckMaker(OneQuestion one, DataQuestions data, Image
     public const int MostDecks = 200;
 
     /// <summary>A new deck about what the person says, its charts' numbers asked, kept as its first version (in the default template, or the one chosen).</summary>
-    public async Task<(Deck? Deck, List<DeckSlide> Slides, IResult? Problem)> CreateAsync(AppUser me, string about, Guid? templateId, CancellationToken ct)
+    public async Task<(Deck? Deck, List<DeckSlide> Slides, IResult? Problem)> CreateAsync(AppUser me, string about, Guid? templateId, CancellationToken ct, DeckLook? look = null)
     {
         about = about.Trim();
         if (about.Length is 0 or > 20_000)
@@ -98,7 +111,7 @@ public sealed partial class DeckMaker(OneQuestion one, DataQuestions data, Image
         }
         await CheckFilesAsync(made.Slides, me, ct);
         await FillChartsAsync(me, made.Slides, false, ct);
-        var deck = new Deck { OwnerId = me.Id, Title = made.Title, Slides = DeckModel.Write(made.Slides), TemplateId = template == Guid.Empty ? null : template };
+        var deck = new Deck { OwnerId = me.Id, Title = made.Title, Slides = DeckModel.Write(made.Slides), TemplateId = template == Guid.Empty ? null : template, Look = DeckModel.Write(DeckModel.Clean(look)) };
         db.Decks.Add(deck);
         db.DeckVersions.Add(new DeckVersion { DeckId = deck.Id, Version = 1, Title = deck.Title, Slides = deck.Slides, Note = about.Length > 500 ? about[..499] + "…" : about });
         await db.SaveChangesAsync(ct);

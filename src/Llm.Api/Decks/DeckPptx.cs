@@ -30,19 +30,21 @@ public static partial class DeckPptx
     private const string RelBase = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
     private const string CtBase = "application/vnd.openxmlformats-officedocument.";
 
-    public static byte[] Build(string title, List<DeckSlide> slides, IReadOnlyDictionary<Guid, DeckImage> images, byte[]? template, DateTimeOffset at)
+    public static byte[] Build(string title, List<DeckSlide> slides, IReadOnlyDictionary<Guid, DeckImage> images, byte[]? template, DateTimeOffset at, DeckLook? look = null)
     {
-        var package = new Package(template is null ? Default() : Unzip(template));
+        look = DeckModel.Clean(look);
+        var package = new Package(template is null ? Default(look.Design) : Unzip(template));
         package.RemoveSlides();
         var layouts = package.Layouts();
         var (width, height) = package.SlideSize();
         var notesMaster = package.Target("ppt/presentation.xml", "notesMaster");
         var number = 0;
+        var ids = new List<long>();
         foreach (var slide in slides)
         {
             number++;
             var layout = Choose(layouts, slide.Layout);
-            var writer = new SlideWriter(package, number, width, height);
+            var writer = new SlideWriter(package, number, slides.Count, width, height, look);
             var xml = writer.Slide(slide, images);
             var path = $"ppt/slides/slide{number}.xml";
             package.Set(path, xml);
@@ -57,10 +59,28 @@ public static partial class DeckPptx
                 writer.Relate("notesSlide", $"../notesSlides/notesSlide{number}.xml");
             }
             package.SetRels(path, writer.Relations);
-            package.AddSlide($"slides/slide{number}.xml");
+            ids.Add(package.AddSlide($"slides/slide{number}.xml"));
         }
+        package.SetSections(title, slides, ids);
         package.SetTitle(title, at);
         return package.Zip();
+    }
+
+    /// <summary>A built-in design's theme for the browser, as <see cref="Theme"/> reads a template's.</summary>
+    public static string DesignTheme(string design) => Theme(Zip(Default(design)));
+
+    private static byte[] Zip(Dictionary<string, byte[]> parts)
+    {
+        using var stream = new MemoryStream();
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (path, bytes) in parts)
+            {
+                using var e = zip.CreateEntry(path).Open();
+                e.Write(bytes);
+            }
+        }
+        return stream.ToArray();
     }
 
     /// <summary>The template's theme for the browser: its colours and fonts, and the slide's size.</summary>
@@ -131,7 +151,8 @@ public static partial class DeckPptx
             "title" => ["title"],
             "section" => ["secHead", "title"],
             "two" => ["twoObj", "twoTxTwoObj", "obj"],
-            "chart" or "picture" => ["titleOnly", "obj"],
+            "chart" or "picture" or "agenda" or "comparison" or "table" or "stats" or "cards" or "process" or "timeline" => ["titleOnly", "obj"],
+            "closing" => ["title"],
             "quote" => ["titleOnly", "blank", "obj"],
             _ => ["obj", "tx"],
         };
@@ -258,7 +279,8 @@ public static partial class DeckPptx
 
         public void SetRels(string path, IEnumerable<(string Id, string Type, string Target)> rels) =>
             Set(RelsOf(path), new XDocument(new XDeclaration("1.0", "UTF-8", "yes"), new XElement(Rel + "Relationships",
-                rels.Select(r => new XElement(Rel + "Relationship", new XAttribute("Id", r.Id), new XAttribute("Type", RelBase + r.Type), new XAttribute("Target", r.Target))))).ToString(SaveOptions.DisableFormatting));
+                rels.Select(r => new XElement(Rel + "Relationship", new XAttribute("Id", r.Id), new XAttribute("Type", RelBase + r.Type), new XAttribute("Target", r.Target),
+                    r.Type == "hyperlink" ? new XAttribute("TargetMode", "External") : null)))).ToString(SaveOptions.DisableFormatting));
 
         /// <summary>The first part this one relates to by that type, or null.</summary>
         public string? Target(string path, string type) => Rels(path).FirstOrDefault(r => r.Type == type).Target;
@@ -331,7 +353,7 @@ public static partial class DeckPptx
         private int _nextRel = 1;
 
         /// <summary>A slide of ours into the presentation's list, after its masters and before its size.</summary>
-        public void AddSlide(string target)
+        public long AddSlide(string target)
         {
             var presentation = Xml("ppt/presentation.xml")!;
             var relsPath = RelsOf("ppt/presentation.xml");
@@ -359,6 +381,41 @@ public static partial class DeckPptx
             }
             var next = list.Elements(P + "sldId").Select(e => (long)e.Attribute("id")!).DefaultIfEmpty(255).Max() + 1;
             list.Add(new XElement(P + "sldId", new XAttribute("id", next), new XAttribute(R + "id", id)));
+            return next;
+        }
+
+        private static readonly XNamespace P14 = "http://schemas.microsoft.com/office/powerpoint/2010/main";
+
+        /// <summary>
+        /// PowerPoint's sections, when the deck has section slides: each starts one, named by its title; the slides before
+        /// the first are in one named by the deck.
+        /// </summary>
+        public void SetSections(string title, List<DeckSlide> slides, List<long> ids)
+        {
+            if (!slides.Any(s => s.Layout == "section"))
+            {
+                return;
+            }
+            var list = new XElement(P14 + "sectionLst");
+            XElement? current = null;
+            for (var i = 0; i < slides.Count; i++)
+            {
+                if (current is null || slides[i].Layout == "section")
+                {
+                    var name = slides[i].Layout == "section" ? slides[i].Title ?? "Section" : title;
+                    current = new XElement(P14 + "sldIdLst");
+                    list.Add(new XElement(P14 + "section", new XAttribute("name", name), new XAttribute("id", "{" + Guid.NewGuid().ToString().ToUpperInvariant() + "}"), current));
+                }
+                current.Add(new XElement(P14 + "sldId", new XAttribute("id", ids[i])));
+            }
+            var root = Xml("ppt/presentation.xml")!.Root!;
+            var ext = root.Element(P + "extLst");
+            if (ext is null)
+            {
+                ext = new XElement(P + "extLst");
+                root.Add(ext);
+            }
+            ext.AddFirst(new XElement(P + "ext", new XAttribute("uri", "{521415D9-36F7-43E2-AB2F-B90AF26B5E84}"), list));
         }
 
         public void SetTitle(string title, DateTimeOffset at)
@@ -400,6 +457,45 @@ public static partial class DeckPptx
                 }
             }
             return stream.ToArray();
+        }
+
+        private Dictionary<string, string>? _colors;
+
+        /// <summary>
+        /// "tx1" or "bg1", whichever has the greater contrast with a theme colour (WCAG's relative luminance), read from the
+        /// slide master's theme; "bg1" when the theme says nothing of it.
+        /// </summary>
+        public string Contrast(string fill)
+        {
+            if (_colors is null)
+            {
+                _colors = new Dictionary<string, string>(StringComparer.Ordinal);
+                var master = Target("ppt/presentation.xml", "slideMaster");
+                var theme = master is null ? null : Target(master, "theme");
+                foreach (var c in (theme is null ? null : Xml(theme))?.Descendants(A + "clrScheme").FirstOrDefault()?.Elements() ?? [])
+                {
+                    if ((c.Element(A + "srgbClr")?.Attribute("val")?.Value ?? c.Element(A + "sysClr")?.Attribute("lastClr")?.Value) is { Length: 6 } hex)
+                    {
+                        _colors[c.Name.LocalName] = hex;
+                    }
+                }
+            }
+            static double Luminance(string hex)
+            {
+                double Channel(int at)
+                {
+                    var c = int.Parse(hex.AsSpan(at, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture) / 255.0;
+                    return c <= 0.03928 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+                }
+                return 0.2126 * Channel(0) + 0.7152 * Channel(2) + 0.0722 * Channel(4);
+            }
+            static double Ratio(double a, double b) => (Math.Max(a, b) + 0.05) / (Math.Min(a, b) + 0.05);
+            if (!_colors.TryGetValue(fill, out var back) || !_colors.TryGetValue("dk1", out var dark) || !_colors.TryGetValue("lt1", out var light))
+            {
+                return "bg1";
+            }
+            var l = Luminance(back);
+            return Ratio(l, Luminance(dark)) > Ratio(l, Luminance(light)) ? "tx1" : "bg1";
         }
 
         private int _media;

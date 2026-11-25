@@ -830,6 +830,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
         {
             e.ToTable("decks");
             e.Property(x => x.Title).HasMaxLength(200);
+            e.Property(x => x.Look).HasMaxLength(1000).HasDefaultValue("{}");
             e.HasIndex(x => new { x.OwnerId, x.UpdatedAt });
             e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Decks.DeckTemplate>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.SetNull);

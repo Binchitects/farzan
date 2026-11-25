@@ -13,6 +13,8 @@ public sealed class Deck
     public required string Slides { get; set; }
     /// <summary>The company template it is in; none: the built-in look.</summary>
     public Guid? TemplateId { get; set; }
+    /// <summary>Its look, JSON: <c>{ design, footer, numbers, transition }</c> (the design only without a template).</summary>
+    public string Look { get; set; } = "{}";
     public int Version { get; set; } = 1;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
