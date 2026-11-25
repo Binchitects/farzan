@@ -69,6 +69,33 @@ async function openCanvas() {
 }
 
 describe('canvas', () => {
+  it('slides open as their deck draws them, link to it under Decks, and download as PowerPoint', async () => {
+    const slidesText = '# Plan\n\n## Steps {process}\n1. **Ask**\n2. **Build**\n'
+    const deck = {
+      id: 'd1', title: 'Plan', templateId: null, look: { design: 'arena', footer: null, numbers: true, transition: 'none' }, version: 1, createdAt: '', updatedAt: '',
+      slides: [{ layout: 'title', title: 'Plan' }, { layout: 'process', title: 'Steps', items: [{ title: 'Ask' }, { title: 'Build' }] }],
+    }
+    const { calls } = backend({
+      canvas: canvas({ kind: 'slides', deckId: 'd1', content: slidesText }),
+      extra: {
+        'GET /api/decks/d1': () => ({ json: deck }),
+        'GET /api/decks/config': () => ({ json: { pictures: false, templates: [], sources: [], designs: [{ name: 'arena', theme: { colors: {} } }] } }),
+        'GET /api/chat/canvases/k1/export': () => ({ json: {} }),
+      },
+    })
+    renderApp('/chat/c1')
+    const panel = await openCanvas()
+    const slides = await within(panel).findByRole('list', { name: 'Slides' })
+    expect(within(slides).getByText('Build')).toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: /Open in Decks to present/ })).toHaveAttribute('href', '/decks/d1')
+    // Its text is the deck's Markdown, to edit as any canvas.
+    await userEvent.click(within(panel).getByRole('tab', { name: 'Edit' }))
+    expect(await within(panel).findByRole('textbox', { name: 'Plan: text' })).toHaveValue(slidesText)
+    await userEvent.click(within(panel).getByRole('button', { name: 'Export' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'PowerPoint (.pptx)' }))
+    await waitFor(() => expect(calls.some((c) => c.path === '/api/chat/canvases/k1/export?format=pptx')).toBe(true))
+  })
+
   it('opens beside the chat from its header, and a save by the person is a version', async () => {
     const { calls } = backend()
     renderApp('/chat/c1')

@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Code2, Download, FilePen, FileText, History, Maximize2, MessageSquareQuote, Minimize2, Plus, RotateCcw, Save, Scissors, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Code2, Download, ExternalLink, FilePen, FileText, History, Maximize2, MessageSquareQuote, Minimize2, Plus, Presentation, RotateCcw, Save, Scissors, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { Link } from 'react-router'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { useConfirm } from '@/components/ui/confirm'
@@ -33,6 +34,8 @@ import { diffLines, diffRows, diffStats, type DiffRow } from './canvas-diff'
 import { locate, selectionMessage, selectionOf, type CanvasSelection } from './canvas-selection'
 import { markdownToHtml } from './export'
 import { Markdown } from './markdown'
+import { deckConfigQuery, deckQuery, themeFor } from '../decks/decks-api'
+import { SlideView } from '../decks/slide-view'
 
 /** What the person typed and has not saved, per canvas: kept while they look at another one. */
 interface Draft {
@@ -132,7 +135,7 @@ export function CanvasPanel({
 }
 
 function CanvasList({ chatId, canvases, loading, onSelect }: { chatId: string; canvases?: CanvasSummary[]; loading: boolean; onSelect: (id: string) => void }) {
-  const [making, setMaking] = useState<'document' | 'code' | null>(null)
+  const [making, setMaking] = useState<'document' | 'code' | 'slides' | null>(null)
   const queryClient = useQueryClient()
   const confirm = useConfirm()
   const remove = async (c: CanvasSummary) => {
@@ -150,6 +153,9 @@ function CanvasList({ chatId, canvases, loading, onSelect }: { chatId: string; c
         <Button size="sm" variant="outline" onClick={() => setMaking('code')}>
           <Code2 /> New code
         </Button>
+        <Button size="sm" variant="outline" onClick={() => setMaking('slides')}>
+          <Presentation /> New slides
+        </Button>
       </div>
       {making && <NewCanvas chatId={chatId} kind={making} onCancel={() => setMaking(null)} onMade={onSelect} />}
       {loading ? (
@@ -157,7 +163,7 @@ function CanvasList({ chatId, canvases, loading, onSelect }: { chatId: string; c
       ) : !canvases?.length ? (
         !making && (
           <EmptyState icon={FilePen} title="No canvas yet" className="border-0">
-            Ask for a document or code “in a canvas”, or start one here. You and the model both edit it, and every change is kept as a version.
+            Ask for a document, code or slides “in a canvas”, or start one here. You and the model both edit it, and every change is kept as a version. Slides are a deck too, to present and download as PowerPoint.
           </EmptyState>
         )
       ) : (
@@ -170,12 +176,12 @@ function CanvasList({ chatId, canvases, loading, onSelect }: { chatId: string; c
                 className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 text-left outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring"
               >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary-ink">
-                  {c.kind === 'code' ? <Code2 className="size-4" /> : <FileText className="size-4" />}
+                  {c.kind === 'code' ? <Code2 className="size-4" /> : c.kind === 'slides' ? <Presentation className="size-4" /> : <FileText className="size-4" />}
                 </span>
                 <span className="grid min-w-0">
                   <span className="truncate text-sm font-medium">{c.title}</span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {[c.kind === 'code' ? (c.language ?? 'code') : 'Document', `version ${c.version}`, `${c.lines} line${c.lines === 1 ? '' : 's'}`, ago(c.updatedAt)].join(' · ')}
+                    {[c.kind === 'code' ? (c.language ?? 'code') : c.kind === 'slides' ? 'Slides' : 'Document', `version ${c.version}`, `${c.lines} line${c.lines === 1 ? '' : 's'}`, ago(c.updatedAt)].join(' · ')}
                   </span>
                 </span>
               </button>
@@ -190,7 +196,10 @@ function CanvasList({ chatId, canvases, loading, onSelect }: { chatId: string; c
   )
 }
 
-function NewCanvas({ chatId, kind, onCancel, onMade }: { chatId: string; kind: 'document' | 'code'; onCancel: () => void; onMade: (id: string) => void }) {
+/** What new slides start from: a title slide and one slide, in the deck's Markdown. */
+const firstSlides = (title: string) => `# ${title}\n\n## The first slide\n- A point\n`
+
+function NewCanvas({ chatId, kind, onCancel, onMade }: { chatId: string; kind: 'document' | 'code' | 'slides'; onCancel: () => void; onMade: (id: string) => void }) {
   const queryClient = useQueryClient()
   const [title, setTitle] = useState('')
   const [language, setLanguage] = useState('')
@@ -199,7 +208,8 @@ function NewCanvas({ chatId, kind, onCancel, onMade }: { chatId: string; kind: '
     e.preventDefault()
     setMaking(true)
     try {
-      const made = await createCanvas(chatId, { title: title.trim() || (kind === 'code' ? 'Untitled code' : 'Untitled document'), kind, language: kind === 'code' ? language.trim() || null : null, content: '' })
+      const named = title.trim() || (kind === 'code' ? 'Untitled code' : kind === 'slides' ? 'Untitled slides' : 'Untitled document')
+      const made = await createCanvas(chatId, { title: named, kind, language: kind === 'code' ? language.trim() || null : null, content: kind === 'slides' ? firstSlides(named) : '' })
       queryClient.setQueryData(canvasQuery(made.id).queryKey, made)
       await queryClient.invalidateQueries({ queryKey: canvasesQuery(chatId).queryKey })
       onMade(made.id)
@@ -210,7 +220,7 @@ function NewCanvas({ chatId, kind, onCancel, onMade }: { chatId: string; kind: '
     }
   }
   return (
-    <form onSubmit={submit} className="grid gap-2 rounded-lg border p-3" aria-label={kind === 'code' ? 'New code' : 'New document'}>
+    <form onSubmit={submit} className="grid gap-2 rounded-lg border p-3" aria-label={kind === 'code' ? 'New code' : kind === 'slides' ? 'New slides' : 'New document'}>
       <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={kind === 'code' ? 'File name, e.g. rename_photos.py' : 'Title'} aria-label="Title" autoFocus maxLength={200} />
       {kind === 'code' && <Input value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="Language, e.g. python" aria-label="Language" maxLength={40} />}
       <div className="flex justify-end gap-2">
@@ -241,7 +251,7 @@ function CanvasEditor({ canvas, onSend, busy }: { canvas: Canvas; onSend: (text:
   const [loaded, setLoaded] = useState(kept?.loaded ?? { content: canvas.content, title: canvas.title })
   const [seen, setSeen] = useState(canvas.version)
   const [saving, setSaving] = useState(false)
-  const [view, setView] = useState<'edit' | 'preview'>('edit')
+  const [view, setView] = useState<'edit' | 'preview'>(canvas.kind === 'slides' ? 'preview' : 'edit')
   const [sel, setSel] = useState<CanvasSelection | null>(null)
   const [asking, setAsking] = useState(false)
   const [question, setQuestion] = useState('')
@@ -349,7 +359,7 @@ function CanvasEditor({ canvas, onSend, busy }: { canvas: Canvas; onSend: (text:
                 Edit
               </TabsTrigger>
               <TabsTrigger value="preview" className="px-2 text-xs">
-                Preview
+                {canvas.kind === 'slides' ? 'Slides' : 'Preview'}
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -374,7 +384,9 @@ function CanvasEditor({ canvas, onSend, busy }: { canvas: Canvas; onSend: (text:
           </div>
         </Alert>
       )}
-      {previewing ? (
+      {previewing && canvas.kind === 'slides' ? (
+        <SlidesPreview canvas={canvas} />
+      ) : previewing ? (
         <div ref={preview} className="min-h-0 flex-1 overflow-y-auto rounded-md border px-4 py-3">
           {content.trim() ? <Markdown text={content} /> : <p className="text-sm text-muted-foreground">Nothing written yet.</p>}
         </div>
@@ -610,6 +622,13 @@ function ExportMenu({ canvas }: { canvas: Canvas }) {
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">The saved version</DropdownMenuLabel>
         {canvas.kind === 'code' ? (
           <DropdownMenuItem onSelect={() => void download('file')}>Download the file</DropdownMenuItem>
+        ) : canvas.kind === 'slides' ? (
+          <>
+            <DropdownMenuItem onSelect={() => void download('pptx')} disabled={!canvas.deckId}>
+              PowerPoint (.pptx)
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void download('md')}>Markdown (.md)</DropdownMenuItem>
+          </>
         ) : (
           <>
             <DropdownMenuItem onSelect={() => void download('md')}>Markdown (.md)</DropdownMenuItem>
@@ -633,4 +652,38 @@ function printed(canvas: Canvas) {
   toast.info('The sandbox is not running, so your browser makes the PDF: choose Save as PDF.')
   page.addEventListener('load', () => page.print(), { once: true })
   setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+/**
+ * A slides canvas as its deck draws it: its slides as saved (the deck is made again from each saved version), a link to
+ * it under Decks, where it is presented and changed slide by slide.
+ */
+function SlidesPreview({ canvas }: { canvas: Canvas }) {
+  const queryClient = useQueryClient()
+  const config = useQuery(deckConfigQuery)
+  const deck = useQuery({ ...deckQuery(canvas.deckId ?? ''), enabled: !!canvas.deckId })
+  // Each saved version made the deck again: read it again.
+  useEffect(() => {
+    if (canvas.deckId) void queryClient.invalidateQueries({ queryKey: deckQuery(canvas.deckId).queryKey })
+  }, [canvas.deckId, canvas.version, queryClient])
+  if (!canvas.deckId) return <p className="text-sm text-muted-foreground">Save the canvas: its deck is made from what it says.</p>
+  if (!deck.data) return <Skeleton className="aspect-video" />
+  const d = deck.data
+  const theme = themeFor(config.data, d.templateId, d.look)
+  return (
+    <div className="grid min-h-0 flex-1 content-start gap-2 overflow-y-auto">
+      <Button size="sm" variant="outline" className="justify-self-start" asChild>
+        <Link to={`/decks/${d.id}`}>
+          <ExternalLink /> Open in Decks to present
+        </Link>
+      </Button>
+      <ol className="grid gap-2" aria-label="Slides">
+        {d.slides.map((s, i) => (
+          <li key={i} className="overflow-hidden rounded-md border">
+            <SlideView slide={s} theme={theme} look={d.look} number={i + 1} total={d.slides.length} />
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
 }

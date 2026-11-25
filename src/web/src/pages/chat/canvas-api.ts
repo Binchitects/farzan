@@ -1,12 +1,14 @@
 import { api } from '@/lib/api'
 
-/** A canvas of a chat, without its text: a document (Markdown) or code. */
+/** A canvas of a chat, without its text: a document (Markdown), code, or slides (a deck written as Markdown, under Decks too). */
 export interface CanvasSummary {
   id: string
   conversationId: string
   title: string
-  kind: 'document' | 'code'
+  kind: 'document' | 'code' | 'slides'
   language: string | null
+  /** A slides canvas's deck. */
+  deckId?: string | null
   /** Its latest version's number, from 1. */
   version: number
   lines: number
@@ -53,7 +55,7 @@ export const versionQuery = (id: string, number: number) => ({
   staleTime: Infinity,
 })
 
-export const createCanvas = (chatId: string, body: { title: string; kind: 'document' | 'code'; language?: string | null; content?: string }) =>
+export const createCanvas = (chatId: string, body: { title: string; kind: 'document' | 'code' | 'slides'; language?: string | null; content?: string }) =>
   api<Canvas>(`/api/chat/conversations/${chatId}/canvases`, { body })
 
 /** The person's save, made on `baseVersion`: refused (409) when the canvas moved on since. */
@@ -64,6 +66,6 @@ export const restoreVersion = (id: string, number: number) => api<Canvas>(`/api/
 
 export const deleteCanvas = (id: string) => api(`/api/chat/canvases/${id}`, { method: 'DELETE' })
 
-export type CanvasExport = 'md' | 'docx' | 'pdf' | 'file'
+export type CanvasExport = 'md' | 'docx' | 'pdf' | 'file' | 'pptx'
 
 export const exportUrl = (id: string, format: CanvasExport) => `/api/chat/canvases/${id}/export?format=${format}`
