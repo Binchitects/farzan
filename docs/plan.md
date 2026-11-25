@@ -126,9 +126,11 @@ Headlines: **dashboards whose numbers are right, per GPU and per model**; **a pr
     7 days, five models (Qwen3-4B 37.4, Qwen3.8-27B 10.0, Qwen3-VL-8B 9.5, two vLLM test models 0.13 each) of which
     only one was loaded, on one RTX 3090. It is the busiest minute people made, not what the GPU can make, and it adds
     models that never ran together.
-  - *Live tokens a second* takes `rate((n_busy_slots_per_decode * n_decode_total)[1m:15s])`: the rate of a gauge
-    times a counter, which moves with the gauge (9.47 against a true 13.35 for Qwen3-VL at 07:30; 5.96 against 6.00
-    for the 27B). The true rate is `rate(llamacpp:tokens_predicted_total)`.
+  - *Live tokens a second* (`rate((n_busy_slots_per_decode * n_decode_total)[1m:15s])`) is sound, checked
+    2026-11-26: the gauge is llama.cpp's lifetime average, so the product is its count of tokens made as they are made;
+    over a day it agrees with `tokens_predicted_total` within 0.5–9% (2,728 against 2,713 for the 27B on 2026-11-13). A
+    one-minute window with three samples misreads it (9.47 against 13.35 for Qwen3-VL at 07:30): the windows need at
+    least four scrapes.
   - *Decode / Prefill speed a request* and *Draft acceptance*: NO DATA over 30 days in the app's own audit (the 5-minute
     ratios are NaN whenever a window had no request; the `>= 0` filter drops them, so the stat is empty).
   - The ledger's decode speed (tokens / (end − first token)) gives 54,000 tok/s for Qwen3-4B and 126,000 for an
