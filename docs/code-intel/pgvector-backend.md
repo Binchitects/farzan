@@ -40,7 +40,7 @@ CODE_INTEL_PG_DSN=postgresql://user:pass@postgres:5432/code-intel
 ```
 
 Both are required; either missing leaves the SQLite path in force. The stack's
-Postgres already ships the extension (`pgvector/pgvector:0.8.0-pg16`) and the
+Postgres already ships the extension (`pgvector/pgvector:0.8.7-pg16-bookworm`) and the
 init script creates the `code-intel` database with `CREATE EXTENSION vector`.
 
 Install the optional dependency if you are not using the shipped image:

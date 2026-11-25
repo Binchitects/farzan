@@ -67,7 +67,7 @@ class PitrComposeTests(unittest.TestCase):
         conf = (deploy / "config" / "pgbackrest" / "pgbackrest.conf").read_text()
         self.assertIn("repo1-path=/pgbackrest", conf)
         self.assertIn("[arena]", conf)
-        self.assertRegex((deploy / "services" / "postgres.Dockerfile").read_text(), r"ARG POSTGRES_IMAGE=pgvector/pgvector:0\.8\.0-pg16")
+        self.assertRegex((deploy / "services" / "postgres.Dockerfile").read_text(), r"ARG POSTGRES_IMAGE=pgvector/pgvector:0\.8\.7-pg16-bookworm")
 
 
 if __name__ == "__main__":

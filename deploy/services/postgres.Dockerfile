@@ -5,10 +5,11 @@
 #   docker compose -f docker-compose.yml -f pitr.yml build postgres   # approve first: Debian's packages
 #
 # Built from the pgvector image already on the host; pgBackRest comes from the distribution's packages.
-ARG POSTGRES_IMAGE=pgvector/pgvector:0.8.0-pg16
+ARG POSTGRES_IMAGE=pgvector/pgvector:0.8.7-pg16-bookworm
 FROM ${POSTGRES_IMAGE}
 
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends pgbackrest \
  && rm -rf /var/lib/apt/lists/* \
  && mkdir -p /var/log/pgbackrest /var/spool/pgbackrest \

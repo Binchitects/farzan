@@ -10,7 +10,7 @@ const command = `docker run --rm -v "$PWD:/work" -w /work node:22 sh -c "npm ci 
 
 async function backend(page: Page) {
   const state = {
-    name: 'Code Arena', version: '8.0.0', license: 'AGPL-3.0-only', source: 'https://github.com/Binchitects/argus', manual: 'https://llm.test/help/code-arena',
+    name: 'Code Arena', version: '8.0.0', license: 'AGPL-3.0-only', source: 'https://github.com/Binchitects/farzan', manual: 'https://llm.test/help/code-arena',
     folder: '/home/ada/shop', project: 'shop', branch: 'main', model: 'model-a', context: 262144, contextUsed: 4200, compactAt: 80, compactTarget: 25,
     servers: [], queued: [], thinking: null, mode: 'ask', modes: [{ name: 'ask', description: 'edits and commands ask first' }],
     session: 's1', busy: false, arenaTools: false, tools: { local: 10, servers: [] }, tasksRunning: 1,

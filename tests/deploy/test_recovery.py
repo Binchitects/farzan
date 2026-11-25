@@ -150,7 +150,7 @@ class RestoreTestScript(unittest.TestCase):
         self.assertIn("live project left alone: arena", r.stdout)
         self.assertIn("backup.sh --restore --from", r.stdout)
         self.assertIn(f"at https://llm.example:{self.port} (127.0.0.1)", r.stdout)
-        self.assertIn("arena-app arena-web traefik:v3.6.7 pgvector/pgvector:0.8.0-pg16 python:3.13-slim", r.stdout)
+        self.assertIn("arena-app arena-web traefik:v3.8.0 pgvector/pgvector:0.8.7-pg16-bookworm python:3.13-slim", r.stdout)
         self.assertIn("internal: true", r.stdout)
         # Nothing but reading the compose file's services.
         self.assertTrue(all(c[1:2] == ["compose"] and "config" in c for c in self.s.calls()), self.s.calls())

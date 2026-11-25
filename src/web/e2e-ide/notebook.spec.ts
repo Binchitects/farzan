@@ -21,7 +21,7 @@ const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwA
 /** code-arena web's API with a notebook and a kernel that answers each cell: what it printed first, then a picture and a table. */
 async function backend(page: Page) {
   const state = {
-    name: 'Code Arena', version: '7.8.0', license: 'AGPL-3.0-only', source: 'https://github.com/Binchitects/argus', manual: 'https://llm.test/help/code-arena',
+    name: 'Code Arena', version: '7.8.0', license: 'AGPL-3.0-only', source: 'https://github.com/Binchitects/farzan', manual: 'https://llm.test/help/code-arena',
     folder: '/home/ada/shop', project: 'shop', branch: 'main', model: 'model-a', context: 262144, contextUsed: 4200, compactAt: 80, compactTarget: 25,
     servers: [], jobs: [], queued: [], thinking: null, mode: 'ask', modes: [{ name: 'ask', description: 'edits and commands ask first' }],
     session: 's1', busy: false, arenaTools: false, tools: { local: 10, servers: [] },

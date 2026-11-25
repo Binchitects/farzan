@@ -16,6 +16,7 @@ ENV PIP_DEFAULT_TIMEOUT=60 PIP_RETRIES=10
 # Tesseract OCR, poppler (PDF to text and pictures), Graphviz (diagrams), and
 # fonts for many scripts (Noto: Latin, Cyrillic, Greek, Arabic and Persian...).
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends \
       libreoffice-writer-nogui libreoffice-calc-nogui libreoffice-impress-nogui \
       pandoc ffmpeg imagemagick tesseract-ocr tesseract-ocr-eng poppler-utils graphviz \
@@ -92,4 +93,8 @@ RUN echo /opt/toolbox > "$(python -c 'import site; print(site.getsitepackages()[
  && python -c "import sandbox_tools, arena"
 
 COPY runner.py /runner.py
+# pip as new as there is (its own copies of urllib3 and msgpack with their fixes): code run here may use it.
+RUN pip install --no-cache-dir --upgrade "pip==26.3" \
+ && rm -rf /usr/local/lib/python3.13/ensurepip/_bundled
+
 ENTRYPOINT ["python", "-I", "-u", "/runner.py"]

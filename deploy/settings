@@ -31,13 +31,13 @@ LLAMACPP_BACKEND     | Models        | choice:cuda/rocm/vulkan/sycl/metal/cpu | 
 MEDIA_GPU            | Models        | number  | -             | The GPU the picture server runs on (empty: the first)
 EMBED_GPU            | Models        | number  | -             | The GPU the embedder runs on (empty: the CPU)
 ENGINE_RAM_PROTECT   | Models        | size    | -             | RAM protected for the engine under pressure (never a limit), e.g. 40g
-VLLM_IMAGE           | Models        | text    | vllm/vllm-openai:v0.31.0 | The vLLM image arena-vllm is built on, with its GGUF plugin (the vllm feature)
+VLLM_IMAGE           | Models        | text    | vllm/vllm-openai:v0.34.0 | The vLLM image arena-vllm is built on, with its GGUF plugin (the vllm feature)
 VLLM_SHM             | Models        | size    | 16gb          | vLLM's shared memory
-SGLANG_IMAGE         | Models        | text    | lmsysorg/sglang:v0.5.21-cu130-runtime | SGLang's image (the sglang feature)
+SGLANG_IMAGE         | Models        | text    | lmsysorg/sglang:v0.5.23-cu130-runtime | SGLang's image (the sglang feature)
 SGLANG_SHM           | Models        | size    | 16gb          | SGLang's shared memory
 LMDEPLOY_IMAGE       | Models        | text    | arena-lmdeploy:0.18.0 | LMDeploy's image (the lmdeploy feature; lmdeploy-build.yml builds it)
 LMDEPLOY_SHM         | Models        | size    | 16gb          | LMDeploy's shared memory
-STRATA_IMAGE         | Models        | text    | ghcr.io/niko1221/strata:0.2.11-cuda13 | Strata's image (the strata feature)
+STRATA_IMAGE         | Models        | text    | ghcr.io/niko1221/strata:0.2.22-cuda13 | Strata's image (the strata feature)
 STRATA_SHM           | Models        | size    | 2gb           | Strata's shared memory
 KVCACHE_DIR          | Models        | path    | ./kvcache     | LMCache's disk tier for vLLM models: fast NVMe
 GITLAB_URL           | GitLab        | url     | -             | The GitLab the code-intelligence service indexes

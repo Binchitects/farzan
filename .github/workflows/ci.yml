@@ -122,7 +122,7 @@ jobs:
           chmod 644 certs/*
           docker network create e2e
           docker run -d --name postgres --network e2e -e POSTGRES_USER=app -e POSTGRES_PASSWORD=ci \
-            --health-cmd "pg_isready -U app" --health-interval 2s pgvector/pgvector:0.8.0-pg16
+            --health-cmd "pg_isready -U app" --health-interval 2s pgvector/pgvector:0.8.7-pg16-bookworm
           until [ "$(docker inspect -f '{{.State.Health.Status}}' postgres)" = healthy ]; do sleep 1; done
           docker run -d --name app --network e2e --read-only --tmpfs /tmp --tmpfs /audit:uid=1000,gid=1000 \
             -e Database__Host=postgres -e Database__Username=app -e Database__Password=ci \
@@ -132,7 +132,7 @@ jobs:
             --security-opt no-new-privileges:true llm-web:ci
           docker run -d --name traefik --network e2e -p 8443:8443 -v "$PWD/certs:/certs:ro" \
             -v "$PWD/src/web/ci/traefik.yml:/etc/traefik/traefik.yml:ro" \
-            -v "$PWD/src/web/ci/routes.yml:/etc/traefik/routes.yml:ro" traefik:v3.6.7
+            -v "$PWD/src/web/ci/routes.yml:/etc/traefik/routes.yml:ro" traefik:v3.8.0
           for i in $(seq 1 60); do
             [ "$(docker inspect -f '{{.State.Health.Status}}' app)" = healthy ] && \
             [ "$(docker inspect -f '{{.State.Health.Status}}' web)" = healthy ] && \

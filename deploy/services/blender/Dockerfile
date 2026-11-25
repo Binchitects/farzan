@@ -12,6 +12,7 @@ ARG BLENDER_SHA256=9ba871ff2ecd36526b77432745980b7e6664ecd0c7ca11c48849073dcfe06
 # What Blender's binary links to, headless (no X server: --background), and Mesa's software OpenGL for
 # Workbench and EEVEE renders.
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends \
       ca-certificates curl xz-utils libx11-6 libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libice6 \
       libgl1 libegl1 libgl1-mesa-dri libglu1-mesa libxext6 libxinerama1 libxcursor1 libxrandr2 libwayland-client0 libdbus-1-3 \
@@ -33,5 +34,10 @@ ENV SANDBOX_RUN=blender \
 
 LABEL org.opencontainers.image.title="arena-blender" \
       org.opencontainers.image.description="Blender ${BLENDER_VERSION} headless, run as Arena's 3D sandbox"
+
+# pip out of the image: nothing here installs at run time, and pip carries its own copies of urllib3, msgpack and
+# setuptools (with known vulnerabilities in the ones it bundles); Python's ensurepip wheel with it.
+RUN python3 -m pip uninstall -y pip \
+ && rm -rf /usr/local/lib/python3.13/ensurepip/_bundled /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.13
 
 ENTRYPOINT ["python3", "-I", "/runner.py"]

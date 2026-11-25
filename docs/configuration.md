@@ -57,7 +57,7 @@ each v3 option maps: [deployment.md](deployment.md#where-the-v3-env-options-went
 | `code-intel.yaml` | Farzan Graph's paths; the GitLab comes from `.env` |
 | `prometheus/` | what is scraped, and the alert rules |
 | `alertmanager.yml` | where alerts go (nowhere by default: the app shows them) |
-| `loki.yml`, `promtail.yml` | the logs |
+| `loki.yml`, `alloy.alloy` | the logs |
 | `searxng.yml` | the web search engine |
 
 ## Volumes

@@ -36,7 +36,7 @@ and nothing reaches `power-limits`.
 ┌────────▼──────────┐ ┌────────────────▼──┐ ┌────────▼──────────┐ ▼
 │ llamacpp          │ │ sandbox [n]       │ │ prometheus        │ your GitLab
 │ vllm, sglang,     │ │ blender [n]       │ │ alertmanager      │
-│ lmdeploy, strata  │ │ lean [n]          │ │ loki, promtail    │
+│ lmdeploy, strata  │ │ lean [n]          │ │ loki, alloy       │
 │ imagegen          │ │ browser [b]       │ │ node-exporter     │
 │ videogen, audio   │ │ searxng           │ │ gpu-exporter      │
 │ embed             │ │                   │ │                   │
@@ -68,7 +68,7 @@ and the engines directly only to manage them (load, unload, slots, health).
 | the engines | `llamacpp`, `vllm`, `sglang`, `lmdeploy`, `strata`; `imagegen`, `videogen`, `audio`, `embed` | the models: chat models on llama.cpp, vLLM or SGLang, pictures and video on stable-diffusion.cpp, speech on speaches, embeddings on the CPU; other GPU servers the app does not run are reached the same way, through the app's gateway |
 | Farzan Graph | `code-intel`, `scanners` | the code index of your GitLab (read only), knowledge packs and security advisories, over MCP; the scanners for its security reviews |
 | the tools | `sandbox`, `blender`, `lean`, `browser`, `searxng`, `laya`, `studio`, `workspaces` | Python and commands, 3D, proofs, the browser agent, web search, typed decisions, the media studio's own models, Code Studio's workspaces |
-| monitoring | `prometheus`, `alertmanager`, `loki`, `promtail`, the exporters, `power-limits` | what the app's dashboards, logs and alerts read; power caps kept applied |
+| monitoring | `prometheus`, `alertmanager`, `loki`, `alloy`, the exporters, `power-limits` | what the app's dashboards, logs and alerts read; power caps kept applied |
 | off the host | Code Arena, your GitLab, GitHub and Gitea, other GPU servers, Hugging Face, the company's knowledge sources | reached by the app or Farzan Graph (the app's gateway reaches other GPU servers), by the speech server (Hugging Face) and by Code Studio's workspaces (the code hosts, package registries), or reaching in through Traefik |
 
 A broken Traefik is a total outage. A broken Prometheus is not. Farzan Graph alone,
@@ -188,7 +188,7 @@ features it requires.
 | `workspaces` | no | `workspaces` | Code Studio's workspaces on this server (requires `code-studio`) |
 | `laya` | no | `laya` | typed decisions on the CPU |
 | `scanners` | no | `scanners` | security scanners for code reviews (requires `code-intel`) |
-| `monitoring` | yes | `prometheus`, `alertmanager`, `loki`, `promtail`, `node-exporter`, `cpu-temp-exporter` | dashboards, logs and alerts |
+| `monitoring` | yes | `prometheus`, `alertmanager`, `loki`, `alloy`, `node-exporter`, `cpu-temp-exporter` | dashboards, logs and alerts |
 | `gpu-monitoring`, `dcgm` | yes, no | `gpu-exporter`, `dcgm-exporter` | the GPUs' metrics; data-centre GPU detail on bare metal |
 | `power-limits` | yes | `power-limits` | GPU and CPU power caps kept applied |
 | `valkey` | no | `valkey` | LMCache's shared store for the vLLM models' token cache, when `LMCACHE_REMOTE` names it |

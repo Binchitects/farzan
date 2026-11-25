@@ -51,6 +51,16 @@ public sealed partial class VectorSupport(IOptionsMonitor<KnowledgeOptions> opti
                 {
                     await db.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS vector", ct);
                     _has = true;
+                    // A database made with an older pgvector keeps that version's SQL until the extension is updated (after
+                    // an image upgrade: 0.8.0 to 0.8.7). Only its owner may; a company Postgres another owns keeps its own.
+                    try
+                    {
+                        await db.Database.ExecuteSqlRawAsync("ALTER EXTENSION vector UPDATE", ct);
+                    }
+                    catch (PostgresException)
+                    {
+                        // Not the owner, or no newer version: the one there serves.
+                    }
                 }
                 catch (PostgresException ex)
                 {

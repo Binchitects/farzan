@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging.Console;
 namespace Llm.Api;
 
 /// <summary>
-/// The app's log lines as the JSON console writes them (one object a line, the shape promtail and Loki read), with personal and
+/// The app's log lines as the JSON console writes them (one object a line, the shape Alloy and Loki read), with personal and
 /// health data masked first: e-mail addresses, phone, card, IBAN, social security, NHS, national and Medicare numbers, dates of
 /// birth and medical record numbers, in the message, its values and an exception's text. IP addresses stay, as the audit log
 /// keeps them (security needs them).

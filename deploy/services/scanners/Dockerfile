@@ -5,30 +5,42 @@
 #
 # Not here: gosec and the .NET analyzers, which build the project and so fetch its packages; Arena's Go and C# rules
 # stand in for them.
+# gitleaks from its source at its release's commit, built with the newest Go and the libraries it reads raised to
+# their fixed versions: the release's own binary (8.30.1) was built with an older Go and older x/crypto, x/text and
+# compress, each with known vulnerabilities. Checked: the commit is the tag's, go vet passes, the binary says its version.
+FROM golang:1.27-bookworm AS gitleaks
+ARG GITLEAKS_VERSION=8.30.1
+ARG GITLEAKS_COMMIT=83d9cd684c87d95d656c1458ef04895a7f1cbd8e
+ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOFLAGS=-trimpath
+RUN git clone --quiet --branch "v${GITLEAKS_VERSION}" https://github.com/gitleaks/gitleaks /src \
+ && cd /src && test "$(git rev-parse HEAD)" = "${GITLEAKS_COMMIT}" \
+ && go get golang.org/x/crypto@v0.52.0 golang.org/x/text@v0.41.0 github.com/klauspost/compress@v1.18.7 \
+ && go mod tidy \
+ && go vet ./... \
+ && go build -ldflags "-s -w -X github.com/zricethezav/gitleaks/v8/version.Version=v${GITLEAKS_VERSION}" -o /gitleaks . \
+ && /gitleaks version
+
 FROM python:3.13-slim-bookworm
 # PyPI over a slow or lossy link: a minute per read and ten tries before a package counts as missing (a read
 # that timed out read as "no matching distribution"). Only pip reads it.
 ENV PIP_DEFAULT_TIMEOUT=60 PIP_RETRIES=10
 
-ARG OPENGREP_VERSION=1.31.0
-ARG OPENGREP_SHA256=02328d41e710a0305d7407de255bf556f7901f515b6cc3637f68999c54800f6c
+ARG OPENGREP_VERSION=1.33.1
+ARG OPENGREP_SHA256=1a78593c369cd58a8545a1dfb2ce548139f028a1af4ea7d08bc5ce8385cde243
 ARG GITLEAKS_VERSION=8.30.1
-ARG GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
-ARG TRIVY_VERSION=0.75.0
-ARG TRIVY_SHA256=c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f
+ARG TRIVY_VERSION=0.76.2
+ARG TRIVY_SHA256=bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf
 
 # git, to check out a bundle's commit and for gitleaks to read its history (its C commands only: Perl, which only
 # git's interactive and mail commands use, is removed again); opengrep's engine alone (LGPL-2.1: its command-line
 # wrapper unpacks some 250 MB of Python at each start, and the scanner gives the engine its rules and files itself);
-# gitleaks (MIT) and Trivy (Apache-2.0). curl only while building. One layer, so what is removed takes no room.
+# and Trivy (Apache-2.0); gitleaks (MIT) comes built from the stage above. curl only while building. One layer, so what is removed takes no room.
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends git ca-certificates curl \
  && curl -fsSL -o /tmp/opengrep.tgz "https://github.com/opengrep/opengrep/releases/download/v${OPENGREP_VERSION}/opengrep-core_linux_x86.tar.gz" \
  && echo "${OPENGREP_SHA256}  /tmp/opengrep.tgz" | sha256sum -c - \
  && mkdir -p /opt/opengrep && tar -xzf /tmp/opengrep.tgz -C /opt/opengrep opengrep-core \
- && curl -fsSL -o /tmp/gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
- && echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c - \
- && tar -xzf /tmp/gitleaks.tgz -C /usr/local/bin gitleaks \
  && curl -fsSL -o /tmp/trivy.tgz "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
  && echo "${TRIVY_SHA256}  /tmp/trivy.tgz" | sha256sum -c - \
  && tar -xzf /tmp/trivy.tgz -C /usr/local/bin trivy \
@@ -36,8 +48,11 @@ RUN apt-get update \
  && apt-get purge -y curl && apt-get autoremove -y \
  && dpkg --remove --force-depends perl perl-modules-5.36 libperl5.36 liberror-perl \
  && rm -rf /var/lib/apt/lists/* /usr/share/doc/* \
- && /opt/opengrep/opengrep-core -version && gitleaks version && trivy --version \
+ && /opt/opengrep/opengrep-core -version && trivy --version \
  && git init -q /tmp/g && git -C /tmp/g status --short && rm -rf /tmp/g
+
+COPY --from=gitleaks /gitleaks /usr/local/bin/gitleaks
+RUN gitleaks version
 
 # Bandit (Apache-2.0), and PyYAML for the rules.
 RUN pip install --no-cache-dir --only-binary=:all: bandit==1.9.4 pyyaml==6.0.3 \
@@ -55,6 +70,11 @@ ENV SCANNERS_PORT=7800 \
     HOME=/tmp \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
+
+# pip out of the image: nothing here installs at run time, and pip carries its own copies of urllib3, msgpack and
+# setuptools (with known vulnerabilities in the ones it bundles); Python's ensurepip wheel with it.
+RUN python3 -m pip uninstall -y pip \
+ && rm -rf /usr/local/lib/python3.13/ensurepip/_bundled /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.13
 
 USER 65534:65534
 EXPOSE 7800

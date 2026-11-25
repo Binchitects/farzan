@@ -3,13 +3,13 @@
 # vllm-pypi.Dockerfile builds the same from PyPI for a host that cannot pull from Docker Hub (vllm-build.yml).
 #
 # Build arguments:
-#   VLLM_IMAGE  vLLM's own image, pinned (v0.31.0: CUDA 13, FlashInfer's kernels built ahead and nvcc for the rest);
+#   VLLM_IMAGE  vLLM's own image, pinned (v0.34.0: CUDA 13, FlashInfer's kernels built ahead and nvcc for the rest);
 #               compose passes VLLM_IMAGE from .env
 #
 # It runs services/vllm/supervisor.sh, which runs one `vllm serve` per model the app wants (through services/vllm/serve.py:
 # a GGUF file's config and tokenizer from its own header). Models come from the library (HF_HUB_OFFLINE: vLLM never
 # fetches one itself).
-ARG VLLM_IMAGE=vllm/vllm-openai:v0.31.0
+ARG VLLM_IMAGE=vllm/vllm-openai:v0.34.0
 FROM ${VLLM_IMAGE}
 
 # GGUF files from the library: vLLM 0.31 moved GGUF out of its tree into vllm-gguf-plugin (its CUDA kernels built for

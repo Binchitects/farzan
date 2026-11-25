@@ -6,7 +6,14 @@
 #   ./scripts/backup.sh --verify [DIR]           check a backup (default: latest) against its checksums
 #   ./scripts/backup.sh --prune [--keep N]       remove the backups beyond the newest N (default BACKUP_KEEP) now:
 #                                                never the latest, nor the newest that ended well
-#   sudo ./scripts/backup.sh --install-timer     run it daily through systemd
+#   sudo ./scripts/backup.sh --install-timer     run it daily through systemd (at BACKUP_TIME)
+#   sudo ./scripts/backup.sh schedule WHEN [--keep N] [--copy-dir DIR]
+#                                                when it runs, through systemd, saved in .env (BACKUP_TIME, BACKUP_KEEP,
+#                                                BACKUP_COPY_DIR): WHEN is 03:30 (each day then), hourly, "every 6h",
+#                                                "Mon 02:00", "Mon,Thu 02:00", weekly, or any systemd calendar
+#                                                ("*-*-01 04:00": the first of each month)
+#   ./scripts/backup.sh schedule show            the schedule, the next run, and how the last one ended
+#   sudo ./scripts/backup.sh schedule off        no more scheduled backups (those taken stay)
 #   ./scripts/backup.sh --restore --from DIR     put volumes and the database back (stack stopped)
 #   ./scripts/backup.sh --restore --from DIR --with-config   also .env, overrides and config files
 #   ./scripts/backup.sh --restore --from DIR --yes           without asking (restore-test.sh, rollback-test.sh)
@@ -25,7 +32,7 @@
 #                         then one failed disk cannot take the data and every backup   default none
 #   BACKUP_KEEP           how many backups to keep                default 14
 #   BACKUP_INCLUDE_LOGS   1 = also Loki logs, Prometheus metrics  default 1
-#   BACKUP_TIME           when --install-timer runs it (systemd)  default 03:30
+#   BACKUP_TIME           when the timer runs it (systemd): HH:MM each day, or a systemd calendar  default 03:30
 #   BACKUP_KEY_FILE       encrypt each backup with the key in this file (AES-256, its key stretched by PBKDF2):
 #                         make one with  openssl rand -base64 48 > /root/arena-backup.key && chmod 600 /root/arena-backup.key
 #                         and keep a copy where the backups are not: without it, they cannot be opened   default none
@@ -99,12 +106,16 @@ case "$COPY_DIR" in ""|/*) ;; *) COPY_DIR="$ROOT/${COPY_DIR#./}" ;; esac
 SKIP_VOLUMES=" audio acme sandbox blender lean postgres media-status vllm-status valkey "
 LOG_VOLUMES=" loki prometheus alertmanager "
 
-ACTION=backup; FROM=""; WITH_CONFIG=0; VERIFY_DIR=""; YES=0; OPEN_TO=""
+ACTION=backup; FROM=""; WITH_CONFIG=0; VERIFY_DIR=""; YES=0; OPEN_TO=""; WHEN=""; KEEP_SET=""; COPY_SET=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --list) ACTION=list; shift ;;
     --verify) ACTION=verify; shift; if [[ $# -gt 0 && "${1:0:2}" != "--" ]]; then VERIFY_DIR="$1"; shift; fi ;;
     --install-timer) ACTION=timer; shift ;;
+    schedule|--schedule) ACTION=schedule; shift
+      [[ $# -gt 0 && "${1:0:2}" != "--" ]] || die "schedule takes WHEN (03:30, hourly, \"every 6h\", \"Mon 02:00\", a systemd calendar), show or off"
+      WHEN="$1"; shift ;;
+    --copy-dir) [[ $# -ge 2 ]] || die "--copy-dir takes a folder (on another disk)"; COPY_SET="$2"; shift 2 ;;
     --restore) ACTION=restore; shift ;;
     --open) ACTION=open; [[ $# -ge 2 ]] || die "--open takes a backup folder"; FROM="$2"; shift 2 ;;
     --to) [[ $# -ge 2 ]] || die "--to takes a folder"; OPEN_TO="$2"; shift 2 ;;
@@ -115,7 +126,7 @@ while [[ $# -gt 0 ]]; do
     --include-model-cache) SKIP_VOLUMES="${SKIP_VOLUMES/ audio / }"; shift ;;
     --prune) ACTION=prune; shift ;;
     --pitr) ACTION=pitr; PITR_TYPE="${2:-diff}"; [[ $# -ge 2 ]] && shift; shift ;;
-    --keep) [[ $# -ge 2 ]] || die "--keep takes a number"; KEEP="$2"; shift 2 ;;
+    --keep) [[ $# -ge 2 && "$2" =~ ^[1-9][0-9]*$ ]] || die "--keep takes a number (1 or more)"; KEEP="$2"; KEEP_SET="$2"; shift 2 ;;
     -h|--help) awk 'NR > 1 && !/^#/ { exit } NR > 1 { print }' "$SELF"; exit 0 ;;
     *) die "unknown option: $1 (see --help)" ;;
   esac
@@ -263,8 +274,44 @@ if [[ $ACTION == prune ]]; then
 fi
 
 # =========================================================================== timer
-if [[ $ACTION == timer ]]; then
-  [[ $EUID -eq 0 ]] || die "--install-timer needs root: sudo $0 --install-timer"
+# When a backup runs, as systemd's OnCalendar has it: HH:MM each day; hourly, daily, weekly; "every Nh"; days and a
+# time ("Mon,Thu 02:00"); or a calendar of systemd's own, checked by systemd-analyze where it is there.
+calendar_of() {   # calendar_of WHEN -> the OnCalendar expression, or fails
+  local w="$1" cal
+  case "$w" in
+    [0-9]:[0-5][0-9]|[01][0-9]:[0-5][0-9]|2[0-3]:[0-5][0-9]) cal="*-*-* ${w}:00" ;;
+    hourly) cal="hourly" ;;
+    daily) cal="*-*-* 03:30:00" ;;
+    weekly) cal="Sun *-*-* 03:30:00" ;;
+    "every "[1-9]h|"every "1[0-9]h|"every "2[0-3]h) local n="${w#every }"; n="${n%h}"; cal="*-*-* 00/${n}:00:00" ;;
+    *)
+      if [[ "$w" =~ ^((Mon|Tue|Wed|Thu|Fri|Sat|Sun)(,(Mon|Tue|Wed|Thu|Fri|Sat|Sun))*)\ +([01]?[0-9]|2[0-3]):([0-5][0-9])$ ]]; then
+        cal="${BASH_REMATCH[1]} *-*-* ${BASH_REMATCH[5]}:${BASH_REMATCH[6]}:00"
+      else
+        cal="$w"
+      fi ;;
+  esac
+  if command -v systemd-analyze >/dev/null 2>&1; then
+    systemd-analyze calendar "$cal" >/dev/null 2>&1 || return 1
+  fi
+  printf '%s' "$cal"
+}
+# KEY=VALUE in .env: the line replaced, or added; the file keeps its owner and mode (written over, not replaced).
+env_put() {   # env_put KEY VALUE
+  local tmp; tmp="$(mktemp)" || die "cannot write a temporary file"
+  if grep -qE "^$1=" .env 2>/dev/null; then
+    awk -v k="$1" -v v="$2" 'BEGIN { FS = OFS = "=" } $1 == k && !done { print k "=" v; done = 1; next } { print }' .env > "$tmp"
+  else
+    { cat .env 2>/dev/null; printf '%s=%s\n' "$1" "$2"; } > "$tmp"
+  fi
+  cat "$tmp" > .env && rm -f -- "${tmp:?}"
+}
+# BACKUP_UNIT_DIR is for its tests: the unit files in a folder of theirs, with no root.
+UNIT_DIR="${BACKUP_UNIT_DIR:-/etc/systemd/system}"
+need_root() { [[ $EUID -eq 0 || -n "${BACKUP_UNIT_DIR:-}" ]] || die "a schedule is systemd's: sudo $0 $1"; }
+install_timer() {   # writes and starts PROJECT-backup.timer at CAL
+  need_root "$([[ $ACTION == schedule ]] && echo "schedule \"$WHEN\"" || echo --install-timer)"
+  command -v systemctl >/dev/null 2>&1 || die "no systemd here: run $0 from the host's own scheduler (cron: $0 >> /var/log/${PROJECT}-backup.log 2>&1)"
   RUN_USER="${SUDO_USER:-root}"
   # The folders the timer writes, the user's: made now, or taken back from root when
   # Docker made one first (it does for a folder it mounts that is not there yet).
@@ -284,8 +331,7 @@ if [[ $ACTION == timer ]]; then
   else
     NEEDS=$'Requires=docker.service\nAfter=docker.service'
   fi
-  case "$BACKUP_TIME" in *:*:*|*-*|*" "*) CAL="$BACKUP_TIME" ;; *) CAL="*-*-* ${BACKUP_TIME}:00" ;; esac
-  cat > /etc/systemd/system/${PROJECT}-backup.service <<EOF
+  cat > "$UNIT_DIR/${PROJECT}-backup.service" <<EOF
 [Unit]
 Description=${PROJECT}: complete backup of the LLM stack into ${BACKUP_DIR}
 $([[ $ENGINE == docker ]] && echo "$NEEDS")
@@ -300,9 +346,9 @@ ExecStart=${ROOT}/scripts/backup.sh$([[ $ENGINE == podman ]] && echo " --podman"
 Nice=10
 IOSchedulingClass=idle
 EOF
-  cat > /etc/systemd/system/${PROJECT}-backup.timer <<EOF
+  cat > "$UNIT_DIR/${PROJECT}-backup.timer" <<EOF
 [Unit]
-Description=${PROJECT}: daily backup
+Description=${PROJECT}: backup (${CAL})
 
 [Timer]
 OnCalendar=${CAL}
@@ -312,11 +358,56 @@ RandomizedDelaySec=5min
 [Install]
 WantedBy=timers.target
 EOF
-  systemctl daemon-reload && systemctl enable --now ${PROJECT}-backup.timer >/dev/null
-  say "  installed ${PROJECT}-backup.timer (${CAL}), runs as ${RUN_USER}"
-  systemctl list-timers ${PROJECT}-backup.timer --no-pager | sed -n '1,2p' | sed 's/^/  /'
+  systemctl daemon-reload && systemctl enable --now "${PROJECT}-backup.timer" >/dev/null || die "systemd did not take ${PROJECT}-backup.timer"
+  # A timer already there takes its new calendar now, not at its next start.
+  systemctl restart "${PROJECT}-backup.timer" >/dev/null 2>&1 || :
+  say "  ${PROJECT}-backup.timer: ${CAL}, as ${RUN_USER}; keeps the newest ${KEEP}$([[ -n "$COPY_DIR" ]] && echo ", a copy in $COPY_DIR")"
+  systemctl list-timers "${PROJECT}-backup.timer" --no-pager | sed -n '1,2p' | sed 's/^/  /'
   say "  run one now:   sudo systemctl start ${PROJECT}-backup.service"
-  say "  last result:   journalctl -u ${PROJECT}-backup.service -n 30"
+  say "  last result:   $0 schedule show (journalctl -u ${PROJECT}-backup.service -n 30)"
+}
+show_schedule() {
+  local latest
+  say "Backups of $PROJECT in $BACKUP_DIR: the newest $KEEP kept$([[ -n "$COPY_DIR" ]] && echo ", each good one copied to $COPY_DIR")"
+  say "  BACKUP_TIME: $BACKUP_TIME ($(calendar_of "$BACKUP_TIME" 2>/dev/null || echo "not a time systemd knows"))"
+  if command -v systemctl >/dev/null 2>&1 && systemctl cat "${PROJECT}-backup.timer" >/dev/null 2>&1; then
+    say "  timer: $(systemctl is-enabled "${PROJECT}-backup.timer" 2>/dev/null), $(systemctl is-active "${PROJECT}-backup.timer" 2>/dev/null); $(systemctl show -p OnCalendar --value "${PROJECT}-backup.timer" 2>/dev/null | head -n1)"
+    systemctl list-timers "${PROJECT}-backup.timer" --no-pager 2>/dev/null | sed -n '2p' | sed 's/^/  next: /'
+    say "  the last run: $(systemctl show -p Result --value "${PROJECT}-backup.service" 2>/dev/null) ($(systemctl show -p ExecMainExitTimestamp --value "${PROJECT}-backup.service" 2>/dev/null || echo never))"
+  else
+    say "  timer: none (sudo $0 schedule 03:30 makes one)"
+  fi
+  latest="$(ls -1d "$BACKUP_DIR"/20[0-9][0-9]-*_* 2>/dev/null | grep -v '\.part$' | sort | tail -n1)"
+  if [[ -n "$latest" ]]; then say "  latest backup: $(basename "$latest") $(cat "$latest/RESULT" 2>/dev/null)"; else say "  latest backup: none yet"; fi
+}
+if [[ $ACTION == timer ]]; then
+  CAL="$(calendar_of "$BACKUP_TIME")" || die "BACKUP_TIME in .env is no time systemd knows: $BACKUP_TIME"
+  install_timer
+  exit 0
+fi
+if [[ $ACTION == schedule ]]; then
+  case "$WHEN" in
+    show) show_schedule; exit 0 ;;
+    off)
+      need_root "schedule off"
+      systemctl disable --now "${PROJECT:?}-backup.timer" >/dev/null 2>&1 || :
+      rm -f -- "${UNIT_DIR:?}/${PROJECT:?}-backup.timer" "${UNIT_DIR:?}/${PROJECT:?}-backup.service"
+      systemctl daemon-reload >/dev/null 2>&1 || :
+      say "No scheduled backups for $PROJECT now; those in $BACKUP_DIR stay. $0 schedule WHEN sets one again."
+      exit 0 ;;
+  esac
+  CAL="$(calendar_of "$WHEN")" || die "\"$WHEN\" is no time systemd knows: 03:30, hourly, \"every 6h\", \"Mon 02:00\", weekly, or a calendar (systemd.time(7))"
+  need_root "schedule \"$WHEN\""
+  if [[ -n "$COPY_SET" ]]; then
+    case "$COPY_SET" in /*) ;; *) die "--copy-dir is an absolute folder, on another disk than $BACKUP_DIR" ;; esac
+    [[ "$(cd "$(dirname "$COPY_SET")" 2>/dev/null && pwd)" != "" ]] || die "no folder above $COPY_SET"
+    COPY_DIR="$COPY_SET"
+    env_put BACKUP_COPY_DIR "$COPY_SET"
+  fi
+  [[ -n "$KEEP_SET" ]] && env_put BACKUP_KEEP "$KEEP_SET"
+  env_put BACKUP_TIME "$WHEN"
+  BACKUP_TIME="$WHEN"
+  install_timer
   exit 0
 fi
 

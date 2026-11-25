@@ -103,7 +103,7 @@ For **every** service, not just the 22 today:
 
 **Specifically missing:** `app-init` (the app's folders exist with the right owner
 and modes), `prometheus-secrets` (the token is 0600 and non-empty), `cpu-temp-exporter` (a reading is
-emitted), `dcgm-exporter`, `promtail` (a log line reaches Loki), `langfuse-worker`
+emitted), `dcgm-exporter`, `alloy` (a log line reaches Loki), `langfuse-worker`
 (a trace reaches ClickHouse), `minio` (a bucket exists), `vllm-secondary`
 (`api2.<domain>` serves its model).
 

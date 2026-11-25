@@ -27,6 +27,7 @@ RUN rm -rf src/CodeArena/web src/CodeArena/bin src/CodeArena/obj && mkdir -p src
 FROM mcr.microsoft.com/dotnet/sdk:10.0
 # bubblewrap: the sandbox Code Arena runs the agent's commands in (compose's security_opt lets it make one).
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends python3 python3-venv python3-pip nodejs npm build-essential ripgrep less procps bubblewrap \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=code-arena /opt/code-arena/ /opt/code-arena/

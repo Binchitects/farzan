@@ -212,7 +212,7 @@ public static class SecurityEndpoints
         }).ToList();
         var run = new JsonObject
         {
-            ["tool"] = new JsonObject { ["driver"] = new JsonObject { ["name"] = $"{Brand.Product} security review", ["informationUri"] = "https://github.com/Binchitects/argus", ["rules"] = new JsonArray([.. rules]) } },
+            ["tool"] = new JsonObject { ["driver"] = new JsonObject { ["name"] = $"{Brand.Product} security review", ["informationUri"] = "https://github.com/Binchitects/farzan", ["rules"] = new JsonArray([.. rules]) } },
             ["results"] = new JsonArray([.. results]),
         };
         if (s.Commit is not null)

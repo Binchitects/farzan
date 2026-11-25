@@ -78,7 +78,7 @@ PODMAN = os.path.basename(sys.argv[0]) == "podman"
 
 
 def is_short(ref: str) -> bool:
-    """A name with no registry in it (offtest-app, grafana/loki:3.4.1)."""
+    """A name with no registry in it (offtest-app, grafana/loki:3.7.10)."""
     first = ref.split("/", 1)[0]
     return "/" not in ref or ("." not in first and ":" not in first and first != "localhost")
 
@@ -414,6 +414,8 @@ def compose_model(args: list[str], project: str, everything: bool = False) -> di
     if everything:
         return model
     on = set(x for x in os.environ.get("COMPOSE_PROFILES", "").split(",") if x)
+    # And those --profile asks for, as compose adds them.
+    on |= {args[i + 1] for i, a in enumerate(args[:-1]) if a == "--profile"}
     # A service runs when it has no profile, or one of its profiles is asked for.
     return {k: v for k, v in model.items() if not v["profiles"] or set(v["profiles"]) & on}
 
@@ -480,6 +482,11 @@ def compose(st: Store, args: list[str], project: str) -> int:
         return 0
     if "down" in args:
         s["containers"] = [c for c in s["containers"] if c["project"] != project]
+        st.save()
+        return 0
+    if "rm" in args:
+        named = [a for a in args[args.index("rm") + 1:] if not a.startswith("-")]
+        s["containers"] = [c for c in s["containers"] if not (c["project"] == project and (not named or c["service"] in named))]
         st.save()
         return 0
     if "stop" in args:

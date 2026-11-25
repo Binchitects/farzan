@@ -3,7 +3,7 @@ import { expect, test, type Locator, type Page, type Route } from '@playwright/t
 /** code-arena web's API as the page reads it at the start, with the session given; the rest answers nothing. */
 async function backend(page: Page, session: object) {
   const state = {
-    name: 'Code Arena', version: '7.8.0', license: 'AGPL-3.0-only', source: 'https://github.com/Binchitects/argus', manual: 'https://llm.test/help/code-arena',
+    name: 'Code Arena', version: '7.8.0', license: 'AGPL-3.0-only', source: 'https://github.com/Binchitects/farzan', manual: 'https://llm.test/help/code-arena',
     folder: '/home/ada/shop', project: 'shop', branch: 'main', model: 'model-a', context: 262144, contextUsed: 4200, compactAt: 80, compactTarget: 25,
     servers: [], jobs: [], queued: [], thinking: null, mode: 'ask', modes: [{ name: 'ask', description: 'edits and commands ask first' }],
     session: 's1', busy: false, arenaTools: false, tools: { local: 10, servers: [] },

@@ -23,7 +23,7 @@ x-gpu: &gpu
 services:
   traefik:
     <<: *service
-    image: traefik:v3.6.7
+    image: traefik:v3.8.0
     container_name: traefik
     command:
       - --providers.file.directory=/etc/traefik/dynamic
@@ -66,6 +66,24 @@ services:
     tmpfs: [/tmp]
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+
+  # The maintenance page (installer.sh maintenance on): the web's own image with the page's nginx config, answering
+  # every path with 503; Traefik routes everything to it while config/traefik/maintenance.yml is there. Runs only then.
+  maintenance:
+    <<: *service
+    image: ${COMPOSE_PROJECT_NAME:-arena}-web
+    pull_policy: never
+    container_name: maintenance
+    profiles: [maintenance]
+    command: [nginx, -e, stderr, -c, /etc/maintenance/nginx.conf, -g, "daemon off;"]
+    volumes:
+      - ./config/maintenance/nginx.conf:/etc/maintenance/nginx.conf:ro
+      - ./config/maintenance/index.html:/srv/maintenance/index.html:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck: { test: [CMD, wget, -qO, /dev/null, "http://127.0.0.1:8080/healthz"], interval: 15s, timeout: 3s }
 
   app:
     <<: *service
@@ -149,7 +167,7 @@ services:
 
   postgres:
     <<: *service
-    image: pgvector/pgvector:0.8.0-pg16
+    image: pgvector/pgvector:0.8.7-pg16-bookworm
     container_name: postgres
     environment:
       POSTGRES_USER: arena
@@ -168,7 +186,7 @@ services:
   # so a restart keeps what it holds.
   valkey:
     <<: *service
-    image: ${VALKEY_IMAGE:-public.ecr.aws/valkey/valkey:8.1-alpine}
+    image: ${VALKEY_IMAGE:-public.ecr.aws/valkey/valkey:9.2-alpine}
     container_name: valkey
     profiles: [valkey]
     command: [valkey-server, --appendonly, "yes", --save, ""]
@@ -212,7 +230,7 @@ services:
   # vllm-build.yml builds it from PyPI instead; fake-gpu.yml runs the fake vLLM.
   vllm:
     <<: [*service, *gpu]
-    build: { context: ./services, dockerfile: vllm.Dockerfile, args: { VLLM_IMAGE: "${VLLM_IMAGE:-vllm/vllm-openai:v0.31.0}" } }
+    build: { context: ./services, dockerfile: vllm.Dockerfile, args: { VLLM_IMAGE: "${VLLM_IMAGE:-vllm/vllm-openai:v0.34.0}" } }
     image: arena-vllm
     container_name: vllm
     profiles: [vllm]
@@ -248,7 +266,7 @@ services:
   # sglang-build.yml where Docker Hub cannot be reached). fake-gpu.yml runs it with the fake SGLang instead.
   sglang:
     <<: [*service, *gpu]
-    image: ${SGLANG_IMAGE:-lmsysorg/sglang:v0.5.21-cu130-runtime}
+    image: ${SGLANG_IMAGE:-lmsysorg/sglang:v0.5.23-cu130-runtime}
     container_name: sglang
     profiles: [sglang]
     entrypoint: [/bin/sh, /vllm/supervisor.sh]
@@ -315,7 +333,7 @@ services:
   # strata-data). Off until asked for: COMPOSE_PROFILES=strata.
   strata:
     <<: [*service, *gpu]
-    image: ${STRATA_IMAGE:-ghcr.io/niko1221/strata:0.2.11-cuda13}
+    image: ${STRATA_IMAGE:-ghcr.io/niko1221/strata:0.2.22-cuda13}
     container_name: strata
     profiles: [strata]
     entrypoint: [/usr/bin/tini, --, /bin/sh, /vllm/supervisor.sh]
@@ -446,7 +464,9 @@ services:
   audio:
     <<: *service
     profiles: [speech]
-    image: ghcr.io/speaches-ai/speaches:0.9.0-rc.3-cpu
+    # speaches' own image with its vulnerable packages brought up to date (services/speaches/Dockerfile).
+    build: ./services/speaches
+    image: arena-speaches
     container_name: audio
     # Plain HTTPS downloads: Hugging Face's Xet transfer stalls on flaky links. Its models stay loaded until the app
     # unloads them (unused for a while, Admin -> Models), not on a timer of its own.
@@ -648,7 +668,7 @@ services:
   prometheus:
     <<: *service
     profiles: [monitoring]
-    image: prom/prometheus:v3.1.0
+    image: prom/prometheus:v3.16.0
     container_name: prometheus
     environment: { ENGINE_KEY: "${ENGINE_KEY}", CODE_INTEL_KEY: "${CODE_INTEL_KEY}" }
     entrypoint: [/bin/sh, -c]
@@ -665,33 +685,36 @@ services:
   alertmanager:
     <<: *service
     profiles: [monitoring]
-    image: prom/alertmanager:v0.28.0
+    image: prom/alertmanager:v0.35.1
     container_name: alertmanager
     volumes: [./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro, alertmanager:/alertmanager]
 
   loki:
     <<: *service
     profiles: [monitoring]
-    image: grafana/loki:3.4.1
+    image: grafana/loki:3.7.10
     container_name: loki
     command: -config.file=/etc/loki/loki.yml
     volumes: [./config/loki.yml:/etc/loki/loki.yml:ro, loki:/loki]
 
-  promtail:
+  # Grafana Alloy, Promtail's successor: each container's log through the engine's API into Loki (config/alloy.alloy).
+  # Where it has read to is kept in /tmp, as Promtail's was: a restart reads again from what Loki already has.
+  alloy:
     <<: *service
     profiles: [monitoring]
-    image: grafana/promtail:3.4.1
-    container_name: promtail
-    command: -config.file=/etc/promtail/promtail.yml
+    image: grafana/alloy:v1.22.0
+    container_name: alloy
+    command: [run, --storage.path=/tmp/alloy, --disable-reporting, /etc/alloy/config.alloy]
+    read_only: true
+    tmpfs: [/tmp]
     volumes:
-      - ./config/promtail.yml:/etc/promtail/promtail.yml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./config/alloy.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   node-exporter:
     <<: *service
     profiles: [monitoring]
-    image: prom/node-exporter:v1.9.0
+    image: prom/node-exporter:v1.13.1
     container_name: node-exporter
     pid: host
     command: [--path.procfs=/host/proc, --path.sysfs=/host/sys, --path.rootfs=/rootfs, --collector.cpu.info, "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|rootfs/var/lib/docker)($$|/)"]
@@ -700,7 +723,7 @@ services:
   gpu-exporter:
     <<: [*service, *gpu]
     profiles: [gpu-monitoring]
-    image: utkuozdemir/nvidia_gpu_exporter:1.3.2
+    image: utkuozdemir/nvidia_gpu_exporter:2.0.0
     container_name: gpu-exporter
 
   # Data-centre GPU detail (PCIe and NVLink throughput, SM and tensor activity, XID, ECC and retired pages)
@@ -708,7 +731,7 @@ services:
   # (nvcr.io has the same, where it is reachable): COMPOSE_PROFILES=dcgm turns it on; the installer offers it where it can.
   dcgm-exporter:
     <<: [*service, *gpu]
-    image: ${DCGM_EXPORTER_IMAGE:-nvidia/dcgm-exporter:4.6.1-4.8.4}
+    image: ${DCGM_EXPORTER_IMAGE:-nvidia/dcgm-exporter:4.9.0}
     container_name: dcgm-exporter
     profiles: [dcgm]
     cap_add: [SYS_ADMIN]
@@ -731,7 +754,8 @@ services:
   power-limits:
     <<: [*service, *gpu]
     profiles: [power-limits]
-    image: utkuozdemir/nvidia_gpu_exporter:1.3.2
+    # A shell, awk and the NVIDIA runtime's nvidia-smi are all it needs: the GPU exporter's image has no shell since 1.19.
+    image: python:3.13-slim
     container_name: power-limits
     privileged: true
     network_mode: none

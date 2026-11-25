@@ -9,13 +9,13 @@ from pathlib import Path
 
 from support import Sandbox
 
-IMAGES = """traefik:v3.6.7
+IMAGES = """traefik:v3.8.0
 arena-web
 arena-app
-pgvector/pgvector:0.8.0-pg16
+pgvector/pgvector:0.8.7-pg16-bookworm
 ghcr.io/ggml-org/llama.cpp:server-cuda
 ghcr.io/ggml-org/llama.cpp:server-cuda
-public.ecr.aws/valkey/valkey:8.1-alpine
+public.ecr.aws/valkey/valkey:9.2-alpine
 """
 INI = """# Written by the app (Admin -> Models). The engine restarts when this changes.
 
@@ -185,10 +185,10 @@ class AirgapTests(unittest.TestCase):
         self.assertTrue(self.s.called("run", "--rm", "--pull", "never", "--network", "none", "--label", "arena.helper=1", "-v", "arena_audio:/src:ro"))
 
     def test_Packing_never_pulls_and_stops_on_an_image_that_is_not_here(self):
-        self.s.env["FAKE_MISSING"] = "public.ecr.aws/valkey/valkey:8.1-alpine"
+        self.s.env["FAKE_MISSING"] = "public.ecr.aws/valkey/valkey:9.2-alpine"
         r = self.s.run("airgap.sh", "pack", str(self.out))
         self.assertEqual(r.returncode, 1)
-        self.assertIn("public.ecr.aws/valkey/valkey:8.1-alpine is not on this host", r.stderr)
+        self.assertIn("public.ecr.aws/valkey/valkey:9.2-alpine is not on this host", r.stderr)
         self.assertFalse(self.out.exists())
         self.assertFalse(self.s.called("pull"))
         self.assertEqual(list(self.out.parent.iterdir()), [])
@@ -203,7 +203,7 @@ class AirgapTests(unittest.TestCase):
         r = self.s.run("airgap.sh", "pack", "--dry-run", "--models", str(self.out))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("Would pack", r.stdout)
-        self.assertIn("public.ecr.aws/valkey/valkey:8.1-alpine", r.stdout)
+        self.assertIn("public.ecr.aws/valkey/valkey:9.2-alpine", r.stdout)
         self.assertIn("copied into the bundle (--models)", r.stdout)
         self.assertFalse(self.out.exists())
         self.assertFalse(self.s.called("save") or self.s.called("run"))
@@ -326,7 +326,7 @@ class AirgapTests(unittest.TestCase):
         self.pack()
         r = self.load("--dry-run")
         self.assertIn("Would load", r.stdout)
-        self.assertIn("public.ecr.aws/valkey/valkey:8.1-alpine", r.stdout)
+        self.assertIn("public.ecr.aws/valkey/valkey:9.2-alpine", r.stdout)
         self.assertIn("MODEL=big/Big-00001-of-00002.gguf", r.stdout)
         self.assertFalse((self.s.dir / "target").exists())
         self.assertEqual(self.s.calls(), [])

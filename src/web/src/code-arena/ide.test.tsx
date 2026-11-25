@@ -648,7 +648,7 @@ afterEach(() => {
 })
 
 const state: CodeState = {
-  name: 'Code Arena', version: '5.2.0', license: 'AGPL-3.0-only', source: 'https://github.com/Binchitects/argus', log: '/opt/code-arena/code-arena.log', manual: 'https://llm.test/help/code-arena', folder: '/home/ada/shop', project: 'shop', branch: 'feature/cart', model: 'model-a', context: 32768, contextUsed: 4200, compactAt: 80, compactTarget: 25, servers: [], jobs: [], queued: [], thinking: null, mode: 'auto-edit',
+  name: 'Code Arena', version: '5.2.0', license: 'AGPL-3.0-only', source: 'https://github.com/Binchitects/farzan', log: '/opt/code-arena/code-arena.log', manual: 'https://llm.test/help/code-arena', folder: '/home/ada/shop', project: 'shop', branch: 'feature/cart', model: 'model-a', context: 32768, contextUsed: 4200, compactAt: 80, compactTarget: 25, servers: [], jobs: [], queued: [], thinking: null, mode: 'auto-edit',
   modes: [
     { name: 'ask', description: 'edits and commands ask first' },
     { name: 'auto-edit', description: 'file edits run without asking; commands ask' },
@@ -1726,7 +1726,7 @@ describe('Code Arena, the IDE', () => {
     const about = await screen.findByRole('dialog', { name: 'Code Arena' })
     expect(about).toHaveTextContent('5.2.0')
     expect(about).toHaveTextContent('AGPL-3.0-only')
-    expect(within(about).getByRole('link', { name: 'Source' })).toHaveAttribute('href', 'https://github.com/Binchitects/argus')
+    expect(within(about).getByRole('link', { name: 'Source' })).toHaveAttribute('href', 'https://github.com/Binchitects/farzan')
     // Where what code-arena says is kept: started on its own, it has no console to see it in.
     expect(within(about).getByText('Log').nextElementSibling).toHaveTextContent('/opt/code-arena/code-arena.log')
   })

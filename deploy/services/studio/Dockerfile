@@ -3,6 +3,9 @@
 # transformers) are not taken: they run on these. The weights are not in the image: the app
 # fetches them into the model library (MODELS_DIR/studio), and this reads them from there.
 FROM python:3.13-slim
+# The base's own packages brought up to date first: a fix Debian has shipped is in the image even when the base
+# image on the registry is older than it.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 # PyPI over a slow or lossy link: a minute per read and ten tries before a package counts as missing (a read
 # that timed out read as "no matching distribution"). Only pip reads it.
 ENV PIP_DEFAULT_TIMEOUT=60 PIP_RETRIES=10
@@ -32,6 +35,11 @@ ENV STUDIO_DIR=/models/studio \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
+# pip out of the image: nothing here installs at run time, and pip carries its own copies of urllib3, msgpack and
+# setuptools (with known vulnerabilities in the ones it bundles); Python's ensurepip wheel with it.
+RUN python3 -m pip uninstall -y pip \
+ && rm -rf /usr/local/lib/python3.13/ensurepip/_bundled /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.13
+
 USER 65534:65534
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s \

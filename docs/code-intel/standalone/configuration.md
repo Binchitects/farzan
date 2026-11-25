@@ -31,7 +31,7 @@ one-liner in [`deploy/code-intel-standalone/README.md`](../../../deploy/code-int
 | `CODE_INTEL_TLS_CERT`, `CODE_INTEL_TLS_KEY` | empty | PEM files (paths inside the container, under `/etc/code-intel/tls/`) to serve HTTPS; empty = HTTP |
 | `CODE_INTEL_CHAT_SYSTEM_PROMPT` | built in | replaces the chat's opening instruction; the tools' own instructions are always appended |
 | `CODE_INTEL_ADMIN_TOKEN` | empty | lets scripts call `/admin/*` without a session (`X-Farzan Graph-Admin-Token`) |
-| `CODE_INTEL_SOURCE_URL` | `https://github.com/Binchitects/argus` | the **Source** link beside the version at the foot of the app's sidebar. Farzan Graph is under the AGPL, which has everyone who uses it over a network offered the complete source of the version they use: a modified version points this at its own ([LICENSING.md](../../../LICENSING.md)) |
+| `CODE_INTEL_SOURCE_URL` | `https://github.com/Binchitects/farzan` | the **Source** link beside the version at the foot of the app's sidebar. Farzan Graph is under the AGPL, which has everyone who uses it over a network offered the complete source of the version they use: a modified version points this at its own ([LICENSING.md](../../../LICENSING.md)) |
 
 ## Model
 

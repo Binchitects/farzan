@@ -22,7 +22,9 @@ RUN NO_MINIFY=$NO_MINIFY npm run build
 
 # Alpine's own nginx package: no image from Docker Hub beyond the base.
 FROM alpine:3
-RUN apk add --no-cache nginx \
+# Alpine's own packages brought up to date first (a fix shipped since the base image was made), then nginx.
+RUN apk upgrade --no-cache \
+ && apk add --no-cache nginx \
  && rm -rf /etc/nginx/http.d /var/www
 COPY src/web/nginx.conf /etc/nginx/nginx.conf
 COPY --from=build /web/dist /srv/web

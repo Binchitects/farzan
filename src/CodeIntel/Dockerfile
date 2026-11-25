@@ -84,13 +84,14 @@ LABEL org.opencontainers.image.title="code-intel" \
       org.opencontainers.image.version="${CODE_INTEL_VERSION}" \
       org.opencontainers.image.revision="${CODE_INTEL_REVISION}" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
-      org.opencontainers.image.source="https://github.com/Binchitects/argus"
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 ENV CODE_INTEL_VERSION="${CODE_INTEL_VERSION}" \
     CODE_INTEL_REVISION="${CODE_INTEL_REVISION}" \
     DOTNET_gcServer=0 \
     DOTNET_TieredPGO=1
 
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends git universal-ctags ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
  && ctags --version | grep -q "Universal Ctags"

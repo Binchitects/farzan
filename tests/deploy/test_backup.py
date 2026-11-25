@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import unittest
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from support import REPO, Sandbox
 
@@ -346,3 +347,75 @@ class SnapshotTests(unittest.TestCase):
             self.assertTrue(names["imagegen.fifo"].isfifo())
             self.assertIn("index.db", names)
             self.assertIn("imagegen.json", names)
+
+
+class ScheduleTests(unittest.TestCase):
+    """backup.sh schedule: when backups run (systemd's timer, its calendar checked), saved in .env; show and off. The unit
+    files go to a folder of the test's (BACKUP_UNIT_DIR), and systemctl is a fake that records what it was asked."""
+
+    def setUp(self):
+        self.s = Sandbox()
+        self.units = self.s.dir / "units"
+        self.units.mkdir()
+        fake = self.s.bin / "systemctl"
+        fake.write_text('#!/bin/sh\necho "systemctl $*" >> "$FAKE_LOG.systemctl"\n')
+        fake.chmod(0o755)
+        self.extra = {"BACKUP_UNIT_DIR": str(self.units)}
+
+    def tearDown(self):
+        self.s.cleanup()
+
+    def env(self) -> str:
+        return (self.s.deploy / ".env").read_text()
+
+    def asked(self) -> str:
+        p = Path(f"{self.s.log}.systemctl")
+        return p.read_text() if p.exists() else ""
+
+    def test_A_schedule_is_saved_in_env_and_the_timer_runs_at_its_calendar(self):
+        self.s.write(".env", "BACKUP_TIME=03:30\nBACKUP_KEEP=14\nOTHER=kept\n")
+        copies = self.s.dir / "copies"
+        for when, calendar in (("01:15", "*-*-* 01:15:00"), ("hourly", "hourly"), ("every 6h", "*-*-* 00/6:00:00"),
+                               ("Mon,Thu 02:00", "Mon,Thu *-*-* 02:00:00"), ("weekly", "Sun *-*-* 03:30:00"),
+                               ("*-*-01 04:00", "*-*-01 04:00")):
+            r = self.s.run("backup.sh", "schedule", when, "--keep", "9", "--copy-dir", str(copies), extra=self.extra)
+            self.assertEqual(r.returncode, 0, (when, r.stderr))
+            self.assertIn(f"OnCalendar={calendar}\n", (self.units / "arena-backup.timer").read_text(), when)
+            self.assertIn(f"BACKUP_TIME={when}\n", self.env())
+        self.assertIn("BACKUP_KEEP=9\n", self.env())
+        self.assertIn(f"BACKUP_COPY_DIR={copies}\n", self.env())
+        self.assertIn("OTHER=kept\n", self.env())
+        self.assertEqual(self.env().count("BACKUP_TIME="), 1)
+        self.assertIn("ExecStart=", (self.units / "arena-backup.service").read_text())
+        self.assertIn("systemctl enable --now arena-backup.timer", self.asked())
+
+    def test_A_time_systemd_does_not_know_changes_nothing(self):
+        self.s.write(".env", "BACKUP_TIME=03:30\n")
+        for when in ("25:00", "every 30h", "someday"):
+            r = self.s.run("backup.sh", "schedule", when, extra=self.extra)
+            self.assertEqual(r.returncode, 1, when)
+            self.assertIn("no time systemd knows", r.stderr, when)
+        self.assertEqual(self.env(), "BACKUP_TIME=03:30\n")
+        self.assertEqual(list(self.units.iterdir()), [])
+
+    def test_Off_removes_the_timer_and_keeps_the_backups_and_show_says_what_is_set(self):
+        self.s.write(".env", "BACKUP_TIME=03:30\n")
+        self.s.write("backups/2026-09-01_030000/RESULT", "ok\n")
+        self.assertEqual(self.s.run("backup.sh", "schedule", "02:00", extra=self.extra).returncode, 0)
+        shown = self.s.run("backup.sh", "schedule", "show", extra=self.extra)
+        self.assertEqual(shown.returncode, 0, shown.stderr)
+        self.assertIn("BACKUP_TIME: 02:00 (*-*-* 02:00:00)", shown.stdout)
+        self.assertIn("latest backup: 2026-09-01_030000 ok", shown.stdout)
+        off = self.s.run("backup.sh", "schedule", "off", extra=self.extra)
+        self.assertEqual(off.returncode, 0, off.stderr)
+        self.assertEqual(list(self.units.iterdir()), [])
+        self.assertIn("systemctl disable --now arena-backup.timer", self.asked())
+        self.assertTrue((self.s.deploy / "backups/2026-09-01_030000/RESULT").exists())
+
+    @unittest.skipIf(os.geteuid() == 0, "root may")
+    def test_Without_root_a_schedule_says_to_use_sudo(self):
+        self.s.write(".env", "BACKUP_TIME=03:30\n")
+        r = self.s.run("backup.sh", "schedule", "02:00")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('sudo', r.stderr)
+        self.assertEqual(self.env(), "BACKUP_TIME=03:30\n")
