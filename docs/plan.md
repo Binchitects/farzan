@@ -87,6 +87,146 @@ program, and Edge or Chrome 109.
 
 Done (v8.1.0): every item above.
 
+## v8.2 (asked 2026-11-26)
+
+Branch `v8.2` from `origin/v8.1`; `origin/v8.1` (then `origin/main` once 8.1.0 is tagged) merged in often. Code Arena's
+C# client gets no big features (the Rust one is its own product): every change to `/api/code-arena/*`, the chat sync
+and the key routes stays compatible with both. Measured on the live stack (v8.0.0, read-only: Prometheus, the ledger
+in Postgres under a read-only transaction, the app's GET exports) on 2026-11-26. The live ledger is small (10,978
+requests, the last on 2026-11-13), so speed is also measured on a seeded ledger of a million requests.
+
+Headlines: **dashboards whose numbers are right, per GPU and per model**; **a prompt log that shows the whole run**
+(thinking, every tool call with its input and output, the sub-agents) **with reports written on any filtered log**;
+**an assistant for running Arena in every admin page**.
+
+### 1. Tests: fewer, faster, covering more
+
+- **Today.** Llm.Tests about 1,780 cases in 1 h 15 min, CodeArena.Tests 779, CodeIntel.Tests 378, tests/deploy 469
+  (about 12 min), web Vitest about 1,780 (213 files), Playwright 28 specs. Counted in the code: 1,297 xUnit facts and
+  theories in Llm.Tests (494 InlineData rows), 722 in CodeArena.Tests, 261 in CodeIntel.Tests; 176 carry a
+  `[Trait("Control", ...)]`, and docs/compliance/controls.yaml names its own list. Line coverage was never measured
+  (coverlet is referenced, never collected). Baseline being measured now, one suite at a time: run time, each test's
+  time (TRX), line and branch coverage (Cobertura), and coverage by feature (each source folder: Gateway, Chat,
+  Projects, Reports, Dashboards, Identity, ...).
+- **Fix.** From the baseline: (a) the slowest tests first: what each spends its time on (a container per class, a
+  real wait, a model call) and one shared fixture where the classes only read; (b) tests that cover no line no other
+  covers (per-test coverage, by running each class with coverage alone and diffing) go, unless they guard a control
+  or a reported bug; (c) near-copies (the same flow with other literals) become one theory; (d) tests of private
+  shapes (strings in a page, a JSON's spelling) give way to behaviour through the public route. Kept whatever it
+  costs: every test with a Control trait or in controls.yaml (`tools/compliance-docs.py` keeps checking), the parity
+  scripts, and each flaky test's fix (its cause, ten runs in a row).
+- **Proof.** A table in docs/measurements/tests.md, before and after, per suite: cases, wall time, line and branch
+  coverage, coverage per feature. Done when the whole set runs in under half its time today with line coverage not
+  lower in any feature, and `./arenactl check compliance` passes.
+
+### 2. Dashboards whose numbers are right
+
+- **Today (measured on live Prometheus).**
+  - *Capacity (tokens a second)* reads 57.1 at 2026-11-13 11:00: the sum of each model's highest one-minute rate in
+    7 days, five models (Qwen3-4B 37.4, Qwen3.8-27B 10.0, Qwen3-VL-8B 9.5, two vLLM test models 0.13 each) of which
+    only one was loaded, on one RTX 3090. It is the busiest minute people made, not what the GPU can make, and it adds
+    models that never ran together.
+  - *Live tokens a second* takes `rate((n_busy_slots_per_decode * n_decode_total)[1m:15s])`: the rate of a gauge
+    times a counter, which moves with the gauge (9.47 against a true 13.35 for Qwen3-VL at 07:30; 5.96 against 6.00
+    for the 27B). The true rate is `rate(llamacpp:tokens_predicted_total)`.
+  - *Decode / Prefill speed a request* and *Draft acceptance*: NO DATA over 30 days in the app's own audit (the 5-minute
+    ratios are NaN whenever a window had no request; the `>= 0` filter drops them, so the stat is empty).
+  - The ledger's decode speed (tokens / (end − first token)) gives 54,000 tok/s for Qwen3-4B and 126,000 for an
+    SGLang model: for a non-streamed answer `first_token_at` is written at the end. 99.5% of API requests (5,947 of
+    5,953) carry no conversation.
+  - Per GPU is impossible: the engines are scraped with `gpus="all"`, one series for every GPU; the per-GPU panels
+    join only nvidia-smi.
+  - The app's dashboard audit (`audit-dashboards.py 30d`) says 334 queries "ok", 34 NO DATA, 6 errors (Loki: the
+    Indexing page asks 1,270 h, past Loki's 30-day limit), 5 with NaN (System's p95 by service: 370 NaN points). It
+    checks that a query answers, never that its number is true.
+  - Exports take 0.03–1.3 s on live's small data (Hardware 1.3 s, Stack Performance 0.7 s); the GPU dashboard's
+    export answers 404.
+- **Fix.** Each panel's query rewritten from the engines' own counters (llama.cpp, vLLM, SGLang, LMDeploy, Strata),
+  with the unit and the range said in its title; capacity measured, not guessed: the test bench's (v8.1) highest
+  decode rate at full batch per model on its GPUs, kept as a gauge (`arena_model_capacity_tokens_per_second`), with
+  "making now" beside it for the loaded models only; the engines scraped per placement with `gpu` labels (the app
+  knows which GPUs each model holds) so every panel has a GPU and a model variable; the ledger's first token kept
+  null for an answer that was not streamed and decode speed read from the engines; the Loki ranges clamped to its
+  limit; the GPU export fixed. A second audit, `audit-dashboards.py --truth`, recomputes each number from the raw
+  counters and the ledger and fails on a gap over 2%.
+- **Proof.** The truth audit run on live (before: the gaps above; after: none over 2%), screenshots of the pages, a
+  test per rewritten query against a recorded Prometheus answer, and exports of every dashboard under 2 s on the
+  million-request ledger.
+
+### 3. Accounting that adds up
+
+- **Today (live ledger).** Project MDM: its three chats' answers hold 101,438 tokens in their messages; the ledger
+  tags 95,560 to the project; one of its chats (7 answers, 21,097 tokens, made 2026-10-26, before it was put in the
+  project) counts nothing, and its Code Arena session's 3 answers before 2026-11-07 neither. A request is counted for a
+  project only when it carried the project as it was asked: putting a chat in a project, or taking it out, never moves
+  its use.
+- **Fix.** A project's use is its chats' and keys' requests by conversation and key, whenever they were asked (the
+  ledger's `project_id` kept only for requests with no conversation); moving a chat moves its numbers; people,
+  models, surfaces, time and money all from the same rows; budgets and the live usage stream from the same query.
+- **Proof.** Tests that build a ledger by hand (people, chats moved in and out, sub-agents at once, refused, cached,
+  keys) and recompute every figure in the test itself; the same check run on live's MDM project.
+
+### 4. Projects
+
+- **Today.** API use is put in a project only by Code Arena's tag (`project:` prefix): a key has no project
+  (ApiKey has no project column), so a plain API user's work is never a project's. Goals and tasks: none on live
+  (v8.1's goals from sessions are not live yet: measured again after 8.1.0 is deployed). Contribution counts only
+  requests and chat messages, and people's time only from chats.
+- **Fix.** Sessions: the project page lists its chats, Code Arena sessions and API keys apart, each with its numbers;
+  goals: set and closed from sessions (v8.1) and by hand, checked against their tasks; contribution: each person's
+  requests, tokens, money, the model's time and their own, goals and tasks done; **forced projects**: an admin puts a
+  project on groups or people (every new chat and session of theirs goes in it, Code Arena told so, the person cannot
+  leave it); **project keys**: a key made for a project, its use counted there, with its own limits and budget.
+- **Proof.** API tests per rule (forced on a group, on a person, a member who leaves the group), a key's use in the
+  project's numbers, the Rust and C# Code Arena clients both taking the forced project (compatibility test on the
+  routes), an upgrade test for the new columns.
+
+### 5. The prompt log shows the whole run
+
+- **Today (live).** 172 lines; 69 (40%) say only "Called x, y": no arguments, no results. A line keeps the last
+  question and the answer's words, cut at 20,000 characters; no system prompt, no thinking, no earlier turns, no tool
+  results, no link between a sub-agent and the run that started it. The web chat's questions are read from the chats,
+  with their answers' last words only.
+- **Fix.** Each line keeps the request whole (messages, tools offered, reasoning, every tool call with its arguments,
+  each result as the next request brought it), compressed, under the log's retention; a run's requests linked by
+  conversation, parent and sub-agent; the web chat's steps (tool calls, sub-agents) shown the same way. The page shows a
+  run as a tree: thinking, output, input, each tool call, each sub-agent, folded and loaded as opened.
+- **Proof.** A test per surface (API, web chat, Code Arena, sub-agents) that the stored line holds every part; the page
+  opening a 200-step run under 1 s on the seeded log; retention and deletion tests still pass.
+
+### 6. Search and filters everywhere
+
+- **Today.** The prompt log filters by text, person, source, state, tag and time; its text search is `ILIKE '%x%'` with
+  no index (29 ms on live's 2,181 messages, a full scan). Accounting, audits, logs, traces and reports each have their own
+  few filters, some none.
+- **Fix.** One filter bar for every report and log (person, group, project, model, key, surface, state, tag, tool,
+  time, text) kept in the address; full-text search with indexes (pg_trgm or tsvector, no download if PostgreSQL's own).
+- **Proof.** Vitest for the bar on each page, API tests per filter, every search under 300 ms on the seeded million rows.
+
+### 7. Reports written on a filtered log
+
+- **Today.** The prompt log's Report counts (by model, person, tag, day) and dashboards export; nothing reads the log
+  and writes about it.
+- **Fix.** On any filtered log (the prompt log included): Summarize or Write a report, with the model the person picks,
+  over what that person may read (prompts.review and the rest), map-reduce for long logs, audited (who, which filter,
+  which model), as PDF, Excel or Markdown; ready-made asks (the quality of a person's prompts, a project's progress).
+- **Proof.** Tests that a person without the right gets nothing past their reach, the audit line, a report on a
+  seeded log checked for its counts.
+
+### 8. An assistant for running Arena, in every admin page
+
+- **Fix.** A side panel on every admin page; its tools are the admin API with the signed-in person's own permissions
+  (never more), reading freely, and every change shown as what it will do, done only on the person's yes; audited as
+  the person, with the assistant named.
+- **Proof.** Tests that a person without a right cannot do it through the assistant, that nothing changes without the
+  yes, and Playwright on a few pages (find why a dashboard is empty, add a person to a project).
+
+### Order
+
+1 (the baseline first: it is running), 2, 3, 4, 5, 6, 7, 8; each committed and pushed on v8.2, `origin/v8.1` merged in
+between; then every suite, the compliance check, release-scan, the upgrade from 7.x and 8.x, and (when the installer,
+compose or the bundle changed) the offline scenarios, before 8.2.0.
+
 ## Next
 
 1. **Farzan Graph's code graphs.** Who calls a method, what implements an interface,
