@@ -1,17 +1,19 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Llm.Api.Operations;
 using Llm.Core.Chat;
 
 namespace Llm.Api.Chat.Tools;
 
 /// <summary>
-/// The canvas: documents and code beside the chat, which the person edits there too.
+/// The canvas: documents, code and slides beside the chat, which the person edits there too (a slides canvas is a deck,
+/// under Decks too, written as Markdown: see <see cref="Decks.DeckOutline"/>).
 /// The model writes one with canvas_create and changes it by exact find and replace
 /// (canvas_edit), so a change to one part leaves the rest as it was; canvas_rewrite is
 /// for starting over. Every change is a version the person can see and restore.
 /// </summary>
-public sealed class CanvasTool(Canvases canvases) : IChatTool
+public sealed class CanvasTool(Canvases canvases, Decks.SlideCanvases slides, Access.AccessService access, Features features) : IChatTool
 {
     /// <summary>What one canvas_read returns at most; the rest from next_from_line.</summary>
     public const int MaxReadChars = 16_000;
@@ -23,7 +25,7 @@ public sealed class CanvasTool(Canvases canvases) : IChatTool
 
     public string Id => "canvas";
     public string Title => "Canvas";
-    public string Description => "Writes documents and code in a canvas beside the chat, and changes them part by part; you edit them there too.";
+    public string Description => "Writes documents, code and slides in a canvas beside the chat, and changes them part by part; you edit them there too. Slides are a deck, to present and download as PowerPoint.";
     public string Icon => "file-pen";
 
     public Task<string?> UnavailableAsync(CancellationToken ct) => Task.FromResult<string?>(null);
@@ -35,23 +37,39 @@ public sealed class CanvasTool(Canvases canvases) : IChatTool
         "(canvas_rewrite is only for starting over). The person may have changed a canvas since you saw it: read it with canvas_read before you edit it. " +
         "When the person quotes part of a canvas (its id and lines), change only that part.";
 
+    private const string SlideNotes =
+        "\nSlides: when the person asks for slides, a deck or a presentation, make a canvas of kind \"slides\" (not a document): a deck, written as Markdown. " +
+        "Its first line \"# Title\" and the line under it are the title slide; each slide is \"## Its title {layout}\", one of " +
+        "title, section, agenda, bullets, two, comparison, chart, table, timeline, process, stats, cards, picture, quote, closing. Under it: \"- point\" lines " +
+        "(at most 6, each under 12 words); \"### Heading\" starts a column (two, comparison); \"1. [42%] **Title** — words\" items (agenda, process, timeline, " +
+        "cards; stats give the [figure]); \"| a | b |\" table rows (the first the header); \"> quote\" then \"— who\"; \"![a visual description](file:)\" a " +
+        "picture the deck makes; a chart as a block: ```chart then {\"type\": \"bar|hbar|stacked|line|area|pie|doughnut|scatter\", \"categories\": [...], " +
+        "\"series\": [{\"name\": \"...\", \"values\": [...]}]} or {\"type\": \"bar\", \"ask\": {\"source\": \"a database\", \"question\": \"...\"}} then ```; " +
+        "\"Subtitle: ...\" a caption; \"Notes: ...\" what to say (two to four sentences, on every slide). Choose the layout that shows the idea: steps a process, " +
+        "dates a timeline, a few figures stats. Never make up numbers: a chart's come from the person's words or a database. The deck opens beside the chat; give " +
+        "its link (deck in the result) in a sentence and do not write the slides out in your answer.";
+
     public async Task<IToolRun> StartAsync(ToolContext context, CancellationToken ct)
     {
         var chat = context.Conversation.Id;
         // Which canvases the chat has: their ids, titles and kinds only (these change rarely, so the prompt's start stays the same).
         var list = await canvases.ListAsync(chat, ct);
-        var notes = list.Count == 0 ? Notes : Notes + "\nThis chat's canvases:\n" + string.Join("\n", list.Select(c => $"- \"{c.Title}\" (id {c.Id}, {Kind(c)})"));
+        // Slides when this person may make decks, the feature is on, and the chat is theirs (not a room's: a deck is one person's).
+        var maySlides = features.IsOn("decks") && context.Conversation.Kind != RoomMember.Room
+            && (await access.MembershipAsync(context.User, ct)).Has(Core.Access.Permissions.Decks);
+        var intro = maySlides ? Notes + SlideNotes : Notes;
+        var notes = list.Count == 0 ? intro : intro + "\nThis chat's canvases:\n" + string.Join("\n", list.Select(c => $"- \"{c.Title}\" (id {c.Id}, {Kind(c)})"));
         // Kept short: every request carries these definitions. A node has one parent, so each function gets its own.
         static JsonObject CanvasId() => Schema.Text("Canvas id");
         static JsonObject Said() => Schema.Text("A few words for its version history");
         static JsonObject Line() => new() { ["type"] = "integer" };
         return new LocalRun(
             [
-                Schema.Function(Create, "A new canvas beside the chat (Markdown document or code); returns its id.",
+                Schema.Function(Create, maySlides ? "A new canvas beside the chat (Markdown document, code, or slides: a deck in Markdown); returns its id." : "A new canvas beside the chat (Markdown document or code); returns its id.",
                     new JsonObject
                     {
                         ["title"] = Schema.Text("For code, a file name"),
-                        ["kind"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("document", "code") },
+                        ["kind"] = new JsonObject { ["type"] = "string", ["enum"] = maySlides ? new JsonArray("document", "code", "slides") : new JsonArray("document", "code") },
                         ["language"] = Schema.Text("For code, e.g. python"),
                         ["content"] = Schema.Text("The whole text"),
                     }, "title", "kind", "content"),
@@ -84,10 +102,10 @@ public sealed class CanvasTool(Canvases canvases) : IChatTool
                 {
                     return function switch
                     {
-                        Create => await CreateAsync(chat, args, token),
+                        Create => await CreateAsync(context, maySlides, args, token),
                         Read => await ReadAsync(chat, args, token),
-                        Edit => await EditAsync(chat, args, token),
-                        Rewrite => await RewriteAsync(chat, args, token),
+                        Edit => await EditAsync(context, args, token),
+                        Rewrite => await RewriteAsync(context, args, token),
                         _ => new ToolResult($"There is no function {function}.", IsError: true),
                     };
                 }
@@ -102,11 +120,32 @@ public sealed class CanvasTool(Canvases canvases) : IChatTool
             });
     }
 
-    private async Task<ToolResult> CreateAsync(Guid chat, JsonObject args, CancellationToken ct)
+    private async Task<ToolResult> CreateAsync(ToolContext context, bool maySlides, JsonObject args, CancellationToken ct)
     {
-        var canvas = await canvases.CreateAsync(chat, Schema.Str(args, "title"), Schema.Str(args, "kind"), Schema.Str(args, "language"), Schema.Str(args, "content") ?? "",
+        if (Schema.Str(args, "kind")?.Trim().ToLowerInvariant() == "slides" && !maySlides)
+        {
+            return new ToolResult("Slides are not for this chat (decks are off, not yours to make, or this is a room): make a document instead.", IsError: true);
+        }
+        var canvas = await canvases.CreateAsync(context.Conversation.Id, Schema.Str(args, "title"), Schema.Str(args, "kind"), Schema.Str(args, "language"), Schema.Str(args, "content") ?? "",
             Canvases.Model, ct);
-        return Done(canvas, new JsonObject { ["created"] = true });
+        return await DoneAsync(context, canvas, new JsonObject { ["created"] = true }, ct);
+    }
+
+    /// <summary>A slides canvas's deck made again from it (the model's numbers checked); its link with what the model reads.</summary>
+    private async Task<ToolResult> DoneAsync(ToolContext context, Canvas canvas, JsonObject what, CancellationToken ct)
+    {
+        if (await slides.SyncAsync(canvas, context.User, true, ct) is { } deck)
+        {
+            var kept = Decks.DeckModel.Read(deck.Slides);
+            what["deck"] = $"/decks/{deck.Id}";
+            what["slides"] = kept.Count;
+            // What the model should know it did not get: numbers it made up, a question no database answered.
+            if (kept.Select(s => s.Chart?.Note).OfType<string>().Where(n => !n.StartsWith("From ", StringComparison.Ordinal)).Distinct().ToList() is { Count: > 0 } notes)
+            {
+                what["charts"] = new JsonArray([.. notes.Select(n => (JsonNode)n)]);
+            }
+        }
+        return Done(canvas, what);
     }
 
     private async Task<ToolResult> ReadAsync(Guid chat, JsonObject args, CancellationToken ct)
@@ -150,20 +189,20 @@ public sealed class CanvasTool(Canvases canvases) : IChatTool
         }.ToJsonString(Mcp.Plain));
     }
 
-    private async Task<ToolResult> EditAsync(Guid chat, JsonObject args, CancellationToken ct)
+    private async Task<ToolResult> EditAsync(ToolContext context, JsonObject args, CancellationToken ct)
     {
-        var canvas = await FindAsync(chat, args, ct);
+        var canvas = await FindAsync(context.Conversation.Id, args, ct);
         var edits = Edits(args);
         await canvases.EditAsync(canvas, edits, Canvases.Model, Schema.Str(args, "summary"), ct);
-        return Done(canvas, new JsonObject { ["edits"] = edits.Count });
+        return await DoneAsync(context, canvas, new JsonObject { ["edits"] = edits.Count }, ct);
     }
 
-    private async Task<ToolResult> RewriteAsync(Guid chat, JsonObject args, CancellationToken ct)
+    private async Task<ToolResult> RewriteAsync(ToolContext context, JsonObject args, CancellationToken ct)
     {
-        var canvas = await FindAsync(chat, args, ct);
+        var canvas = await FindAsync(context.Conversation.Id, args, ct);
         var content = Schema.Str(args, "content") ?? throw new CanvasException("Give the whole new text in \"content\".");
         await canvases.ChangeAsync(canvas, content, Schema.Str(args, "title"), Canvases.Model, "Rewritten", null, ct);
-        return Done(canvas, new JsonObject { ["rewritten"] = true });
+        return await DoneAsync(context, canvas, new JsonObject { ["rewritten"] = true }, ct);
     }
 
     /// <summary>What the model reads after a change, and what the page opens (the canvas, at its version).</summary>
@@ -176,7 +215,10 @@ public sealed class CanvasTool(Canvases canvases) : IChatTool
         what["shown_to_the_person"] = true;
         return new ToolResult(what.ToJsonString(Mcp.Plain))
         {
-            Details = new JsonObject { ["canvas"] = new JsonObject { ["id"] = canvas.Id.ToString(), ["title"] = canvas.Title, ["version"] = canvas.Version } },
+            Details = new JsonObject
+            {
+                ["canvas"] = new JsonObject { ["id"] = canvas.Id.ToString(), ["title"] = canvas.Title, ["version"] = canvas.Version, ["kind"] = canvas.Kind, ["deckId"] = canvas.DeckId?.ToString() },
+            },
         };
     }
 
@@ -237,7 +279,7 @@ public sealed class CanvasTool(Canvases canvases) : IChatTool
         return edits;
     }
 
-    private static string Kind(Canvas c) => c.Kind == "code" ? $"code{(c.Language is { } l ? ", " + l : "")}" : "document";
+    private static string Kind(Canvas c) => c.Kind switch { "code" => $"code{(c.Language is { } l ? ", " + l : "")}", "slides" => "slides", _ => "document" };
 
     private static int? Int(JsonObject args, string name) => args[name] switch
     {

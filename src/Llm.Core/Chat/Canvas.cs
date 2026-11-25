@@ -1,7 +1,7 @@
 namespace Llm.Core.Chat;
 
 /// <summary>
-/// A document (Markdown) or code beside a chat, edited by the person and by the model
+/// A document (Markdown), code or slides beside a chat, edited by the person and by the model
 /// (by changes, not rewrites). It holds the latest text; every change is a
 /// <see cref="CanvasVersion"/>, and any version can be restored.
 /// </summary>
@@ -10,8 +10,10 @@ public sealed class Canvas
     public Guid Id { get; set; } = Guid.CreateVersion7();
     public Guid ConversationId { get; set; }
     public required string Title { get; set; }
-    /// <summary>"document" (Markdown) or "code".</summary>
+    /// <summary>"document" (Markdown), "code" or "slides" (a deck, written as Markdown: <see cref="DeckId"/> is the deck it is).</summary>
     public string Kind { get; set; } = "document";
+    /// <summary>A slides canvas's deck (under Decks too): made from its text at each change, and its changes there written back.</summary>
+    public Guid? DeckId { get; set; }
     /// <summary>A code canvas's language ("python", "typescript"...); null for a document.</summary>
     public string? Language { get; set; }
     public string Content { get; set; } = "";

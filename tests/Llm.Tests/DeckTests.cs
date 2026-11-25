@@ -223,19 +223,43 @@ public sealed class DeckTests(AppFixture app)
     }
 
     [Fact]
-    public async Task In_a_chat_the_Decks_tool_makes_a_deck_and_answers_with_its_link()
+    public async Task In_a_chat_slides_are_a_canvas_that_is_a_deck_and_each_side_changes_the_other()
     {
         await using var f = NewApp();
         var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
         var kim = await PersonAsync(admin, f);
-        var chat = (await kim.JsonAsync(await kim.PostAsync("/api/chat/conversations", new { useCodeIntel = false, tools = new[] { "decks" } }))).GetProperty("id").GetGuid();
-        var text = await (await kim.PostAsync($"/api/chat/conversations/{chat}/messages", new { content = """Slides please: [call make_deck {"about":"Our quarter for the board"}]""" })).Content.ReadAsStringAsync();
+        var chat = (await kim.JsonAsync(await kim.PostAsync("/api/chat/conversations", new { useCodeIntel = false, tools = new[] { "canvas" } }))).GetProperty("id").GetGuid();
+        const string Outline = "# Our quarter\\nFor the board\\n## How {process}\\n1. **Ask**\\n2. **Build**";
+        var text = await (await kim.PostAsync($"/api/chat/conversations/{chat}/messages",
+            new { content = $$"""Slides please: [call canvas_create {"title":"Our quarter","kind":"slides","content":"{{Outline}}"}]""" })).Content.ReadAsStringAsync();
         var result = text.Split("\n\n", StringSplitOptions.RemoveEmptyEntries).Where(l => l.StartsWith("data: ", StringComparison.Ordinal)).Select(l => JsonDocument.Parse(l[6..]).RootElement)
             .First(e => e.GetProperty("type").GetString() == "tool_result");
         var said = JsonDocument.Parse(result.GetProperty("text").GetString()!).RootElement;
         var deck = (await kim.JsonAsync(await kim.GetAsync("/api/decks"))).EnumerateArray().Single();
-        Assert.Equal(($"/decks/{deck.GetProperty("id").GetGuid()}", 4), (said.GetProperty("link").GetString(), said.GetProperty("slides").GetInt32()));
+        var id = deck.GetProperty("id").GetGuid();
+        Assert.Equal(($"/decks/{id}", 2), (said.GetProperty("deck").GetString(), said.GetProperty("slides").GetInt32()));
         Assert.Equal("Our quarter", deck.GetProperty("title").GetString());
+        var canvas = (await kim.JsonAsync(await kim.GetAsync($"/api/chat/conversations/{chat}/canvases"))).EnumerateArray().Single();
+        var canvasId = canvas.GetProperty("id").GetGuid();
+        Assert.Equal(("slides", id), (canvas.GetProperty("kind").GetString(), canvas.GetProperty("deckId").GetGuid()));
+
+        // Changed in Decks: the canvas's text is the deck's, a version by the person.
+        var slides = JsonSerializer.Deserialize<List<DeckSlide>>((await kim.JsonAsync(await kim.GetAsync($"/api/decks/{id}"))).GetProperty("slides").GetRawText(), DeckModel.Json)!;
+        slides[1].Items!.Add(new DeckItem { Title = "Ship" });
+        await StatusAssert.Is(HttpStatusCode.OK, await kim.Http.PutAsJsonAsync(new Uri($"/api/decks/{id}", UriKind.Relative), new { slides }, DeckModel.Json));
+        var written = await kim.JsonAsync(await kim.GetAsync($"/api/chat/canvases/{canvasId}"));
+        Assert.Contains("3. **Ship**", written.GetProperty("content").GetString(), StringComparison.Ordinal);
+        Assert.Equal("person", (await kim.JsonAsync(await kim.GetAsync($"/api/chat/canvases/{canvasId}/versions"))).EnumerateArray().First().GetProperty("author").GetString());
+        // Changed in the canvas by the person: the deck follows.
+        var content = written.GetProperty("content").GetString()!.Replace("**Ship**", "**Ship it**", StringComparison.Ordinal);
+        await StatusAssert.Is(HttpStatusCode.OK, await kim.Http.PutAsJsonAsync(new Uri($"/api/chat/canvases/{canvasId}", UriKind.Relative),
+            new { content, baseVersion = written.GetProperty("version").GetInt32() }));
+        var now = await kim.JsonAsync(await kim.GetAsync($"/api/decks/{id}"));
+        Assert.Equal("Ship it", now.GetProperty("slides")[1].GetProperty("items")[2].GetProperty("title").GetString());
+        // As PowerPoint from the canvas: its deck's file.
+        var file = await kim.Http.GetAsync(new Uri($"/api/chat/canvases/{canvasId}/export?format=pptx", UriKind.Relative));
+        await StatusAssert.Is(HttpStatusCode.OK, file);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.presentationml.presentation", file.Content.Headers.ContentType?.MediaType);
     }
 
     [Fact]

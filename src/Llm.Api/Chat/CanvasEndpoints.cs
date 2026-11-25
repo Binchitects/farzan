@@ -46,7 +46,7 @@ public static partial class CanvasEndpoints
 
     private static object Shape(Canvas c, bool content) => new
     {
-        c.Id, c.ConversationId, c.Title, c.Kind, c.Language, c.Version, c.CreatedAt, c.UpdatedAt,
+        c.Id, c.ConversationId, c.Title, c.Kind, c.Language, c.DeckId, c.Version, c.CreatedAt, c.UpdatedAt,
         lines = Canvases.Split(c.Content).Length,
         content = content ? c.Content : null,
     };
@@ -61,16 +61,32 @@ public static partial class CanvasEndpoints
         return Results.Ok((await canvases.ListAsync(id, ct)).Select(c => Shape(c, false)));
     }
 
-    private static async Task<IResult> CreateAsync(Guid id, NewCanvas body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, Canvases canvases, CancellationToken ct)
+    /// <summary>
+    /// Whether a slides canvas may be made or changed here: the chat is the person's own (a deck is one person's, never a
+    /// room's), decks are on and they may make them.
+    /// </summary>
+    private static async Task<string?> SlidesRefusedAsync(AppDbContext db, Guid chat, AppUser me, AccessService access, Operations.Features features, CancellationToken ct) =>
+        !features.IsOn("decks") ? "Decks are off here."
+        : !(await access.MembershipAsync(me, ct)).Has(Core.Access.Permissions.Decks) ? "You may not make decks."
+        : !await db.Conversations.AnyAsync(c => c.Id == chat && c.UserId == me.Id && c.Kind != RoomMember.Room, ct) ? "Slides are for your own chats, not a room's."
+        : null;
+
+    private static async Task<IResult> CreateAsync(Guid id, NewCanvas body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, Canvases canvases,
+        Decks.SlideCanvases slides, AccessService access, Operations.Features features, CancellationToken ct)
     {
         var me = await Me(p, users);
         if (await RoomAccess.FindAsync(db, id, me, Need.Write, ct) is null)
         {
             return Results.NotFound();
         }
+        if (body.Kind?.Trim().ToLowerInvariant() == "slides" && await SlidesRefusedAsync(db, id, me, access, features, ct) is { } why)
+        {
+            return AuthEndpoints.Problem(403, "slides", why);
+        }
         try
         {
             var canvas = await canvases.CreateAsync(id, body.Title, body.Kind, body.Language, body.Content, Canvases.Person, ct);
+            await slides.SyncAsync(canvas, me, false, ct);
             return Results.Created($"/api/chat/canvases/{canvas.Id}", Shape(canvas, true));
         }
         catch (CanvasException ex)
@@ -85,12 +101,17 @@ public static partial class CanvasEndpoints
         return await OwnedAsync(db, id, me, ct, Need.Read) is { } c ? Results.Ok(Shape(c, true)) : Results.NotFound();
     }
 
-    private static async Task<IResult> SaveAsync(Guid id, CanvasSave body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, Canvases canvases, CancellationToken ct)
+    private static async Task<IResult> SaveAsync(Guid id, CanvasSave body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, Canvases canvases,
+        Decks.SlideCanvases slides, AccessService access, Operations.Features features, CancellationToken ct)
     {
         var me = await Me(p, users);
         if (await OwnedAsync(db, id, me, ct) is not { } canvas)
         {
             return Results.NotFound();
+        }
+        if (canvas.Kind == "slides" && await SlidesRefusedAsync(db, canvas.ConversationId, me, access, features, ct) is { } why)
+        {
+            return AuthEndpoints.Problem(403, "slides", why);
         }
         try
         {
@@ -102,6 +123,7 @@ public static partial class CanvasEndpoints
             {
                 await db.SaveChangesAsync(ct);
             }
+            await slides.SyncAsync(canvas, me, false, ct);
             return Results.Ok(Shape(canvas, true));
         }
         catch (CanvasConflictException ex)
@@ -154,7 +176,8 @@ public static partial class CanvasEndpoints
         return v is null ? Results.NotFound() : Results.Ok(new { v.Number, v.Title, v.Author, v.Summary, v.CreatedAt, v.Content });
     }
 
-    private static async Task<IResult> RestoreAsync(Guid id, int number, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, Canvases canvases, CancellationToken ct)
+    private static async Task<IResult> RestoreAsync(Guid id, int number, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, Canvases canvases,
+        Decks.SlideCanvases slides, CancellationToken ct)
     {
         var me = await Me(p, users);
         if (await OwnedAsync(db, id, me, ct) is not { } canvas)
@@ -163,7 +186,12 @@ public static partial class CanvasEndpoints
         }
         try
         {
-            return await canvases.RestoreAsync(canvas, number, ct) is null ? Results.NotFound() : Results.Ok(Shape(canvas, true));
+            if (await canvases.RestoreAsync(canvas, number, ct) is null)
+            {
+                return Results.NotFound();
+            }
+            await slides.SyncAsync(canvas, me, false, ct);
+            return Results.Ok(Shape(canvas, true));
         }
         catch (CanvasConflictException)
         {
@@ -186,6 +214,11 @@ public static partial class CanvasEndpoints
         var name = FileBase(canvas.Title);
         switch (format)
         {
+            // Slides: their deck, as PowerPoint.
+            case "pptx" when canvas.DeckId is { } deck:
+                return await db.Decks.AsNoTracking().SingleOrDefaultAsync(d => d.Id == deck && d.OwnerId == me.Id, ct) is { } d
+                    ? await Decks.DeckEndpoints.FileAsync(d, me, db, clock, ct)
+                    : Results.NotFound();
             case "md":
                 return Results.File(Encoding.UTF8.GetBytes(canvas.Content), "text/markdown; charset=utf-8", name + ".md");
             case "file" or null:

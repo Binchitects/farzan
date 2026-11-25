@@ -17,6 +17,9 @@ internal static class CanvasTables
             e.Property(c => c.Version).IsConcurrencyToken();
             e.HasIndex(c => c.ConversationId);
             e.HasOne<Conversation>().WithMany().HasForeignKey(c => c.ConversationId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(c => c.DeckId);
+            // The deck removed under Decks: the canvas keeps its text, and makes a deck again at its next change.
+            e.HasOne<Decks.Deck>().WithMany().HasForeignKey(c => c.DeckId).OnDelete(DeleteBehavior.SetNull);
         });
         builder.Entity<CanvasVersion>(e =>
         {

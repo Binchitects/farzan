@@ -123,7 +123,7 @@ public static class DeckEndpoints
         db.DeckVersions.Add(new DeckVersion { DeckId = d.Id, Version = d.Version, Title = d.Title, Slides = d.Slides, Note = Cut(note, 500) });
     }
 
-    private static async Task<IResult> EditAsync(Guid id, DeckEdit body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, DeckMaker maker, CancellationToken ct)
+    private static async Task<IResult> EditAsync(Guid id, DeckEdit body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, DeckMaker maker, SlideCanvases canvas, CancellationToken ct)
     {
         var me = await Me(p, users);
         if (await db.Decks.SingleOrDefaultAsync(d => d.Id == id && d.OwnerId == me.Id, ct) is not { } d)
@@ -164,6 +164,7 @@ public static class DeckEndpoints
             Save(d, db, title, DeckModel.Read(d.Slides), body.Note ?? "Renamed");
         }
         await db.SaveChangesAsync(ct);
+        await canvas.FromDeckAsync(d, DeckModel.Read(d.Slides), "Changed in Decks", ct);
         return Results.Ok(Full(d, DeckModel.Read(d.Slides)));
     }
 
@@ -180,7 +181,7 @@ public static class DeckEndpoints
     }
 
     /// <summary>Changed as the person asks: pictures kept where their prompt is the same, new charts' numbers asked of the data.</summary>
-    private static async Task<IResult> ChangeAsync(Guid id, DeckChange body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, DeckMaker maker, CancellationToken ct)
+    private static async Task<IResult> ChangeAsync(Guid id, DeckChange body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, DeckMaker maker, SlideCanvases canvas, CancellationToken ct)
     {
         var me = await Me(p, users);
         if (await db.Decks.SingleOrDefaultAsync(d => d.Id == id && d.OwnerId == me.Id, ct) is not { } d)
@@ -215,11 +216,12 @@ public static class DeckEndpoints
         await maker.FillChartsAsync(me, made.Slides, false, ct);
         Save(d, db, made.Title, made.Slides, change);
         await db.SaveChangesAsync(ct);
+        await canvas.FromDeckAsync(d, made.Slides, "Changed in Decks: " + (change.Length > 200 ? change[..199] + "…" : change), ct);
         return Results.Ok(Full(d, made.Slides));
     }
 
     /// <summary>Every chart that asks a database asked again: today's numbers.</summary>
-    private static async Task<IResult> RefreshAsync(Guid id, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, DeckMaker maker, CancellationToken ct)
+    private static async Task<IResult> RefreshAsync(Guid id, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, DeckMaker maker, SlideCanvases canvas, CancellationToken ct)
     {
         var me = await Me(p, users);
         if (await db.Decks.SingleOrDefaultAsync(d => d.Id == id && d.OwnerId == me.Id, ct) is not { } d)
@@ -230,11 +232,12 @@ public static class DeckEndpoints
         await maker.FillChartsAsync(me, slides, true, ct);
         Save(d, db, d.Title, slides, "Numbers asked again");
         await db.SaveChangesAsync(ct);
+        await canvas.FromDeckAsync(d, slides, "Numbers asked again", ct);
         return Results.Ok(Full(d, slides));
     }
 
     /// <summary>A slide's picture made from its prompt (once: a slide that has one keeps it), kept in the deck as it is.</summary>
-    private static async Task<IResult> PictureAsync(Guid id, int index, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, DeckMaker maker, ToolRegistry registry,
+    private static async Task<IResult> PictureAsync(Guid id, int index, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, DeckMaker maker, SlideCanvases canvas, ToolRegistry registry,
         AccessService access, ImageTool images, CancellationToken ct)
     {
         var me = await Me(p, users);
@@ -270,6 +273,7 @@ public static class DeckEndpoints
         now.Slides = DeckModel.Write(current);
         now.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
+        await canvas.FromDeckAsync(now, current, "A picture made", ct);
         return Results.Ok(Full(now, current));
     }
 
@@ -284,7 +288,7 @@ public static class DeckEndpoints
             .Select(v => new { v.Version, v.Title, v.Note, v.CreatedAt }).ToListAsync(ct));
     }
 
-    private static async Task<IResult> RestoreAsync(Guid id, int version, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, DeckMaker maker, CancellationToken ct)
+    private static async Task<IResult> RestoreAsync(Guid id, int version, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, DeckMaker maker, SlideCanvases canvas, CancellationToken ct)
     {
         var me = await Me(p, users);
         if (await db.Decks.SingleOrDefaultAsync(d => d.Id == id && d.OwnerId == me.Id, ct) is not { } d)
@@ -299,6 +303,7 @@ public static class DeckEndpoints
         await maker.CheckFilesAsync(slides, me, ct);
         Save(d, db, old.Title, slides, $"Version {version} put back");
         await db.SaveChangesAsync(ct);
+        await canvas.FromDeckAsync(d, slides, $"Deck version {version} put back", ct);
         return Results.Ok(Full(d, slides));
     }
 
@@ -306,10 +311,12 @@ public static class DeckEndpoints
     private static async Task<IResult> PptxAsync(Guid id, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, TimeProvider clock, CancellationToken ct)
     {
         var me = await Me(p, users);
-        if (await db.Decks.AsNoTracking().SingleOrDefaultAsync(d => d.Id == id && d.OwnerId == me.Id, ct) is not { } d)
-        {
-            return Results.NotFound();
-        }
+        return await db.Decks.AsNoTracking().SingleOrDefaultAsync(d => d.Id == id && d.OwnerId == me.Id, ct) is { } d ? await FileAsync(d, me, db, clock, ct) : Results.NotFound();
+    }
+
+    /// <summary>A deck of this person's as its PowerPoint file: the file it was opened from revised, else made in its template or look.</summary>
+    public static async Task<IResult> FileAsync(Deck d, AppUser me, AppDbContext db, TimeProvider clock, CancellationToken ct)
+    {
         var slides = DeckModel.Read(d.Slides);
         var ids = slides.Select(s => s.Picture?.FileId).OfType<Guid>().Distinct().ToList();
         var images = await db.ChatAttachments.AsNoTracking()

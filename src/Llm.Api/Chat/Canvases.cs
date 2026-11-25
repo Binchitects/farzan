@@ -28,7 +28,7 @@ public sealed class Canvases(AppDbContext db)
     public const string Person = "person";
     public const string Model = "model";
 
-    public static readonly string[] Kinds = ["document", "code"];
+    public static readonly string[] Kinds = ["document", "code", "slides"];
 
     /// <summary>A chat's canvases, oldest first, without their text.</summary>
     public Task<List<Canvas>> ListAsync(Guid conversationId, CancellationToken ct) =>
@@ -50,7 +50,7 @@ public sealed class Canvases(AppDbContext db)
         kind = string.IsNullOrWhiteSpace(kind) ? "document" : kind.Trim().ToLowerInvariant();
         if (!Kinds.Contains(kind))
         {
-            throw new CanvasException("A canvas is a \"document\" (Markdown) or \"code\".");
+            throw new CanvasException("A canvas is a \"document\" (Markdown), \"code\" or \"slides\" (a deck, in Markdown).");
         }
         var text = Text(content ?? "");
         if (await db.Canvases.CountAsync(c => c.ConversationId == conversationId, ct) >= MaxPerChat)
