@@ -242,9 +242,24 @@ Headlines: **dashboards whose numbers are right, per GPU and per model**; **a pr
   text in its boxes), a revised .pptx keeps the slides it was not asked to change, decks made from each source, and
   screenshots of a made deck in each design.
 
+### 10. Fewer, clearer tools (asked 2026-11-26)
+
+- **Today.** Things that do the same job under different names: the chat's Canvas (documents, code) and its Decks tool
+  (slides) both write beside the chat; Scheduled tasks and Agent Studio both run work on a schedule (Studio already
+  imports a task); Plans (a chat's steps on a board) and a project's goals and tasks track the same work; "studio" names
+  three pages (Code Studio, Agent Studio, Media studio); "Tools as code" sits among the tools though it is a way of
+  calling them.
+- **Fix (chosen by the user 2026-11-26).** Canvas holds documents, code and slides: a slides canvas is a deck, shown in
+  Decks too, and the Decks chat tool goes. Scheduled tasks become Automations' schedule trigger, each task moved to a
+  workflow by the upgrade, the /tasks page gone (the routes Code Arena calls keep answering). A plan is its project's
+  task board; a chat outside a project keeps its plan in the chat. Code Studio is Code, Agent Studio is Automations,
+  Media studio is Media; Tools as code moves into the tool-mode setting.
+- **Proof.** The upgrade test moves tasks and plans with nothing lost (counts and each field), Code Arena's routes answer
+  as before (both clients), Vitest and Playwright on the renamed pages, the manual and help updated.
+
 ### Order
 
-1 (the baseline first: it is running), 2, 3, 4, 5, 6, 7, 8, 9; each committed and pushed on v8.2, `origin/v8.1` merged in
+1 (the baseline first: it is running), 2, 3, 4, 5, 6, 7, 8, 9, 10; each committed and pushed on v8.2, `origin/v8.1` merged in
 between; then every suite, the compliance check, release-scan, the upgrade from 7.x and 8.x, and (when the installer,
 compose or the bundle changed) the offline scenarios, before 8.2.0.
 
