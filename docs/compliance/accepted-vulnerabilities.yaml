@@ -11,6 +11,10 @@
   package: golang:github.com/aquasecurity/trivy
   reason: "the Go database marks every Trivy release from 0.69.4 on; GitHub's advisory of the same compromise (GHSA-69fq-xp46-6x23) names 0.69.4 alone, and the scanners image pins 0.76.2 with its SHA-256 checked"
   until: 2027-04-30
+- id: MAL-2026-6561
+  package: pypi:skillspector
+  reason: "the malicious uploads were a squatter's redistribution (0.0.1-0.0.4, 2.3.7-2.3.10, a telemetry.py posting to livekit-agents.xyz) before NVIDIA published the name; the entry lists every version since. 2.13.7's wheel is byte-identical to NVIDIA's GitHub release (sha256 e2356aa1...), which the scanners image checks, has no telemetry.py nor that domain, and runs on an internal network that reaches nothing"
+  until: 2027-02-28
 
 # The images' own (tools/image-scan.py, Trivy over each image the bundle carries): a critical one with no fix to apply.
 - id: CVE-2025-68121

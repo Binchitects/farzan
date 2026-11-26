@@ -69,7 +69,13 @@ RUN pip install --no-cache-dir --only-binary=:all: bandit==1.9.4 pyyaml==6.0.3 \
 # SkillSpector (NVIDIA, Apache-2.0): an agent skill's instructions, scripts and dependencies checked for what a skill
 # should not do (hidden instructions, exfiltration, dangerous commands, known-vulnerable packages), as Arena's skills
 # are imported, made and changed. Static checks only at run time (--no-llm): the image reaches nothing.
-RUN pip install --no-cache-dir --only-binary=:all: skillspector==2.13.7 \
+# PyPI's skillspector name was squatted before NVIDIA published to it (OSV MAL-2026-6561 lists the whole project):
+# the wheel installed is the one on NVIDIA's own release (github.com/NVIDIA/SkillSpector v2.13.7), by its SHA-256.
+ARG SKILLSPECTOR_SHA256=e2356aa11f0d484f789543f25da6208fe2408641c8b16e7b59bc6600c5c39ffb
+RUN pip download --no-cache-dir --no-deps --only-binary=:all: -d /tmp/skillspector skillspector==2.13.7 \
+ && echo "${SKILLSPECTOR_SHA256}  /tmp/skillspector/skillspector-2.13.7-py3-none-any.whl" | sha256sum -c - \
+ && pip install --no-cache-dir --only-binary=:all: /tmp/skillspector/skillspector-2.13.7-py3-none-any.whl \
+ && rm -rf /tmp/skillspector \
  && skillspector --version
 
 COPY rules /opt/rules
