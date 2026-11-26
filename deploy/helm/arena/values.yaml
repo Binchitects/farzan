@@ -43,6 +43,8 @@ secrets:
   appKey: ""
   engineKey: ""
   codeIntelKey: ""
+  # The app's key at the plugin runtime (made at the first install when empty).
+  pluginsKey: ""
   hfToken: ""
   gitlabToken: ""
   gitlabUsername: ""
@@ -55,6 +57,7 @@ images:
   web: { repository: arena-web, tag: "" }
   codeIntel: { repository: arena-code-intel, tag: "" }
   sandbox: { repository: arena-sandbox, tag: "" }
+  plugins: { repository: arena-plugins, tag: "" }
   blender: { repository: arena-blender, tag: "" }
   lean: { repository: arena-lean, tag: "" }
   laya: { repository: arena-laya, tag: "" }
@@ -260,6 +263,14 @@ sandbox:
   slots: 2
   jobMemoryMb: 3072
   resources: { limits: { cpu: "2", memory: 7Gi } }
+
+# Plugins' own server code (plugin.yaml's server:), each plugin a worker of its own (deploy/services/plugins): the app
+# reaches it over TCP with PLUGINS_KEY; its NetworkPolicy lets only the app in and nothing out.
+plugins:
+  enabled: true
+  # The most memory one plugin's worker may have, whatever its manifest asks.
+  mostMemoryMb: 1024
+  resources: { requests: { cpu: 250m, memory: 512Mi }, limits: { cpu: "2", memory: 4Gi } }
 
 # The chat's 3D models: Blender headless, as the sandbox is (no network, a read-only root), with more room.
 blender:

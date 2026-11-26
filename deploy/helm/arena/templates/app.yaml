@@ -52,6 +52,11 @@ spec:
             - { name: Engine__EmbedGpu, value: {{ .Values.engines.embedGpu | quote }} }
             - { name: Engine__LmcacheRemote, value: {{ .Values.engines.lmcacheRemote | quote }} }
             {{- include "arena.secretEnv" (list $ "CodeIntel__AdminToken" "CODE_INTEL_KEY") | nindent 12 }}
+            {{- if .Values.plugins.enabled }}
+            # The plugin runtime, over TCP with the app's key (compose: its socket on the plugin-runtime volume).
+            - { name: PluginRuntime__Tcp, value: "plugins:7700" }
+            {{- include "arena.secretEnv" (list $ "PluginRuntime__Key" "PLUGINS_KEY") | nindent 12 }}
+            {{- end }}
             - { name: CodeIntel__GitlabUrl, value: {{ .Values.gitlab.url | quote }} }
             - { name: CodeIntel__Host, value: {{ .Values.codeIntel.host | quote }} }
             {{- if .Values.gitlab.caCert }}
