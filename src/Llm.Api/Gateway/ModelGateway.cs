@@ -387,8 +387,9 @@ public sealed partial class ModelGateway(IServiceScopeFactory scopes, IHttpClien
                 // The longest wait for the answer to start (its prompt read, a long one too), then the longest pause in it.
                 var (firstByte, idle) = (timeouts.CurrentValue.FirstByteTimeout, timeouts.CurrentValue.IdleTimeout);
                 var sent = clock.GetUtcNow();
-                using var waiting = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                waiting.CancelAfter(firstByte);
+                // Timed by the gateway's clock (the system's; a test's own), as everything else here is.
+                using var timer = new CancellationTokenSource(firstByte, clock);
+                using var waiting = CancellationTokenSource.CreateLinkedTokenSource(ct, timer.Token);
                 try
                 {
                     using var req = new HttpRequestMessage(HttpMethod.Post, d.BaseUrl.TrimEnd('/') + endpoint)
@@ -430,7 +431,7 @@ public sealed partial class ModelGateway(IServiceScopeFactory scopes, IHttpClien
                     {
                         row.Call = "completion";
                     }
-                    var inner = new TimedStream(await res.Content.ReadAsStreamAsync(ct), meter, firstByte - (clock.GetUtcNow() - sent), firstByte, idle);
+                    var inner = new TimedStream(await res.Content.ReadAsStreamAsync(ct), meter, clock, firstByte - (clock.GetUtcNow() - sent), firstByte, idle);
                     var metered = new MeteredStream(inner, meter, ended =>
                     {
                         Release();
@@ -894,7 +895,7 @@ public sealed class GatewayTimeoutOptions
 /// pause longer than the idle wait. A wait past its limit ends the read with an error (the request is cancelled at the
 /// server) and the meter says why, so the ledger books it as failed.
 /// </summary>
-internal sealed class TimedStream(Stream inner, SseMeter meter, TimeSpan firstLeft, TimeSpan firstByte, TimeSpan idle) : Stream
+internal sealed class TimedStream(Stream inner, SseMeter meter, TimeProvider clock, TimeSpan firstLeft, TimeSpan firstByte, TimeSpan idle) : Stream
 {
     private bool _started;
 
@@ -912,8 +913,8 @@ internal sealed class TimedStream(Stream inner, SseMeter meter, TimeSpan firstLe
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         var limit = _started ? idle : firstLeft < TimeSpan.Zero ? TimeSpan.Zero : firstLeft;
-        using var wait = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        wait.CancelAfter(limit);
+        using var timer = new CancellationTokenSource(limit, clock);
+        using var wait = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timer.Token);
         try
         {
             var n = await inner.ReadAsync(buffer, wait.Token);

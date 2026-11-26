@@ -131,18 +131,24 @@ public sealed class OwnGatewayTests(AppFixture app)
     {
         public const string Answer = "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\ndata: {\"choices\":[],\"usage\":{\"prompt_tokens\":3,\"completion_tokens\":1}}\n\ndata: [DONE]\n\n";
 
+        /// <summary>Set when a request reaches the slow server (it then waits until it is given up on).</summary>
+        public TaskCompletionSource Slowed { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        /// <summary>Set when the stalling server has said its first words and waits.</summary>
+        public TaskCompletionSource Stalled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             if (request.RequestUri!.Host == "slow.test")
             {
-                await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
+                Slowed.TrySetResult();
+                await Task.Delay(Timeout.Infinite, cancellationToken);
             }
-            Stream body = request.RequestUri.Host == "stall.test" ? new Stalling() : new MemoryStream(Encoding.UTF8.GetBytes(Answer));
+            Stream body = request.RequestUri.Host == "stall.test" ? new Stalling(Stalled) : new MemoryStream(Encoding.UTF8.GetBytes(Answer));
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(body) { Headers = { ContentType = new("text/event-stream") } } };
         }
 
         /// <summary>Its first words, then nothing until it is given up on.</summary>
-        private sealed class Stalling : Stream
+        private sealed class Stalling(TaskCompletionSource stalled) : Stream
         {
             private bool _said;
             public override bool CanRead => true;
@@ -165,6 +171,7 @@ public sealed class OwnGatewayTests(AppFixture app)
                     first.CopyTo(buffer);
                     return first.Length;
                 }
+                stalled.TrySetResult();
                 await Task.Delay(Timeout.Infinite, cancellationToken);
                 return 0;
             }
@@ -174,13 +181,17 @@ public sealed class OwnGatewayTests(AppFixture app)
     [Fact]
     public async Task An_answer_that_does_not_start_in_time_goes_to_another_copy_else_fails_and_one_that_stops_halfway_is_ended_and_booked_failed()
     {
+        // The gateway's own clock: its timeouts pass when the test moves it past them, however loaded the machine is.
+        var clock = new ManualClock(DateTimeOffset.UtcNow);
+        var servers = new SlowServers();
         var cs = app.ConnectionStringFor("owngw_" + Guid.NewGuid().ToString("N")[..8]);
         await using var f = app.Create(cs, new FakeGateway(), new Dictionary<string, string?> { ["Gateway:FirstByteTimeout"] = "00:00:01", ["Gateway:IdleTimeout"] = "00:00:01" },
             s =>
             {
                 s.AddSingleton<IRoutesSource>(new Given(Route("pool", Deployment.Remote, "http://slow.test/v1"), Route("pool", Deployment.Remote),
                     Route("slow", Deployment.Remote, "http://slow.test/v1"), Route("stall", Deployment.Remote, "http://stall.test/v1")));
-                s.AddHttpClient(ModelGateway.Upstream).ConfigurePrimaryHttpMessageHandler(() => new SlowServers());
+                s.AddHttpClient(ModelGateway.Upstream).ConfigurePrimaryHttpMessageHandler(() => servers);
+                s.AddSingleton<TimeProvider>(clock);
             });
         var gateway = f.Services.GetRequiredService<ModelGateway>();
         JsonObject Ask(string model, string tag) => new()
@@ -193,9 +204,18 @@ public sealed class OwnGatewayTests(AppFixture app)
             await using var scope = f.Services.CreateAsyncScope();
             return await scope.ServiceProvider.GetRequiredService<AppDbContext>().GatewayRequests.AsNoTracking().SingleAsync(r => r.Tag == tag);
         }
+        // The request sent, and once it waits on the slow server, its second past: given up on there.
+        async Task<T> PastTheSlowOneAsync<T>(Task<T> asked)
+        {
+            if (await Task.WhenAny(asked, servers.Slowed.Task) != asked)
+            {
+                clock.Advance(TimeSpan.FromSeconds(2));
+            }
+            return await asked;
+        }
 
-        // The slow copy gives up its turn: the other copy answers, in two tries.
-        using (var res = await gateway.ChatAsync(Ask("pool", "pooled"), new GatewayCaller("slow@example.test", Tag: "pooled"), [], default))
+        // The slow copy gives up its turn: the other copy answers, in two tries (or at once, should it be asked first).
+        using (var res = await PastTheSlowOneAsync(gateway.ChatAsync(Ask("pool", "pooled"), new GatewayCaller("slow@example.test", Tag: "pooled"), [], default)))
         {
             Assert.Contains("\"content\":\"hi\"", await res.Content.ReadAsStringAsync(), StringComparison.Ordinal);
         }
@@ -204,18 +224,139 @@ public sealed class OwnGatewayTests(AppFixture app)
         Assert.True(pooled.Attempts >= 1);
 
         // Its only copy slow: it fails, and says why.
-        var slow = await Assert.ThrowsAsync<ChatGatewayException>(() => gateway.ChatAsync(Ask("slow", "slow"), new GatewayCaller("slow@example.test", Tag: "slow"), [], default));
+        servers.Slowed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var slow = await Assert.ThrowsAsync<ChatGatewayException>(() => PastTheSlowOneAsync(
+            gateway.ChatAsync(Ask("slow", "slow"), new GatewayCaller("slow@example.test", Tag: "slow"), [], default)));
         Assert.Equal(504, slow.Status);
         Assert.Contains("did not start its answer within 1 second", slow.Message, StringComparison.Ordinal);
         Assert.Equal(Llm.Core.Gateway.GatewayRequest.Failed, (await RowAsync("slow")).Status);
 
-        // Started, then silent: the read ends with why, and the ledger books it failed with its first words counted.
+        // Started, then silent: once it waits after its first words, its second passes; the read ends with why, and the ledger
+        // books it failed with its first words counted.
         var res2 = await gateway.ChatAsync(Ask("stall", "stall"), new GatewayCaller("slow@example.test", Tag: "stall"), [], default);
-        var cut = await Assert.ThrowsAnyAsync<Exception>(() => res2.Content.ReadAsStringAsync());
+        var reading = res2.Content.ReadAsStringAsync();
+        await Task.WhenAny(reading, servers.Stalled.Task);
+        clock.Advance(TimeSpan.FromSeconds(2));
+        var cut = await Assert.ThrowsAnyAsync<Exception>(() => reading);
         Assert.Contains("paused its answer for more than 1 second", cut.ToString(), StringComparison.Ordinal);
         res2.Dispose();
         var stalled = await RowAsync("stall");
         Assert.Equal((Llm.Core.Gateway.GatewayRequest.Failed, true), (stalled.Status, stalled.Error!.Contains("paused its answer", StringComparison.Ordinal)));
+    }
+
+    /// <summary>A clock that moves only when told (<see cref="Advance"/>), its timers firing as it passes them.</summary>
+    private sealed class ManualClock(DateTimeOffset start) : TimeProvider
+    {
+        private readonly Lock _gate = new();
+        private readonly List<ManualTimer> _timers = [];
+        private TimeSpan _now;
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            lock (_gate)
+            {
+                return start + _now;
+            }
+        }
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp()
+        {
+            lock (_gate)
+            {
+                return _now.Ticks;
+            }
+        }
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            var t = new ManualTimer(this, callback, state);
+            t.Change(dueTime, period);
+            return t;
+        }
+
+        /// <summary>Moves the clock on, and runs each timer it passed.</summary>
+        public void Advance(TimeSpan by)
+        {
+            List<ManualTimer> due;
+            lock (_gate)
+            {
+                _now += by;
+                due = [.. _timers.Where(t => t.At <= _now)];
+                foreach (var t in due)
+                {
+                    if (t.Period > TimeSpan.Zero && t.Period != Timeout.InfiniteTimeSpan)
+                    {
+                        t.At = _now + t.Period;
+                    }
+                    else
+                    {
+                        _timers.Remove(t);
+                    }
+                }
+            }
+            foreach (var t in due)
+            {
+                t.Fire();
+            }
+        }
+
+        private void Set(ManualTimer t, TimeSpan due, TimeSpan period)
+        {
+            var now = false;
+            lock (_gate)
+            {
+                _timers.Remove(t);
+                if (due == Timeout.InfiniteTimeSpan)
+                {
+                    return;
+                }
+                (t.At, t.Period) = (_now + due, period);
+                if (due <= TimeSpan.Zero)
+                {
+                    now = true;
+                }
+                else
+                {
+                    _timers.Add(t);
+                }
+            }
+            if (now)
+            {
+                ThreadPool.QueueUserWorkItem(_ => t.Fire());
+            }
+        }
+
+        private void Remove(ManualTimer t)
+        {
+            lock (_gate)
+            {
+                _timers.Remove(t);
+            }
+        }
+
+        private sealed class ManualTimer(ManualClock clock, TimerCallback callback, object? state) : ITimer
+        {
+            public TimeSpan At { get; set; }
+            public TimeSpan Period { get; set; }
+
+            public void Fire() => callback(state);
+
+            public bool Change(TimeSpan dueTime, TimeSpan period)
+            {
+                clock.Set(this, dueTime, period);
+                return true;
+            }
+
+            public void Dispose() => clock.Remove(this);
+
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return ValueTask.CompletedTask;
+            }
+        }
     }
 
     [Fact]
