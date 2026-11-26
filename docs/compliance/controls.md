@@ -834,6 +834,7 @@ A plugin's code runs in the plugin runtime, each plugin its own worker, user and
 
 - `Llm.Tests/PluginRuntimeTests.A_signed_plugin_installs_once_its_publisher_is_trusted_and_its_calls_are_checked_by_its_grants`
 - `Llm.Tests/PluginRuntimeTests.A_plugin_that_crashes_five_times_in_a_row_is_turned_off_by_itself_and_on_again_by_an_admin`
+- `Llm.Tests/PluginRuntimeTests.A_granted_host_that_points_into_the_office_network_is_never_reached`
 - `Llm.Tests/PluginConformanceTests.Each_package_is_read_or_refused_as_the_framework_says`
 - `deploy/test_plugin_runtime.py::test_isolation_another_plugins_files_the_network_the_socket_and_its_own_code`
 - `deploy/test_plugin_runtime.py::test_processes_files_and_file_size_stop_at_its_own_limits`
