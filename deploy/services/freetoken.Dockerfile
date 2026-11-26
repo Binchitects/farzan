@@ -12,8 +12,9 @@
 #
 # FreeToken goes into the image's own Python (SGLang's, /opt/sglang), with no resolve of its dependencies (--no-deps):
 # PyTorch, torchvision, Triton, FlashInfer and the rest are the image's; only the packages FreeToken pins to other versions
-# than the image has (sglang-kernel, transformers, pillow, tvm-ffi) and its own (flashlib) are fetched, so the build can
-# never fetch another PyTorch or CUDA. FlashInfer stays the image's 0.7.2 (FreeToken asks 0.6.18.post1, whose prebuilt
+# than the image has (sglang-kernel, transformers, tvm-ffi) and its own (flashlib) are fetched, so the build can never
+# fetch another PyTorch or CUDA. Pillow stays the image's 13.0.0 (FreeToken asks below 13; 12.x has known critical
+# vulnerabilities that 13.0.0 fixed), as FlashInfer stays its 0.7.2. FlashInfer stays the image's 0.7.2 (FreeToken asks 0.6.18.post1, whose prebuilt
 # kernels PyPI does not have, so it would fetch them as it runs): its kernels for every GPU are in the image. Its kernels are compiled once a GPU runs them (a build has none), into
 # FREETOKEN_CACHE (a volume): a second start compiles nothing. Models come from the library (HF_HUB_OFFLINE: FreeToken
 # never fetches one itself).
@@ -28,7 +29,7 @@ ARG PIP_INDEX_URL=
 RUN --mount=type=cache,target=/root/.cache/pip \
     python3 -m pip install --no-deps --timeout 60 --retries 5 ${PIP_INDEX_URL:+--index-url "$PIP_INDEX_URL"} \
       "freetoken==${FREETOKEN_VERSION}" "sglang-kernel==0.4.9" "flashlib==0.4.0" \
-      "apache-tvm-ffi==0.1.13.post3" "transformers==5.18.0" "pillow==12.2.0" \
+      "apache-tvm-ffi==0.1.13.post3" "transformers==5.18.0" \
  && ft --version \
  && python3 -c "import freetoken.server.args, flashinfer, flashlib, torch; print('torch', torch.__version__)"
 
