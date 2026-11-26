@@ -22,6 +22,16 @@ async function install(request: APIRequestContext, name: string) {
 
 const frame = (page: Page, plugin: string) => page.locator(`iframe[data-plugin="${plugin}"]`)
 
+/**
+ * The frame has painted, and the page around it: Chrome drops input to an out-of-process frame until its first frames
+ * are drawn (measured: one click in about fifteen right after load reached nothing), so a click waits for both.
+ */
+async function painted(page: Page, plugin: string) {
+  const twice = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))))
+  await frame(page, plugin).contentFrame().locator('body').evaluate(twice)
+  await page.evaluate(twice)
+}
+
 test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async ({ request }) => {
@@ -30,14 +40,16 @@ test.beforeAll(async ({ request }) => {
 
 test('a plugin page is in the menu, sandboxed, and reaches Arena only through the bridge', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: 'Hello' }).first().click()
+  await page.getByRole('link', { name: 'Hello', exact: true }).filter({ visible: true }).first().click()
   await expect(page).toHaveURL(/\/p\/hello\/home$/)
   const f = frame(page, 'hello')
   await expect(f).toHaveAttribute('sandbox', 'allow-scripts allow-forms allow-modals')
   const inside = f.contentFrame()
   await expect(inside.locator('#who')).toContainText('Signed in as')
+  await painted(page, 'hello')
   await inside.getByRole('button', { name: 'Say hello' }).click()
-  await expect(inside.locator('#answer')).toContainText(/^Hello, .+! \(\d+\)$/)
+  // The first call starts the plugin's worker.
+  await expect(inside.locator('#answer')).toContainText(/^Hello, .+! \(\d+\)$/, { timeout: 20_000 })
   // The page's own toast, asked for by the frame.
   await expect(page.getByText(/Hello, .+! \(\d+\)/).first()).toBeVisible()
 })
@@ -46,7 +58,7 @@ test('a page that throws as it loads shows its card, and the rest of Arena works
   await page.goto('/p/chaos/throws')
   await expect(page.locator('[data-plugin-error]')).toContainText('Chaos is not working', { timeout: 15_000 })
   await expect(page.locator('[data-plugin-error]')).toContainText('did not start')
-  await page.getByRole('link', { name: 'Hello' }).first().click()
+  await page.getByRole('link', { name: 'Hello', exact: true }).filter({ visible: true }).first().click()
   await expect(frame(page, 'hello').contentFrame().locator('#who')).toContainText('Signed in as')
 })
 
@@ -58,7 +70,8 @@ test('a page that never loads (an endless loop) is given up on, and the page aro
   expect(Date.now() - t).toBeLessThan(2000)
   await expect(page.locator('[data-plugin-error]')).toContainText('did not start', { timeout: 15_000 })
   await page.getByRole('button', { name: 'Try again' }).click()
-  await expect(frame(page, 'chaos')).toBeVisible()
+  // Asked of the page itself: its frame is back (a locator's query can stall beside a frame whose own process spins).
+  await page.waitForFunction(() => !!document.querySelector('iframe[data-plugin="chaos"]') && !document.querySelector('[data-plugin-error]'))
 })
 
 test('a frame that floods the bridge is limited, then stopped, and the page goes on', async ({ page }) => {

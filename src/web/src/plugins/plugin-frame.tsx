@@ -81,17 +81,25 @@ function Frame({ plugin, slot, id, entry, rest = '', chatId = null, projectId = 
   }), [plugin, slot, id, rest, me.data, chatId, projectId, message, resolved])
   const contextRef = useRef(context)
   const bridgeRef = useRef<ReturnType<typeof createBridge> | null>(null)
+  // What the bridge calls back, read when it calls: a new function from a render (navigate after a route change) never
+  // makes another bridge, which would not know the frame had said hello.
+  const callbacks = useRef({ navigate, confirm, onClose, onInsert, fill })
+  useEffect(() => {
+    callbacks.current = { navigate, confirm, onClose, onInsert, fill }
+  })
+  const writes = plugin.writes.join(',')
 
+  // One bridge for as long as the frame is the same page (its plugin, its version's address, its attempt).
   useEffect(() => {
     const bridge = createBridge({
-      plugin: plugin.name, context: contextRef.current, writes: plugin.writes,
+      plugin: plugin.name, get context() { return contextRef.current }, writes: writes ? writes.split(',') : [],
       host: {
-        navigate: (path) => navigate(path),
+        navigate: (path) => callbacks.current.navigate(path),
         toast: (text, kind) => (kind === 'error' ? toast.error(text) : kind === 'success' ? toast.success(text) : toast(text)),
-        resize: (h) => { if (!fill) setHeight(h) },
-        close: () => onClose?.(),
-        insert: (text) => onInsert?.(text),
-        confirm: (title, body) => confirm({ title, description: body, confirm: 'Run it' }),
+        resize: (h) => { if (!callbacks.current.fill) setHeight(h) },
+        close: () => callbacks.current.onClose?.(),
+        insert: (text) => callbacks.current.onInsert?.(text),
+        confirm: (title, body) => callbacks.current.confirm({ title, description: body, confirm: 'Run it' }),
         broke: (why) => setBroke(why),
         hello: () => {},
       },
@@ -111,7 +119,7 @@ function Frame({ plugin, slot, id, entry, rest = '', chatId = null, projectId = 
       window.removeEventListener('message', listener)
       window.clearTimeout(deadline)
     }
-  }, [plugin, attempt, navigate, confirm, fill, onClose, onInsert])
+  }, [plugin.name, plugin.base, writes, attempt])
 
   // The context it is shown in changed (another chat, the theme): told, not reloaded.
   useEffect(() => {

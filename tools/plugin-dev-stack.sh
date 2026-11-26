@@ -18,7 +18,6 @@ name="arena-plugin-dev"
 pg_image="${PG_IMAGE:-pgvector/pgvector:0.8.7-pg16-bookworm}"
 app_port="${APP_PORT:-5080}"
 web_port="${WEB_PORT:-5173}"
-runtime_port="${RUNTIME_PORT:-7790}"
 
 up() {
   mkdir -p "$state"
@@ -28,7 +27,6 @@ up() {
   [ -f "$state/admin-password" ] || (umask 077; head -c 24 /dev/urandom | base64 | tr -d '/+=' > "$state/admin-password")
   [ -f "$state/data-key" ] || (umask 077; head -c 32 /dev/urandom | base64 > "$state/data-key")
   [ -f "$state/pg-password" ] || (umask 077; head -c 18 /dev/urandom | base64 | tr -d '/+=' > "$state/pg-password")
-  [ -f "$state/runtime-key" ] || (umask 077; head -c 32 /dev/urandom | base64 | tr -d '/+=' > "$state/runtime-key")
   if ! docker ps --format '{{.Names}}' | grep -qx "$name-pg"; then
     docker rm -f "$name-pg" >/dev/null 2>&1 || true
     docker run -d --name "$name-pg" -p 127.0.0.1::5432 -e POSTGRES_USER=arena -e POSTGRES_DB=arena \
@@ -39,12 +37,12 @@ up() {
   if ! docker ps --format '{{.Names}}' | grep -qx "$name-runtime"; then
     docker rm -f "$name-runtime" >/dev/null 2>&1 || true
     docker build -q --pull=false -t "$name-runtime:local" "$here/deploy/services/plugins" >/dev/null
-    # TCP with a key, as on Kubernetes (the app here is outside compose); the workers keep every limit but the network.
-    docker run -d --name "$name-runtime" -p "127.0.0.1:$runtime_port:7700" --cap-drop ALL --cap-add SETUID --cap-add SETGID \
+    # As compose runs it: no network at all, the app by its socket in .plugin-dev/runtime (its group is yours).
+    mkdir -p "$state/runtime"
+    docker run -d --name "$name-runtime" --network none --init --cap-drop ALL --cap-add SETUID --cap-add SETGID \
       --cap-add CHOWN --cap-add DAC_OVERRIDE --cap-add FOWNER --cap-add KILL --security-opt no-new-privileges:true --read-only \
-      --tmpfs /work:size=512m,mode=0711 --tmpfs /tmp:size=16m --tmpfs /plugin-runtime:size=128m --pids-limit 512 --memory 2g \
-      -e PLUGINS_LISTEN=tcp:0.0.0.0:7700 -e PLUGINS_KEY_FILE=/run/runtime-key -v "$state/runtime-key:/run/runtime-key:ro" \
-      "$name-runtime:local" >/dev/null
+      --tmpfs /work:size=512m,mode=0711 --tmpfs /tmp:size=16m --pids-limit 512 --memory 2g \
+      -e PLUGINS_SOCKET_GID="$(id -g)" -v "$state/runtime:/plugin-runtime" "$name-runtime:local" >/dev/null
   fi
   if ! curl -s -o /dev/null "http://127.0.0.1:$app_port/api/info"; then
     docker rm -f "$name-app" >/dev/null 2>&1 || true
@@ -60,8 +58,7 @@ Plugins__Directory=/repo/plugins
 Plugins__AllowUnsigned=true
 Plugins__DevInstalls=true
 Dashboards__Path=/repo/deploy/config/dashboards
-PluginRuntime__Tcp=127.0.0.1:$runtime_port
-PluginRuntime__Key=$(cat "$state/runtime-key")
+PluginRuntime__Root=/repo/.plugin-dev/runtime
 Engine__Enabled=false
 ENV
     )
@@ -85,6 +82,8 @@ down() {
     fi
   done
   docker rm -f "$name-app" "$name-pg" "$name-runtime" >/dev/null 2>&1 || true
+  # The runtime's folder holds root's and the plugins' users' files: emptied from inside a container.
+  [ -d "$state/runtime" ] && docker run --rm --network none -v "$state/runtime:/x" node:22-alpine sh -c 'rm -rf /x/* /x/.[!.]*' >/dev/null 2>&1 || true
   echo "Stopped. Its secrets stay in .plugin-dev/ until you remove the folder."
 }
 

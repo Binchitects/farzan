@@ -309,11 +309,11 @@ off by itself); **grants an admin can read**: what each plugin may reach, for wh
   after 25 failures. An install is an `McpServer` row (`Plugin`, `Manifest`, `PluginSettings`, `PluginPermissions`).
   No plugin code runs, and there is no UI, event, hook, job or data API for plugins.
 - **Fix.** One manifest (`apiVersion: arena.plugins/v3`, a superset of v2), one installer, one admin page. New tables
-  (not more columns on `McpServer`, which 8.2 is reworking): `Plugins` (the install: name, version, state, the
-  reason it is off, signer), `PluginGrants` (scope, granted by, when), `PluginEnablement` (group or everyone),
-  `PluginManagers`, `PluginStore` (key-value, plugin-wide or per person, with quotas), `PluginEventOutbox`
-  (at-least-once delivery), `PluginJobRuns` (claimed as Automations claim theirs, so one replica runs each). The
-  v2 plugin's tool stays an `McpServer` row owned by its `Plugins` row. A migration moves every installed v2 plugin
+  only (not more columns on `mcp_servers`): `plugin_states` (on, off or tripped and why, the signer, a dev install's
+  owner), `plugin_publishers`, `plugin_managers`, `plugin_store` (plugin-wide or per person, with quotas),
+  `plugin_events` (at-least-once delivery), `plugin_jobs` (claimed as Automations' are), `plugin_package_blobs`.
+  Grants stay where v2 kept them (the install's granted permissions: `scope:` and `host:` keys beside v2's);
+  enablement per group is Admin → Tools' access for the plugin's tool row, as for any tool. A migration moves every installed v2 plugin
   into them (manifest rewritten with `apiVersion`, grants carried), with an upgrade test from 7.x and 8.x data.
 
 ### The runtime: `plugins`, a service with no network
@@ -337,8 +337,8 @@ off by itself); **grants an admin can read**: what each plugin may reach, for wh
   (by the app, to granted hosts only), notify, audit. Events and hooks (observe, or modify with its own grant) with
   deadlines; jobs on cron; code-defined tools for models (they ask first when they write); routes under
   `/api/p/{plugin}/...`, each declaring its access as every route does (EndpointAccessTests).
-- New permissions: `plugins.grant`, `plugins.enable`, `plugins.develop` (dev installs, one's own only). Plugin scopes
-  are their own catalogue, not entries of `Permissions.All`.
+- New permissions: `plugins.grant`, `plugins.enable`, `feature.plugins.develop` (dev installs, one's own only). Plugin
+  scopes are their own catalogue, not entries of `Permissions.All`.
 - Every install, grant, enable, disable, auto-disable, setting, outward call, write and denial is audited `plugin.*`.
 
 ### The UI
@@ -360,6 +360,12 @@ tries the top window, cookies and the API). The framework's conformance suite ru
 and 8.x with installed v2 plugins. The offline scenarios, since compose, the features and the bundle change.
 
 ### Order
+
+Done (2026-11-26, on `v8.3`): 1 to 6, and of 7 the migration with its upgrade test, compose, the feature, Helm, the
+docs and the compliance control (OPS-03); the framework released as v0.1.0. To do before 8.3.0: the whole Llm.Tests
+run, the offline scenarios (compose and the bundle changed), release-scan and image-scan, the upgrade from 7.x and
+8.x on a real install, the framework's 0.1.1; IDE panels, the after_model and before_store hooks and person.created
+come later.
 
 1. The framework's contract and CLI (its repository). 2. Its server SDK and harness. 3. The runtime service and its
 chaos tests. 4. The registry, the tables and the v2 migration, the host API, tools, routes, events, hooks, jobs,
