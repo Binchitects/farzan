@@ -29,11 +29,14 @@ public sealed class PluginsV3MigrationTests(AppFixture app)
         const string gitlab = "# The GitLab plugin\nname: gitlab-issues\nversion: \"1.1\"\ntitle: GitLab issues\ntools:\n  openapi: openapi.yaml\n  url: \"{gitlab_url}/api/v4\"\nwrites: [create_issue]\n";
         const string weather = "name: weather\nversion: 2\ntools: { mcp: https://weather.example.test/mcp }\n";
         const string units = "apiVersion: arena.plugins/v3\nname: units\nversion: 1.0.0\ntools: { sandbox: mcp }\n";
-        var (a, b, c) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        // What plugins v2 also took: no version at all, an odd one, a setting type it did not know, a key with capitals.
+        const string bare = "name: bare\ntools: { mcp: https://bare.example.test/mcp }\nsettings:\n  - { key: apiKey, title: Key, type: password }\n";
+        const string odd = "name: odd\nversion: 1.2.3.4\ntools: { mcp: https://odd.example.test/mcp }\n";
+        var (a, b, c, d, e) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         await using (var conn = new NpgsqlConnection(cs))
         {
             await conn.OpenAsync();
-            foreach (var (id, name, manifest) in new[] { (a, "gitlab-issues", gitlab), (b, "weather", weather), (c, "units", units) })
+            foreach (var (id, name, manifest) in new[] { (a, "gitlab-issues", gitlab), (b, "weather", weather), (c, "units", units), (d, "bare", bare), (e, "odd", odd) })
             {
                 await V61MigrationTests.InsertAsync(conn, "mcp_servers", new()
                 {
@@ -55,6 +58,9 @@ public sealed class PluginsV3MigrationTests(AppFixture app)
         Assert.StartsWith("apiVersion: arena.plugins/v3\n# The GitLab plugin\n", servers[a].Manifest!, StringComparison.Ordinal);
         Assert.Equal("2.0.0", PluginManifest.Parse(servers[b].Manifest!).Version);
         Assert.Equal(units, servers[c].Manifest);
+        var bareRead = PluginManifest.Parse(servers[d].Manifest!);
+        Assert.Equal(("0.0.0", "apiKey", "text"), (bareRead.Version, bareRead.Settings[0].Key, bareRead.Settings[0].Type));
+        Assert.Equal("0.0.0", PluginManifest.Parse(servers[e].Manifest!).Version);
         var release = await db.PluginReleases.AsNoTracking().SingleAsync(r => r.ServerId == a);
         var files = JsonNode.Parse(release.FilesJson)!.AsObject();
         Assert.Equal("1.1.0", PluginManifest.Parse(files["plugin.yaml"]!.GetValue<string>()).Version);

@@ -29,7 +29,7 @@ public sealed record PluginCallResult(JsonNode? Result, string? Kind, string? Me
 {
     public bool Ok => Kind is null;
     /// <summary>A failure that is the plugin's fault (counted by its breaker), not the person's or Arena's.</summary>
-    public bool PluginsFault => Kind is "timeout" or "crash" or "protocol" or "memory" or "cpu" or "error" or "busy";
+    public bool PluginsFault => Kind is "timeout" or "crash" or "protocol" or "memory" or "cpu" or "error";
 }
 
 /// <summary>Who a call is for, while it lasts: host API calls carrying its token act as this, and nothing else.</summary>
@@ -283,8 +283,15 @@ public sealed partial class PluginRuntime(IOptionsMonitor<PluginRuntimeOptions> 
         var blob = await db.PluginPackageBlobs.AsNoTracking().SingleOrDefaultAsync(b => b.ReleaseId == release, ct)
             ?? throw new InvalidOperationException($"{server.Plugin} {server.PluginVersion} has no package kept: install it again.");
         var (files, _) = PluginFap.Read(blob.Bytes);
+        // What its worker runs: not its pages and their pictures (the app serves those), nor its manifest.
+        var manifest = PluginManifest.Parse(server.Manifest!);
+        var pages = manifest.Ui.Pages.Select(p => p.Entry).Concat(manifest.Ui.Panels.Select(p => p.Entry)).Concat(manifest.Ui.IdePanels.Select(p => p.Entry))
+            .Concat(manifest.Ui.ComposerActions.Concat(manifest.Ui.MessageActions).Select(a => a.Entry).OfType<string>())
+            .Concat(manifest.Ui.Settings is { } st ? [st] : []).Select(e => e.Contains('/') ? e[..(e.LastIndexOf('/') + 1)] : "").Where(d => d.Length > 0).ToHashSet();
+        var serverDir = manifest.Server!.Entry.Contains('/') ? manifest.Server.Entry[..(manifest.Server.Entry.LastIndexOf('/') + 1)] : "";
         var o = new JsonObject();
-        foreach (var (name, data) in files.Where(f => f.Key != PluginManifest.FileName))
+        foreach (var (name, data) in files.Where(f => f.Key != PluginManifest.FileName && (serverDir.Length > 0 && f.Key.StartsWith(serverDir, StringComparison.Ordinal)
+            || !pages.Any(d => f.Key.StartsWith(d, StringComparison.Ordinal)))))
         {
             o[name] = Convert.ToBase64String(data);
         }

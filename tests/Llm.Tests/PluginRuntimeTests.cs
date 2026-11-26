@@ -57,12 +57,37 @@ public sealed class PluginRuntimeTests(AppFixture app, PluginRuntimeFixture runt
 {
     private static readonly string Fixtures = Path.GetFullPath(Path.Combine(AppFixture.PluginsPath, "..", "tests", "fixtures", "plugins"));
 
-    private WebApplicationFactory<Program> NewApp(Dictionary<string, string?>? more = null) =>
+    private WebApplicationFactory<Program> NewApp(Dictionary<string, string?>? more = null, Action<IServiceCollection>? services = null) =>
         app.Create(app.ConnectionStringFor("pluginrt_" + Guid.NewGuid().ToString("N")[..8]), new FakeGateway(), new Dictionary<string, string?>(more ?? [])
         {
             ["Auth:DataKey"] = "a-data-key-for-plugin-runtime-tests", ["PluginRuntime:Tcp"] = runtime.Address, ["PluginRuntime:Key"] = runtime.Key,
             ["Plugins:DevInstalls"] = "true",
-        });
+        }, services);
+
+    /// <summary>tickets.example.com (the ticket desk's one host) as a name that points into the office network.</summary>
+    private sealed class PrivateTickets : Llm.Api.Chat.Tools.WebResolver
+    {
+        public override Task<System.Net.IPAddress[]> ResolveAsync(string host, CancellationToken ct) =>
+            host == "tickets.example.com" ? Task.FromResult<System.Net.IPAddress[]>([System.Net.IPAddress.Parse("10.0.0.7")]) : base.ResolveAsync(host, ct);
+    }
+
+    [Fact]
+    [Trait("Control", "OPS-03")]
+    public async Task A_granted_host_that_points_into_the_office_network_is_never_reached()
+    {
+        await using var f = NewApp(services: s => s.AddSingleton<Llm.Api.Chat.Tools.WebResolver, PrivateTickets>());
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        await TrustAsync(admin);
+        await InstallAsync(admin, "ticket-desk");
+        var r = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/host", new { method = "http.fetch", @params = new { url = "https://tickets.example.com/api/tickets" } }));
+        Assert.True(r.TryGetProperty("error", out _), r.ToString());
+        Assert.Equal(-32004, r.GetProperty("error").GetProperty("code").GetInt32());
+        Assert.Contains("not on the public internet", r.GetProperty("error").GetProperty("message").GetString(), StringComparison.Ordinal);
+        // An address is never a host it may be granted, and plain http is not reached.
+        var plain = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/host", new { method = "http.fetch", @params = new { url = "http://tickets.example.com/" } }));
+        Assert.True(plain.TryGetProperty("error", out _), plain.ToString());
+        Assert.Equal(-32001, plain.GetProperty("error").GetProperty("code").GetInt32());
+    }
 
     private static string Fap(string name) => Convert.ToBase64String(File.ReadAllBytes(Path.Combine(Fixtures, "packages", name + ".fap")));
 
@@ -256,5 +281,22 @@ public sealed class PluginRuntimeTests(AppFixture app, PluginRuntimeFixture runt
             .GetProperty("content").GetString(), StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.NotFound, (await BridgeAsync(admin, $"/api/plugins/{devName}/tools/greet", new { arguments = new { name = "Me" } })).StatusCode);
         Assert.True((await Push("?dev=true")).IsSuccessStatusCode, "pushed again: a new dev version");
+
+        // Nobody else meets it by another door: not in anyone's chat tools (its developer's neither), and its host API refuses them.
+        await using var scope = f.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var server = await db.McpServers.AsNoTracking().SingleAsync(s => s.Plugin == devName);
+        var registry = scope.ServiceProvider.GetRequiredService<Llm.Api.Chat.Tools.ToolRegistry>();
+        var access = scope.ServiceProvider.GetRequiredService<Llm.Api.Access.AccessService>();
+        foreach (var who in await db.Users.AsNoTracking().Where(u => u.UserName == "admin" || u.UserName == name).ToListAsync())
+        {
+            Assert.DoesNotContain(await registry.ForAsync(await access.MembershipAsync(who)), t => t.Tool.Id == $"mcp:{server.Id}");
+        }
+        var adminUser = await db.Users.AsNoTracking().SingleAsync(u => u.UserName == "admin");
+        var rt = f.Services.GetRequiredService<Llm.Api.Plugins.PluginRuntime>();
+        var token = rt.Mint(new Llm.Api.Plugins.PluginCallScope(server.Id, devName, adminUser.Id, null, null, DateTimeOffset.UtcNow.AddMinutes(1), true));
+        var host = scope.ServiceProvider.GetRequiredService<Llm.Api.Plugins.PluginHost>();
+        var refused = await Assert.ThrowsAsync<Llm.Api.Plugins.PluginHost.HostApiException>(() => host.HandleAsync(devName, "storage.get", new System.Text.Json.Nodes.JsonObject { ["key"] = "count" }, token, CancellationToken.None));
+        Assert.Equal(-32001, refused.Code);
     }
 }

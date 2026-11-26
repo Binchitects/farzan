@@ -126,8 +126,9 @@ function Frame({ plugin, slot, id, entry, rest = '', chatId = null, projectId = 
       ref={frame}
       title={`${plugin.title}${plugin.dev ? ' (dev)' : ''}`}
       src={plugin.base + entry}
-      // Scripts and forms only: no same origin (so no cookies, storage or Arena), no top navigation, no downloads.
-      sandbox="allow-scripts allow-forms allow-popups allow-modals"
+      // Scripts and forms only: no same origin (so no cookies, storage or Arena), no popups (they would carry what it read to any site),
+      // no top navigation, no downloads. The page's own policy (frame-src 'self') refuses the frame navigating itself off Arena.
+      sandbox="allow-scripts allow-forms allow-modals"
       referrerPolicy="no-referrer"
       loading="lazy"
       data-plugin={plugin.name}

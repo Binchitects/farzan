@@ -21,7 +21,8 @@ namespace Llm.Api.Plugins;
 /// changes something or reaches out, are audited as plugin.*.
 /// </summary>
 public sealed class PluginHost(AppDbContext db, PluginRuntime runtime, AccessService access, Audit audit, Chat.OneQuestion one, Knowledge.KnowledgeSearch knowledge,
-    Notifications.Notifier notifier, IHttpClientFactory http, IOptionsMonitor<Settings.BrandingOptions> branding, IOptions<AuthOptions> auth, TimeProvider clock)
+    Notifications.Notifier notifier, IHttpClientFactory http, IOptionsMonitor<Settings.BrandingOptions> branding, IOptions<AuthOptions> auth, TimeProvider clock,
+    WebResolver resolver)
 {
     public const int Denied = -32001, NotFound = -32002, RateLimited = -32003, Unavailable = -32004, InvalidParams = -32602, NoMethod = -32601;
     /// <summary>A stored value at most, its keys at most, a plugin's store at most.</summary>
@@ -68,6 +69,12 @@ public sealed class PluginHost(AppDbContext db, PluginRuntime runtime, AccessSer
         }
         AppUser? me = null;
         Membership? member = null;
+        // A dev install is its developer's alone: a call for anyone else is refused, whatever door it came by.
+        if (state?.DevOwnerId is { } owner && scope?.UserId is { } someone && someone != owner)
+        {
+            await DenyAsync(plugin, method, someone, "a dev install of someone else's");
+            throw Fail(Denied, "That is someone's dev install.");
+        }
         if (scope?.UserId is { } uid)
         {
             me = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == uid, ct);
@@ -76,7 +83,7 @@ public sealed class PluginHost(AppDbContext db, PluginRuntime runtime, AccessSer
                 throw Fail(Denied, "The person this call is for may not use Arena now.");
             }
             member = await access.MembershipAsync(me, ct);
-            if (!ToolRegistry.Allowed(member, McpServerTool.Prefix + server.Id))
+            if (state?.DevOwnerId is null && !ToolRegistry.Allowed(member, McpServerTool.Prefix + server.Id))
             {
                 await DenyAsync(plugin, method, uid, "the plugin is not allowed to this person");
                 throw Fail(Denied, $"{server.Name} is not allowed to this person.");
@@ -87,7 +94,7 @@ public sealed class PluginHost(AppDbContext db, PluginRuntime runtime, AccessSer
             await DenyAsync(plugin, method, null, "no person");
             throw Fail(Denied, $"{method} acts for a person, and this call is for nobody.");
         }
-        var ctx = new Call(server, scope, me, member, args);
+        var ctx = new Call(server, scope, me, member, args) { DevOwner = state?.DevOwnerId };
         var result = await DispatchAsync(method, ctx, ct);
         if (Audited.Contains(method))
         {
@@ -110,6 +117,8 @@ public sealed class PluginHost(AppDbContext db, PluginRuntime runtime, AccessSer
         public Membership? Member { get; } = member;
         public JsonObject Args { get; } = args;
         public string Detail { get; set; } = "";
+        /// <summary>A dev install's developer: the only person it reaches.</summary>
+        public Guid? DevOwner { get; init; }
 
         public string Str(string key) => Args[key] is JsonValue v && v.TryGetValue<string>(out var s) && s.Length > 0 ? s : throw Fail(InvalidParams, $"{key} is required.");
         public string? Opt(string key) => Args[key] is JsonValue v && v.TryGetValue<string>(out var s) && s.Length > 0 ? s : null;
@@ -456,7 +465,7 @@ public sealed class PluginHost(AppDbContext db, PluginRuntime runtime, AccessSer
                     : c.Me is { } me ? [me.Id] : throw Fail(InvalidParams, "Say whom to tell (to), or call it for a person.");
                 // Only people the plugin is allowed to: it cannot reach everyone's bell.
                 var allowed = new List<Guid>();
-                foreach (var id in users.Take(500))
+                foreach (var id in users.Where(u => c.DevOwner is null || u == c.DevOwner).Take(500))
                 {
                     if (await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id && !u.IsDisabled, ct) is { } u
                         && ToolRegistry.Allowed(await access.MembershipAsync(u, ct), McpServerTool.Prefix + c.Server.Id))
@@ -581,6 +590,22 @@ public sealed class PluginHost(AppDbContext db, PluginRuntime runtime, AccessSer
             if (url.Scheme != Uri.UriSchemeHttps)
             {
                 throw Fail(Denied, "Only https addresses are reached.");
+            }
+            // Where the name points, before anything is sent: only the public internet (never Arena, the office, cloud metadata). The
+            // connection checks it again as it is made, so a name that turns private meanwhile is refused there.
+            System.Net.IPAddress[] addresses;
+            try
+            {
+                addresses = await resolver.ResolveAsync(url.Host, ct);
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                throw Fail(Unavailable, $"{url.Host} could not be found.");
+            }
+            if (addresses.Length == 0 || addresses.Any(a => !WebGuard.IsPublic(a)))
+            {
+                await DenyAsync(c.Server.Plugin!, "http.fetch", c.Me?.Id, $"{url.Host} is not on the public internet");
+                throw Fail(Unavailable, $"{url.Host} is not on the public internet.");
             }
             using var request = new HttpRequestMessage(new HttpMethod(method), url);
             if (c.Args["headers"] is JsonObject headers)

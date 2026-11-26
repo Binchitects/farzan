@@ -33,7 +33,7 @@ test('a plugin page is in the menu, sandboxed, and reaches Arena only through th
   await page.getByRole('link', { name: 'Hello' }).first().click()
   await expect(page).toHaveURL(/\/p\/hello\/home$/)
   const f = frame(page, 'hello')
-  await expect(f).toHaveAttribute('sandbox', 'allow-scripts allow-forms allow-popups allow-modals')
+  await expect(f).toHaveAttribute('sandbox', 'allow-scripts allow-forms allow-modals')
   const inside = f.contentFrame()
   await expect(inside.locator('#who')).toContainText('Signed in as')
   await inside.getByRole('button', { name: 'Say hello' }).click()
@@ -74,8 +74,19 @@ test('a frame cannot read cookies or storage, reach the API or the web, move the
   await expect(out).toContainText('another plugin', { timeout: 15_000 })
   const text = (await out.textContent()) ?? ''
   expect(text.split('\n').filter((l) => l.includes('REACHED'))).toEqual([])
-  for (const what of ['cookies', 'local storage', "the parent's document", 'the API by fetch', 'another site by fetch', 'the top window', 'navigating Arena outside its own pages']) {
+  for (const what of ['cookies', 'local storage', "the parent's document", 'the API by fetch', 'another site by fetch', 'the top window', 'a popup', 'navigating Arena outside its own pages']) {
     expect(text).toContain(`${what}: refused`)
   }
   await expect(page).toHaveURL(/\/p\/chaos\/escape$/)
+})
+
+test('a frame that navigates itself to another site, with what it read, is refused by the page\'s policy', async ({ page }) => {
+  const refused: string[] = []
+  page.on('console', (m) => { if (/frame-src|Refused to frame/i.test(m.text())) refused.push(m.text()) })
+  const left: string[] = []
+  page.on('framenavigated', (f) => { if (f.url().startsWith('https://example.com')) left.push(f.url()) })
+  await page.goto('/p/chaos/leave')
+  await expect.poll(() => refused.length, { timeout: 10_000 }).toBeGreaterThan(0)
+  expect(left).toEqual([])
+  await expect(page).toHaveURL(/\/p\/chaos\/leave$/)
 })

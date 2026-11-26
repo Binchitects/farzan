@@ -30,7 +30,9 @@ public static class PluginFrontEndpoints
 {
     public const string BridgeHeader = "X-Arena-Bridge";
     /// <summary>The frames' policy: an opaque origin (no cookies, no storage, no Arena), no network of their own, framed only by Arena.</summary>
-    public const string FrameCsp = "sandbox allow-scripts allow-forms allow-popups allow-modals; default-src 'none'; script-src 'self' 'unsafe-inline'; " +
+    /// <remarks>No allow-popups (window.open would carry what it read to any site), no top navigation; a frame that navigates itself
+    /// off Arena is refused by the page's own policy (frame-src 'self').</remarks>
+    public const string FrameCsp = "sandbox allow-scripts allow-forms allow-modals; default-src 'none'; script-src 'self' 'unsafe-inline'; " +
         "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'none'; " +
         "frame-src 'none'; worker-src 'none'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'";
     /// <summary>A route's answer: data, never a page in Arena's origin.</summary>
@@ -64,6 +66,11 @@ public static class PluginFrontEndpoints
         if (state is { State: not PluginStates.On } || (state?.DevOwnerId is { } owner && owner != me.Id))
         {
             return null;
+        }
+        if (state?.DevOwnerId is not null)
+        {
+            // Its developer's own: off in everyone's chat (its tool row), on for them here.
+            return (server, PluginManifest.Parse(text), state);
         }
         var setting = await db.ToolSettings.AsNoTracking().SingleOrDefaultAsync(t => t.ToolId == McpServerTool.Prefix + server.Id, ct);
         if (setting is { Enabled: false } || !ToolRegistry.Allowed(await access.MembershipAsync(me, ct), McpServerTool.Prefix + server.Id))
@@ -386,6 +393,11 @@ public static class PluginFrontEndpoints
             }
             db.McpServers.Add(server);
             await db.SaveChangesAsync(ct);
+            if (dev)
+            {
+                // Never in anyone's chat or at Arena MCP, its developer's neither: they try it through its pages and the CLI.
+                db.ToolSettings.Add(new ToolSetting { ToolId = McpServerTool.Prefix + server.Id, Enabled = false });
+            }
             var release = PluginContent.Release(server, package, me.Id);
             db.PluginReleases.Add(release);
             PluginContent.Keep(db, release, package);

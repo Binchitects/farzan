@@ -36,9 +36,19 @@ public sealed class PluginServerTool(McpServer server, PluginCalls calls, Plugin
         return await PluginCalls.OffAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), server.Id, ct) is { } off ? $"{server.Name} is off. {off}" : null;
     }
 
-    public Task<IToolRun> StartAsync(ToolContext context, CancellationToken ct)
+    public async Task<IToolRun> StartAsync(ToolContext context, CancellationToken ct)
     {
         var prefix = Slug + "__";
+        await using (var scope = scopes.CreateAsyncScope())
+        {
+            // A dev install is its developer's alone: nobody else is given its functions, wherever they ask from.
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            if (await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AnyAsync(db.PluginStates,
+                s => s.ServerId == server.Id && s.DevOwnerId != null && s.DevOwnerId != context.User.Id, ct))
+            {
+                return new LocalRun([], null, (_, _, _) => Task.FromResult(new ToolResult("That is someone's dev install.", true)));
+            }
+        }
         var functions = new JsonArray([.. _manifest.Functions.Select(f => (JsonNode)new JsonObject
         {
             ["type"] = "function",
@@ -63,6 +73,6 @@ public sealed class PluginServerTool(McpServer server, PluginCalls calls, Plugin
         {
             AsksFirst = function => function.StartsWith(prefix, StringComparison.Ordinal) && _manifest.Functions.Any(f => f.Writes && prefix + f.Name == function),
         };
-        return Task.FromResult(run);
+        return run;
     }
 }

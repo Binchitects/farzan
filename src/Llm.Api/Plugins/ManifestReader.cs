@@ -140,17 +140,14 @@ internal sealed partial class ManifestReader(JsonObject doc)
             var key = Str(o["key"]);
             if (key is null || !SettingKey().IsMatch(key))
             {
-                throw Fail("manifest.setting.key", $"settings[{i}] needs a key of lowercase letters, digits and underscores.");
+                throw Fail("manifest.setting.key", $"settings[{i}] needs a key of letters, digits, dots, dashes and underscores, up to 64.");
             }
             if (settings.Any(s => s.Key == key))
             {
                 throw Fail("manifest.setting.duplicate", $"The setting {key} is there twice.");
             }
-            var type = Str(o["type"]) ?? "text";
-            if (type is not ("text" or "url" or "secret" or "number" or "boolean" or "select"))
-            {
-                throw Fail("manifest.setting.type", $"{type} is not a setting type (text, url, secret, number, boolean, select).");
-            }
+            // A type it does not know is text, as plugins v2 took it (the framework warns of it).
+            var type = Str(o["type"]) is { } t && t is "text" or "url" or "secret" or "number" or "boolean" or "select" ? t : "text";
             var options = type == "select" ? Strings(o["options"], $"settings[{i}].options") : [];
             if (type == "select" && options.Length == 0)
             {
@@ -496,7 +493,8 @@ internal sealed partial class ManifestReader(JsonObject doc)
             Panels(ide["panels"], "ui.ide.panels", false));
     }
 
-    [GeneratedRegex("^[a-z0-9_]{1,64}$")]
+    /// <summary>As plugins v2 took them; only [a-z0-9_] keys can be {placeholders}.</summary>
+    [GeneratedRegex("^[A-Za-z0-9_.-]{1,64}$")]
     private static partial Regex SettingKey();
 
     [GeneratedRegex("^[a-z][a-z0-9_]{0,63}$")]

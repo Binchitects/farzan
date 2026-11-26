@@ -48,7 +48,9 @@ const FIRST_UID = Number(env.PLUGINS_FIRST_UID ?? 40000)
 const MOST_PLUGINS = Number(env.PLUGINS_MOST ?? 200)
 const SOCKET_GID = Number(env.PLUGINS_SOCKET_GID ?? 1000)
 const NODE = env.PLUGINS_NODE ?? process.execPath
+// A worker's line at most; the app's may carry a package's files (its start: 64 MB of files, base64).
 const MOST_LINE = 4 * 1024 * 1024
+const MOST_APP_LINE = 96 * 1024 * 1024
 const WATCH_MS = Number(env.PLUGINS_WATCH_MS ?? 250)
 const AS_ROOT = process.getuid?.() === 0
 // Bounds an app's request can never go past, whatever a manifest or an admin says.
@@ -172,18 +174,18 @@ function writePackage(plugin, version, files) {
 
 // ---- a line-delimited JSON channel --------------------------------------------------------------------------------
 
-function lines(stream, onMessage, onBroken) {
+function lines(stream, onMessage, onBroken, most = MOST_LINE) {
   let buffer = ''
   stream.setEncoding('utf8')
   stream.on('data', (chunk) => {
     buffer += chunk
-    if (buffer.length > MOST_LINE && !buffer.includes('\n')) return onBroken('a line longer than allowed')
+    if (buffer.length > most && !buffer.includes('\n')) return onBroken('a line longer than allowed')
     let nl
     while ((nl = buffer.indexOf('\n')) >= 0) {
       const line = buffer.slice(0, nl)
       buffer = buffer.slice(nl + 1)
       if (!line.trim()) continue
-      if (line.length > MOST_LINE) return onBroken('a line longer than allowed')
+      if (line.length > most) return onBroken('a line longer than allowed')
       let m
       try {
         m = JSON.parse(line)
@@ -473,6 +475,11 @@ async function fromApp(app, m) {
       if (typeof m.entry !== 'string' || !safePath(m.entry) || typeof m.files !== 'object' || m.files === null || !(m.entry in m.files)) {
         return app.send({ type: 'result', id: m.id, error: { code: -32602, message: 'the package\'s files, with its entry among them, are needed', kind: 'error' } })
       }
+      // Another replica's start of the version running already: answered with it, the worker left as it is.
+      const running = plugins.get(m.plugin)
+      if (running && running.version === String(m.version) && running.alive() && running.worker.initialized) {
+        return app.send({ type: 'result', id: m.id, result: running.worker.initialized })
+      }
       let source
       try {
         source = writePackage(m.plugin, String(m.version), m.files)
@@ -545,7 +552,7 @@ function accept(socket) {
   }, (why) => {
     log(`the app's connection broke: ${why}`)
     socket.destroy()
-  })
+  }, MOST_APP_LINE)
   if (authed) apps.add(app)
   socket.on('close', () => {
     apps.delete(app)

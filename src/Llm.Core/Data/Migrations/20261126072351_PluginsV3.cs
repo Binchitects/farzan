@@ -237,9 +237,12 @@ namespace Llm.Core.Data.Migrations
             const string v3 = "'apiVersion: arena.plugins/v3' || E'\\n' || {0}";
             const string twoParts = "regexp_replace({0}, '(^|\\n)version:[ \\t]*[\"'']?(\\d+)\\.(\\d+)[\"'']?[ \\t]*(\\n|$)', '\\1version: \\2.\\3.0\\4')";
             const string onePart = "regexp_replace({0}, '(^|\\n)version:[ \\t]*[\"'']?(\\d+)[\"'']?[ \\t]*(\\n|$)', '\\1version: \\2.0.0\\3')";
-            string Fix(string column) => string.Format(System.Globalization.CultureInfo.InvariantCulture, onePart,
-                string.Format(System.Globalization.CultureInfo.InvariantCulture, twoParts,
-                    $"CASE WHEN {column} ~ '(^|\\n)apiVersion:' THEN {column} ELSE {string.Format(System.Globalization.CultureInfo.InvariantCulture, v3, column)} END"));
+            // Then a version still not like 1.2.3 (v2 took any) is 0.0.0, and a manifest with none gets it.
+            const string odd = "regexp_replace({0}, '(^|\\n)version:(?![ \\t]*[\"'']?v?\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?[\"'']?[ \\t]*(\\n|$))[^\\n]*', '\\1version: 0.0.0')";
+            const string none = "CASE WHEN {0} ~ '(^|\\n)version:' THEN {0} ELSE {0} || E'\\nversion: 0.0.0' END";
+            string F(string format, string arg) => string.Format(System.Globalization.CultureInfo.InvariantCulture, format, arg);
+            string Fix(string column) => F(none, F(odd, F(onePart, F(twoParts,
+                $"CASE WHEN {column} ~ '(^|\\n)apiVersion:' THEN {column} ELSE {F(v3, column)} END"))));
             migrationBuilder.Sql($"UPDATE mcp_servers SET \"Manifest\" = {Fix("\"Manifest\"")} WHERE \"Manifest\" IS NOT NULL;");
             var release = Fix("(\"FilesJson\"::jsonb->>'plugin.yaml')");
             migrationBuilder.Sql($$"""

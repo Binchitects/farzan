@@ -45,6 +45,9 @@ export default defineConfig({
     },
   },
   server: {
+    // As the web image's policy has it (default-src 'self'), for its frames only: a plugin's frame may not navigate itself off
+    // Arena. The rest of the image's policy is left out here, where the dev server's own scripts need it.
+    headers: { 'Content-Security-Policy': "frame-src 'self'" },
     proxy: { '/api': proxy, '/connect': proxy, '/.well-known': proxy, '^/mcp(/code)?$': proxy, '/scim': proxy },
     fs: { allow: [searchForWorkspaceRoot(process.cwd()), docs] },
   },
