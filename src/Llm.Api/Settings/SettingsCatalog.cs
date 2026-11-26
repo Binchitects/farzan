@@ -37,7 +37,6 @@ public static class SettingsCatalog
     private const string SecurityGroup = "Security alerts";
     private const string RoomsGroup = "Rooms and calls";
     private const string MeetingsGroup = "Meetings";
-    private const string StudioGroup = "Code workspaces";
     private const string LabGroup = "Science lab and 3D";
     private const string DashboardsGroup = "Dashboards";
     private const string ReplicasGroup = "Replicas";
@@ -538,13 +537,6 @@ public static class SettingsCatalog
         new("Meetings:MostPerPerson", MeetingsGroup, "Meetings one person keeps", "Past it, they delete one before adding another.", SettingType.WholeNumber, SettingScope.Live)
             { Default = "500", Min = 1, Max = 100_000, Optional = false },
 
-        new("Workspaces:Idle", StudioGroup, "A workspace sleeps after", "A Code workspace unused this long sleeps: its engine stops, its files stay.", SettingType.Duration, SettingScope.Live)
-            { Default = "00:30:00", Unit = "minutes", Min = 5, Max = 10_080, Optional = false },
-        new("Workspaces:MostPerPerson", StudioGroup, "Workspaces one person keeps", "On the server.", SettingType.WholeNumber, SettingScope.Live)
-            { Default = "8", Min = 1, Max = 100, Optional = false },
-        new("Workspaces:MostMachines", StudioGroup, "Machines one person connects", "Their own machines with Code Arena (each folder one).", SettingType.WholeNumber, SettingScope.Live)
-            { Default = "8", Min = 1, Max = 100, Optional = false },
-
         new("Push:PerPerson", NotificationsGroup, "Devices one person gets news on", "Browsers and phones that show the bell's news as notifications.", SettingType.WholeNumber, SettingScope.Live)
             { Default = "20", Min = 1, Max = 200, Optional = false },
         new("Push:Hosts", NotificationsGroup, "Push services", "The browsers' own push services the app posts to, comma separated; *.example.com for a domain and its subdomains. Airgapped: none reaches out, and people see the news in the bell.", SettingType.Text, SettingScope.Live)
@@ -619,7 +611,7 @@ public static class SettingsCatalog
         Schedules or Mail or NotificationsGroup or BotsGroup => Permissions.SettingsIntegrations,
         Safeguards or SecurityGroup => Permissions.SettingsSafeguards,
         RoomsGroup or MeetingsGroup => Permissions.SettingsChat,
-        StudioGroup or LabGroup => Permissions.SettingsTools,
+        LabGroup => Permissions.SettingsTools,
         Knowledge or Retention or StorageGroup => Permissions.SettingsData,
         Api => Permissions.SettingsGateway,
         _ => Permissions.SettingsManage,

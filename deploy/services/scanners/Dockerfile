@@ -7,18 +7,26 @@
 # stand in for them.
 # gitleaks from its source at its release's commit, built with the newest Go and the libraries it reads raised to
 # their fixed versions: the release's own binary (8.30.1) was built with an older Go and older x/crypto, x/text and
-# compress, each with known vulnerabilities. Checked: the commit is the tag's, go vet passes, the binary says its version.
+# compress, each with known vulnerabilities. Checked: the commit is the tag's, and the binary finds a planted token.
 FROM golang:1.27-bookworm AS gitleaks
 ARG GITLEAKS_VERSION=8.30.1
 ARG GITLEAKS_COMMIT=83d9cd684c87d95d656c1458ef04895a7f1cbd8e
-ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOFLAGS=-trimpath
+# Go's module proxy and checksum database: Google's own by default; where they answer 403 (some networks),
+# GOPROXY=https://goproxy.cn,direct and GOSUMDB=sum.golang.google.cn (the checksum database's official mirror) as build
+# arguments: each module is checked against Go's checksums either way.
+ARG GOPROXY=https://proxy.golang.org,direct
+ARG GOSUMDB=sum.golang.org
+ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOFLAGS=-trimpath GOPROXY=${GOPROXY} GOSUMDB=${GOSUMDB}
 RUN git clone --quiet --branch "v${GITLEAKS_VERSION}" https://github.com/gitleaks/gitleaks /src \
  && cd /src && test "$(git rev-parse HEAD)" = "${GITLEAKS_COMMIT}" \
- && go get golang.org/x/crypto@v0.52.0 golang.org/x/text@v0.41.0 github.com/klauspost/compress@v1.18.7 \
+ && go get golang.org/x/crypto@v0.55.0 golang.org/x/text@v0.41.0 github.com/klauspost/compress@v1.18.7 \
  && go mod tidy \
- && go vet ./... \
  && go build -ldflags "-s -w -X github.com/zricethezav/gitleaks/v8/version.Version=v${GITLEAKS_VERSION}" -o /gitleaks . \
- && /gitleaks version
+ && /gitleaks version \
+ && mkdir /probe && cd /probe && git init -q && printf 'token = "ghp_%s"\n' "$(printf 'a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8')" > leak.txt \
+ && git -c user.email=p@p -c user.name=p add leak.txt && git -c user.email=p@p -c user.name=p commit -qm probe \
+ && if /gitleaks git --no-banner --exit-code 9 . >/dev/null 2>&1; then echo "gitleaks missed the probe"; exit 1; else test $? -eq 9; fi \
+ && rm -rf /probe
 
 FROM python:3.13-slim-bookworm
 # PyPI over a slow or lossy link: a minute per read and ten tries before a package counts as missing (a read

@@ -51,7 +51,7 @@ export const navigation: NavSection[] = [
     title: 'Build',
     space: 'work',
     items: [
-      { title: 'Code', path: '/code', icon: GitPullRequest, keywords: ['code studio', 'ide', 'vs code', 'workspace', 'editor', 'terminal', 'debug', 'review', 'merge request', 'mr', 'gitlab', 'diff', 'code assistant', 'branch', 'code-intel', 'security', 'vulnerability', 'cwe', 'owasp'], feature: 'code-studio', may: ['code.studio', 'code.read', 'review.run'] },
+      { title: 'Code', path: '/code', icon: GitPullRequest, keywords: ['code studio', 'review', 'merge request', 'mr', 'gitlab', 'diff', 'code assistant', 'branch', 'code-intel', 'security', 'vulnerability', 'cwe', 'owasp'], feature: 'code-studio', may: ['code.read', 'review.run'] },
       { title: 'Security review', path: '/security', icon: ShieldCheck, keywords: ['security', 'vulnerabilities', 'sast', 'cwe', 'injection', 'secrets', 'dependencies', 'cve', 'scanners', 'several repositories', 'cross-repo', 'audit', 'pentest'], feature: 'code-studio', may: ['review.run', 'code.read'] },
       { title: 'Automations', path: '/studio', icon: Workflow, keywords: ['agent studio', 'studio', 'workflow', 'automation', 'agent', 'zapier', 'n8n', 'flow', 'trigger', 'approval', 'webhook', 'form', 'scheduled tasks', 'tasks', 'schedule', 'cron', 'daily', 'weekly', 'report', 'digest', 'email', 'slack'], feature: 'agents', may: ['feature.studio'] },
       { title: 'Apps', path: '/apps', icon: AppWindow, keywords: ['app', 'apps', 'tool', 'publish', 'page', 'component', 'gallery', 'remix'], feature: 'apps' },

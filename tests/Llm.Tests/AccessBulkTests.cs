@@ -90,10 +90,10 @@ public sealed class AccessBulkTests(AppFixture app)
         await admin.PostAsync("/api/admin/access/bulk", new
         {
             people = new[] { made.GetProperty("id").GetGuid() },
-            steps = new[] { new { kind = "feature.deny", feature = "feature.compare" }, new { kind = "feature.deny", feature = "code.studio" } },
+            steps = new[] { new { kind = "feature.deny", feature = "feature.compare" }, new { kind = "feature.deny", feature = "feature.decks" } },
             dryRun = false,
         });
-        Assert.Equal(["code.studio", "feature.compare"], Denied(await person.JsonAsync(await person.GetAsync("/api/auth/me"))).Order());
+        Assert.Equal(["feature.compare", "feature.decks"], Denied(await person.JsonAsync(await person.GetAsync("/api/auth/me"))).Order());
         Assert.Contains("feature.compare", Denied(await person.JsonAsync(await person.GetAsync("/api/chat/config"))));
         // An Owner holds every one.
         Assert.Empty(Denied(await admin.JsonAsync(await admin.GetAsync("/api/auth/me"))));

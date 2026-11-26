@@ -42,7 +42,7 @@ and nothing reaches `power-limits`.
 │ embed             │ │                   │ │                   │
 │ other GPU servers │ │ laya [l]          │ │ dcgm-exporter     │
 │                   │ │ studio [t]        │ │ cpu-temp-exporter │
-│                   │ │ workspaces [w]    │ │ power-limits [n]  │
+│                   │ │                   │ │ power-limits [n]  │
 │                   │ │                   │ │                   │
 └───────────────────┘ └───────────────────┘ └───────────────────┘
  the engines, behind   the tools' sandboxes  monitoring
@@ -67,9 +67,9 @@ and the engines directly only to manage them (load, unload, slots, health).
 | the stores | `postgres`, `valkey` | the app's database (`llmapp`: people, chats, settings, the ledger of model requests, the API keys and their rate counts); Valkey, LMCache's shared store, only with the `valkey` feature |
 | the engines | `llamacpp`, `vllm`, `sglang`, `lmdeploy`, `strata`; `imagegen`, `videogen`, `audio`, `embed` | the models: chat models on llama.cpp, vLLM or SGLang, pictures and video on stable-diffusion.cpp, speech on speaches, embeddings on the CPU; other GPU servers the app does not run are reached the same way, through the app's gateway |
 | Farzan Graph | `code-intel`, `scanners` | the code index of your GitLab (read only), knowledge packs and security advisories, over MCP; the scanners for its security reviews |
-| the tools | `sandbox`, `blender`, `lean`, `browser`, `searxng`, `laya`, `studio`, `workspaces` | Python and commands, 3D, proofs, the browser agent, web search, typed decisions, the media studio's own models, Code's workspaces |
+| the tools | `sandbox`, `blender`, `lean`, `browser`, `searxng`, `laya`, `studio` | Python and commands, 3D, proofs, the browser agent, web search, typed decisions, the media studio's own models |
 | monitoring | `prometheus`, `alertmanager`, `loki`, `alloy`, the exporters, `power-limits` | what the app's dashboards, logs and alerts read; power caps kept applied |
-| off the host | Code Arena, your GitLab, GitHub and Gitea, other GPU servers, Hugging Face, the company's knowledge sources | reached by the app or Farzan Graph (the app's gateway reaches other GPU servers), by the speech server (Hugging Face) and by Code's workspaces (the code hosts, package registries), or reaching in through Traefik |
+| off the host | Code Arena (its own project), your GitLab, GitHub and Gitea, other GPU servers, Hugging Face, the company's knowledge sources | reached by the app or Farzan Graph (the app's gateway reaches other GPU servers), by the speech server (Hugging Face), or reaching in through Traefik |
 
 A broken Traefik is a total outage. A broken Prometheus is not. Farzan Graph alone,
 without the platform, is a compose of its own in `deploy/code-intel-standalone`
@@ -185,7 +185,6 @@ features it requires.
 | `3d` | no | `blender` | 3D models |
 | `lean` | no | `lean` | proofs checked by Lean 4 and Mathlib (requires `lab`) |
 | `studio` | no | `studio` | the media studio's own models: cutouts, voices, music (requires `media`) |
-| `workspaces` | no | `workspaces` | Code's workspaces on this server (requires `code-studio`) |
 | `laya` | no | `laya` | typed decisions on the CPU |
 | `scanners` | no | `scanners` | security scanners for code reviews (requires `code-intel`) |
 | `monitoring` | yes | `prometheus`, `alertmanager`, `loki`, `alloy`, `node-exporter`, `cpu-temp-exporter` | dashboards, logs and alerts |
@@ -223,7 +222,6 @@ other by service name (`http://app:8080`). Five are kept apart:
 | `studio` | the app, `studio` | none (internal) |
 | `browsing` | the app, `browser` | none of its own: the browser's only way out is the app's proxy on port 3128, which opens only the public sites an admin allows, on ports 80 and 443 |
 | `scanning` | `code-intel`, `scanners` | none (internal) |
-| `workspaces` | the app, `code-intel`, `workspaces` | the internet (a workspace clones, pushes and installs packages); no database, gateway, engine or browser is on it |
 
 `sandbox`, `blender`, `lean` and `power-limits` have no network at all
 (`network_mode: none`): the app hands the first three their jobs through
@@ -248,7 +246,6 @@ installer makes the folders with their services' owners.
 | `audit` | the app | the audit log's daily anchors |
 | `code-arena-signature` | `sign-code-arena.sh` | the signature of the Code Arena builds the app hands out, and the Windows builds Authenticode-signed |
 | `sandbox`, `blender`, `lean` | the app and those services | jobs in and results out, and an admin's reset (`reset`, removed once done) |
-| `workspaces` | `workspaces` | each workspace's clone, its engine's home, what is not pushed yet |
 | `code-intel` | Farzan Graph | its index |
 | `audio` | the speech server | its models |
 | `prometheus`, `alertmanager`, `loki` | those services | metrics (30 days or 20 GB), silences, logs (90 days) |
@@ -394,7 +391,6 @@ Farzan Graph for up to 5 minutes.
 |---|---|---|
 | `ENGINE_KEY` | the app (its model gateway), `llamacpp`, `vllm`, `sglang`, Prometheus | the engines' API |
 | `CODE_INTEL_KEY` | the app, Farzan Graph, Prometheus | the chat's calls to Farzan Graph (naming the person), the app's admin calls, Farzan Graph's key and repository checks, Farzan Graph's metrics |
-| `WORKSPACES_KEY` | the app, `workspaces` | starting and stopping workspaces; each workspace's engine has a key of its own, kept encrypted |
 | `DB_PASSWORD` | the app, Postgres | the database |
 | `APP_KEY` | the app | the key ring is encrypted under it, so it never changes |
 | `ADMIN_PASSWORD` | the app | the first admin, made only while there are no people |
@@ -549,20 +545,6 @@ person's requests a minute itself ([mcp.md](mcp.md)).
   Arena MCP at `DOMAIN/mcp` and Farzan Graph at `code-intel.DOMAIN/mcp`.
 - **Its sessions follow the web chat** both ways through `/api/code-arena`
   (chats, messages, a turn's lease of 90 seconds), signed in by the key.
-- **`code-arena web --connect`** dials a WebSocket to
-  `wss://DOMAIN/api/code-arena/connect`. Code's IDE in the browser then
-  reaches that machine through the tunnel, held by the replica it dialled.
-- **Code's workspaces on the server** (the `workspaces` feature): the
-  app makes the workspace a key of its own and asks `workspaces` (with
-  `WORKSPACES_KEY`) to start it. Each workspace runs Code Arena's engine as a
-  user of its own. Its model calls go to `http://app:8080`, so they take the
-  API key's path too (the key's line, the prompt log, the slot), and its tools
-  to the app's MCP and `code-intel:7700/mcp`. The IDE reaches the workspace's
-  engine through the app. The company CA the app trusts goes with each start
-  (`ca`), as one bundle with the system's CAs in the workspace's home. No
-  Docker socket is involved
-  ([chat.md](chat.md#code-workspaces), [code-arena.md](code-arena.md)).
-
 ### Company knowledge and the wiki
 
 The app reads the sources an admin added (folders under `/knowledge`,
@@ -641,7 +623,6 @@ installer prepares the host.
 | `imagegen`, `videogen`, `embed` | nothing: they wait for their files (`sd-serve.sh` also follows the app's on and off) |
 | `audio` | fetches its models when the app asks |
 | `studio`, `laya` | nothing: the app fetches their models into `MODELS_DIR` |
-| `workspaces` | a user and an engine for each workspace, when the app asks |
 | `prometheus` | its scrape credentials, from its environment, at start |
 | `searxng` | a new secret each start |
 
@@ -657,8 +638,7 @@ or the Helm chart's `app.replicas`). What must happen once runs on one of them:
   targets), the media servers' on and off, the downloads, the first model,
   the ledger's import once after an upgrade from before 8.0, the LDAP sync,
   Farzan Graph's schedule, the storage watch, the alerts for the bell, the chat
-  digests, meeting reminders, the memory's upkeep, idle Code
-  workspaces, and the answers queued before a restart. A replica that stops
+  digests, meeting reminders, the memory's upkeep, and the answers queued before a restart. A replica that stops
   lets go of the lock. One that dies loses it with its connection, and another
   leads within seconds. The replicas are counted by their connections' names.
 - **The start.** Replicas starting together go one at a time through creating
@@ -721,7 +701,7 @@ names the app reaches them by, one release per namespace. `./arenactl kube`
   router, the supervisor, `sd-serve.sh`) are mounted from the chart's
   ConfigMap, and its pod carries a checksum of them: a `helm upgrade` that
   changes one starts that engine's pod again, and no other's. The sandboxes, Laya, the
-  scanners, the studio and the workspaces have NetworkPolicies.
+  scanners and the studio have NetworkPolicies.
 - **Not in the chart**: the browser (point `browser.url` at one you run),
   Promtail (log shipping is the cluster's), the GPU exporters and the power
   limits. Point-in-time recovery is CloudNativePG's.

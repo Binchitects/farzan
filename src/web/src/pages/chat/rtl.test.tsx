@@ -54,7 +54,5 @@ describe('right-to-left text in the chat', () => {
   it('every box that guesses its direction does it line by line', () => {
     const css = readFileSync(`${process.cwd()}/src/styles/index.css`, 'utf8')
     expect(css).toMatch(/textarea\[dir='auto'\],\s*\.bidi-lines\s*\{\s*unicode-bidi: plaintext;/)
-    // Code Arena's box is one of them.
-    expect(readFileSync(`${process.cwd()}/src/code-arena/chat.tsx`, 'utf8')).toMatch(/<textarea\s+ref=\{area\}\s+dir="auto"/)
   })
 })

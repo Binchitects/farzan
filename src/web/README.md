@@ -11,8 +11,6 @@ src/
   components/ui/    the design system: Radix primitives + Tailwind, our own components
   components/app/   pieces shared by pages (page header, secrets shown once)
   pages/            one file per page; pages/chat/ is the chat (tree, live stream, markdown, files)
-  code-arena/       Code Arena's web interface (code-arena web): the chat's components around its API,
-                    built on its own (vite.code-arena.config.ts) into src/CodeArena/web, not part of npm run build
   help/             the manual (/help: docs/ built into the page, searched here) and each
                     page's help (the ? in the top bar): topics.ts, and route-help.ts for which page has which
   lib/              API client, theme, formatting, command-palette matching

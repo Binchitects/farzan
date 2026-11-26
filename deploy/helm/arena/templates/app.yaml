@@ -52,9 +52,6 @@ spec:
             - { name: Engine__EmbedGpu, value: {{ .Values.engines.embedGpu | quote }} }
             - { name: Engine__LmcacheRemote, value: {{ .Values.engines.lmcacheRemote | quote }} }
             {{- include "arena.secretEnv" (list $ "CodeIntel__AdminToken" "CODE_INTEL_KEY") | nindent 12 }}
-            # Code Studio's workspaces (workspaces.enabled): the service and its key.
-            - { name: Workspaces__Url, value: "http://workspaces:4000" }
-            {{- include "arena.secretEnv" (list $ "Workspaces__Key" "WORKSPACES_KEY") | nindent 12 }}
             - { name: CodeIntel__GitlabUrl, value: {{ .Values.gitlab.url | quote }} }
             - { name: CodeIntel__Host, value: {{ .Values.codeIntel.host | quote }} }
             {{- if .Values.gitlab.caCert }}

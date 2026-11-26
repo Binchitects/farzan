@@ -102,9 +102,18 @@ public sealed class OwnGatewayTests(AppFixture app)
             }, new GatewayCaller("pool@example.test", Tag: tag), [], default);
             Assert.Contains($"\"content\":\"{tag}\"", await res.Content.ReadAsStringAsync(), StringComparison.Ordinal);
             res.Dispose();
-            await gateway.FlushAsync(default);
-            await using var scope = f.Services.CreateAsyncScope();
-            return await scope.ServiceProvider.GetRequiredService<AppDbContext>().GatewayRequests.AsNoTracking().SingleAsync(r => r.Tag == tag);
+            // The request is booked as its body ends, which may come just after the answer was read: until it is in the ledger.
+            for (var i = 0; ; i++)
+            {
+                await gateway.FlushAsync(default);
+                await using var scope = f.Services.CreateAsyncScope();
+                if (await scope.ServiceProvider.GetRequiredService<AppDbContext>().GatewayRequests.AsNoTracking().SingleOrDefaultAsync(r => r.Tag == tag) is { } row)
+                {
+                    return row;
+                }
+                Assert.True(i < 500, $"the request {tag} was never booked");
+                await Task.Delay(20);
+            }
         }
         // The down copy is the first chosen (both idle): the other answers, the ledger says it took two tries, with no fallback.
         var first = await AskAsync("first");

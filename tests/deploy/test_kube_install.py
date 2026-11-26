@@ -203,7 +203,7 @@ class KubeInstall(unittest.TestCase):
         self.assertIn("arena", cluster["namespaces"])
         manifest = cluster["secrets"]["arena/arena-secrets"]["manifest"]
         secrets = [l.split(":", 1)[1].strip().strip('"') for l in manifest.splitlines() if l.startswith("  ") and l.strip().split(":")[0].isupper()]
-        self.assertEqual(6, len(secrets))
+        self.assertEqual(5, len(secrets))
         self.assertTrue(all(len(v) >= 24 for v in secrets))
         self.assertNotIn("GATEWAY_KEY", manifest)
         # Never on a command line, in the output, or in the values file.

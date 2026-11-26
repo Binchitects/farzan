@@ -148,7 +148,6 @@ public static class Permissions
     public const string Memory = "feature.memory";
     public const string CodeRead = "code.read";
     public const string ReviewRun = "review.run";
-    public const string CodeStudio = "code.studio";
     public const string ReviewPolicy = "review.policy";
     public const string Python = "feature.python";
     public const string Canvas = "feature.canvas";
@@ -312,7 +311,6 @@ public static class Permissions
         new(Memory, "Chat and knowledge", "Let the chat remember things.", false),
         new(CodeRead, "Code", $"Ask about the company's code ({Brand.CodeIntel}) and use the code assistant.", false),
         new(ReviewRun, "Code", "Start reviews of merge requests and branches.", false),
-        new(CodeStudio, "Code", "Open workspaces in Code: edit, run and debug code on the server or one's own machine.", false),
         new(ReviewPolicy, "Code", "Set a project's automatic reviews.", false),
         new(Python, "Chat and knowledge", "Run Python in the sandbox (data, charts, files).", false),
         new(Canvas, "Chat and knowledge", "Write documents and code with the canvas.", false),

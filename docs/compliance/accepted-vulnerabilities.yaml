@@ -11,3 +11,65 @@
   package: golang:github.com/aquasecurity/trivy
   reason: "the Go database marks every Trivy release from 0.69.4 on; GitHub's advisory of the same compromise (GHSA-69fq-xp46-6x23) names 0.69.4 alone, and the scanners image pins 0.76.2 with its SHA-256 checked"
   until: 2027-04-30
+
+# The images' own (tools/image-scan.py, Trivy over each image the bundle carries): a critical one with no fix to apply.
+- id: CVE-2025-68121
+  package: "image:pgvector/pgvector:0.8.7-pg16-bookworm gosu (Go stdlib 1.24.6)"
+  reason: "crypto/tls session resumption: gosu only drops root to postgres once as the container starts and opens no TLS connection; gosu 1.19 is the newest, built with this Go"
+  until: 2027-02-28
+- id: CVE-2025-7458
+  package: "image:the Debian bookworm images (pgvector, scanners, the Python ones) deb:libsqlite3-0"
+  reason: "SQLite's integer overflow in its KeyInfo handling, reached only by SQL an attacker writes: Postgres does not use SQLite, and where Python's sqlite3 does (the scanners, the sandbox) it runs only the image's own statements or the person's own code in their own sandbox; Debian has no fixed package for bookworm"
+  until: 2027-02-28
+- id: CVE-2026-6653
+  package: "image:pgvector/pgvector:0.8.7-pg16-bookworm deb:libxml2"
+  reason: "a denial of service on crafted XML: the app sends no XML to Postgres's xml functions and no one else reaches the database; Debian has no fixed package for bookworm yet"
+  until: 2027-02-28
+- id: CVE-2023-45853
+  package: "image:the Debian bookworm images (pgvector, scanners, the Python ones) deb:zlib1g"
+  reason: "in zlib's minizip (zipOpenNewFileInZip4_64), which nothing in these images calls (minizip is not built into Debian's zlib1g); Debian marks it as not affecting its zlib package"
+  until: 2027-02-28
+- id: CVE-2026-135736
+  package: "image:arena-sandbox deb:ffmpeg (libavcodec59, libavfilter8, libswscale6 and the rest)"
+  reason: "an out-of-bounds write in ffmpeg's deband filter through a coupling command: reached only by a command the person's own code gives ffmpeg, in their own sandbox (no network, its own user, a read-only root); Debian has no fixed package for bookworm"
+  until: 2027-02-28
+- id: CVE-2023-6879
+  package: "image:arena-sandbox deb:libaom3"
+  reason: "AV1 decoding of a stream whose frame size changes: only the person's own files reach it, in their own sandbox as above; Debian has no fixed package for bookworm"
+  until: 2027-02-28
+- id: CVE-2026-58016
+  package: "image:arena-sandbox, arena-browser deb:libglib2.0-0"
+  reason: "an integer underflow in GLib's D-Bus introspection XML parser: there is no D-Bus in these containers and nothing hands GLib introspection XML; Debian has deferred the fix for bookworm"
+  until: 2027-02-28
+- id: CVE-2025-47917
+  package: "image:arena-sandbox deb:libmbedcrypto7"
+  reason: "Mbed TLS 2.28 (pulled in by ffmpeg's libraries): the sandbox has no network, so no TLS connection is ever made with it; bookworm's 2.28 has no fix"
+  until: 2027-02-28
+- id: CVE-2026-34873
+  package: "image:arena-sandbox deb:libmbedcrypto7"
+  reason: "TLS 1.3 session resumption in Mbed TLS: no TLS connection is made in the sandbox (no network); bookworm's 2.28 has no fix"
+  until: 2027-02-28
+- id: CVE-2026-34875
+  package: "image:arena-sandbox deb:libmbedcrypto7"
+  reason: "a buffer overflow in Mbed TLS's FFDH key export: no key exchange is made in the sandbox (no network); bookworm's 2.28 has no fix"
+  until: 2027-02-28
+- id: CVE-2025-14009
+  package: "image:lmsysorg/sglang:v0.5.23-cu130-runtime python:nltk 3.9.1"
+  reason: "nltk is imported only by SGLang's video generation (multimodal_gen's Cosmos 3 guardrails, for cosmos-guardrail); the stack runs SGLang's language-model server, which never loads it, and SGLang 0.5.23 is the newest release"
+  until: 2027-02-28
+- id: CVE-2026-78683
+  package: "image:lmsysorg/sglang:v0.5.23-cu130-runtime python:nltk 3.9.1"
+  reason: "nltk is imported only by SGLang's video generation (multimodal_gen's Cosmos 3 guardrails, for cosmos-guardrail); the stack runs SGLang's language-model server, which never loads it, and SGLang 0.5.23 is the newest release"
+  until: 2027-02-28
+- id: CVE-2026-79657
+  package: "image:lmsysorg/sglang:v0.5.23-cu130-runtime python:nltk 3.9.1"
+  reason: "nltk is imported only by SGLang's video generation (multimodal_gen's Cosmos 3 guardrails, for cosmos-guardrail); the stack runs SGLang's language-model server, which never loads it, and SGLang 0.5.23 is the newest release"
+  until: 2027-02-28
+- id: CVE-2026-79675
+  package: "image:lmsysorg/sglang:v0.5.23-cu130-runtime python:nltk 3.9.1"
+  reason: "nltk is imported only by SGLang's video generation (multimodal_gen's Cosmos 3 guardrails, for cosmos-guardrail); the stack runs SGLang's language-model server, which never loads it, and SGLang 0.5.23 is the newest release"
+  until: 2027-02-28
+- id: CVE-2026-115905
+  package: "image:lmsysorg/sglang:v0.5.23-cu130-runtime cargo:zip 0.6.6 (sglang-radix-tree's Cargo.lock)"
+  reason: "only the radix tree's source lock file names it: the built module (libmem_cache.so) carries none of it, and its Cargo.toml does not ask for it"
+  until: 2027-02-28

@@ -15,7 +15,44 @@ Sections used:
   makes weaker (gone, a clause or a check dropped, fewer tests), by its id,
   and why ([compliance](docs/compliance/README.md#when-a-change-weakens-a-control))
 
-## v8.2.0 (unreleased, branch v8.2)
+## v8.2.0 (2026-11-26)
+
+Numbers you can trust and fewer, clearer tools. The dashboards say what the
+engines really make, per model and per GPU; Accounting counts each project
+again; projects take their keys, their people and their chats' plans; the
+prompt log keeps each request whole and is searched, filtered and summed up by
+a model; an assistant helps run Arena from every admin page; decks are worth
+showing. Scheduled tasks are Automations, plans are the project's, and Code
+Arena is its own project.
+
+### :rocket: Epics and highlights
+
+- **Dashboards whose numbers are right.** Stack Performance's capacity is each
+  loaded model's tested best (not the busiest minute of a week summed over
+  models never loaded together), tokens a second by GPU, idle speeds said so;
+  no made-up first token for answers not streamed; a **Model** and a **GPU**
+  choice on Stack Performance, LLM Overview, LLM and users, Usage by person,
+  Hardware and GPU Hardware (a ledger panel's choice bound as a parameter, never
+  written into its SQL). `audit-dashboards.py --truth` checks pairs of panels
+  that count the same thing from their own sources (on live: 1.3% apart over 30
+  days).
+- **Projects that add up.** Accounting's projects are each project's again
+  (every request read as in no project before); chats' answers from before
+  requests carried their chat are linked to it at the upgrade; an admin puts a
+  project on people or groups (their chats, rooms, meetings, sessions and API
+  requests go in it); a key of a project counts toward it.
+- **The prompt log, whole.** Each API request kept as it went (its new
+  messages, tools and settings, the whole thinking, words and tool calls),
+  opened whole on its page, searched and filtered everywhere (kept in the
+  address); **Write a report** on what the filters find, by the model chosen
+  (prompt quality, a project's progress, failures, topics), audited.
+- **The admin assistant**, on every admin page: it reads Arena's own API as
+  the person (their permissions, no more), and a change it proposes is made
+  only on their yes, in the audit log as through the assistant.
+- **Decks worth showing.** 15 layouts and 8 chart types drawn as PowerPoint's
+  own, five designs; decks from words, an outline, a file or a canvas; a
+  PowerPoint file opened to revise; decks as Markdown both ways; the canvas
+  holds slides.
 
 ### :sparkles: New features & Enhancements
 
@@ -36,6 +73,15 @@ Sections used:
   went.
 
 ### :boom: Breaking changes & Deprecations
+- **Code Arena is its own project** (github.com/Binchitects/code-arena, in
+  Rust): the C# Code Arena, its IDE in the browser, its builds the app served
+  for download (with their signing and the installer's bundling), and Code's
+  workspaces on the server and on one's own machine (the `workspaces` feature,
+  its forwarded ports, `code.studio`) are gone from this repository. Every
+  route Code Arena uses (`/api/code-arena/*`, sign-in, keys, `/api/info`)
+  stays as it was. Connect your tools points to its releases. The workspaces'
+  rows and files are kept (nothing is deleted: their folder under DATA_DIR,
+  the Helm claim kept by its policy); `code.studio` leaves roles and rules.
 
 - **Scheduled tasks, their page (`/tasks`) and `/api/tasks` are gone.** The
   upgrade makes each task the workflow of the same id with its runs, chats,
@@ -58,14 +104,27 @@ Sections used:
   room's plan is then the project's people's, not the room's. Code Arena's
   working plans and those of chats in no project stay plans.
 
-## v8.1.0 (unreleased, branch v8.1)
+### :warning: Weakened controls
+
+- **IAM-05** (33 tests now 31), **IAM-06** (3 now 2), **DAT-04** (12 now 11):
+  the tests of what left with Code Arena's C# client and Code's workspaces (a
+  VM's changes asked for and its guest password kept from the model, a
+  forwarded port reached by its owner alone, the IDE's log without its key).
+  What they proved is not in this product any more; the controls' own clauses
+  about it went with them. The Rust client's own tests are its repository's.
+- **OPS-02**: its clause on a Code workspace's commands in bubblewrap, and its two tests, went with
+  the workspaces; the sandbox's own clause and tests stay.
+
+## v8.1.0 (2026-11-26)
 
 Work that goes on by itself and is counted as it goes. An answer cut at its
 longest carries on until it ends; the time of the model, the tools and the
 people is counted everywhere; Accounting and projects are live; a chat in a
 project keeps its goals and tasks; Code Arena runs schedules and Arena's
 agents, keeps checklists, and is tidier; a model is tested from its card,
-and every use a model has is said. And the logo: the A with its eyes.
+and every use a model has is said. Every image brought up to date and
+scanned for known vulnerabilities, a backup schedule and a maintenance mode
+from `arenactl`, and the logo: the A with its eyes.
 
 ### :rocket: Epics and highlights
 
@@ -140,9 +199,47 @@ and every use a model has is said. And the logo: the A with its eyes.
 - **The A with its eyes**: the logo is the Arena's A with two open eyes and
   nothing else in it; the sign-in's eyes are its eyes, and its outline is a
   pattern behind the pages.
+- **Every image up to date, and scanned.** Traefik 3.8.0, Prometheus 3.16.0,
+  Alertmanager 0.35.1, Loki 3.7.10, node-exporter 1.13.1, pgvector 0.8.7
+  (Postgres 16 on Debian bookworm, so the database's text keeps its
+  collation; the vector extension is updated in place), Valkey 9.2, the GPU
+  exporter 2.0.0 and DCGM exporter 4.9.0 (which refuses the clock-throttle bit
+  mask: the GPU Hardware dashboard shows the clock events by reason now),
+  vLLM 0.34.0, SGLang 0.5.23, Strata 0.2.22, Trivy 0.76.2 and opengrep 1.33.1;
+  our own images bring their base's packages up to date as they are built.
+  `tools/image-scan.py` runs Trivy over every image the stack runs before a
+  release: a critical finding fails it unless
+  `docs/compliance/accepted-vulnerabilities.yaml` accepts it, with why and
+  until when (those with no fix to apply, in Debian bookworm's packages, SGLang's
+  video generation and a lock file, are listed with why nothing reaches them).
+- **Grafana Alloy in place of Promtail**, which has reached its end of life:
+  the same labels and parsing, through the engine's API.
+- **A speech image without its known vulnerabilities**: speaches 0.9.0-rc.3
+  with Pillow, urllib3, cryptography, starlette, python-multipart, protobuf
+  and Ubuntu's OpenSSL raised to their fixed versions (`arena-audio`).
+- **`arenactl backup schedule`**: when backups run, through systemd's timer,
+  saved in `.env`: `03:30`, `hourly`, `"every 6h"`, `"Mon,Thu 02:00"`,
+  `weekly` or any systemd calendar (checked); with `--keep N` and
+  `--copy-dir DIR`; `schedule show` says the next run and how the last one
+  ended, `schedule off` stops it.
+- **`arenactl maintenance on|off|status`**: every address answers with a
+  maintenance page (503, `Retry-After`, `--message` on it) and the services
+  people use stop, while the database, Traefik and the monitoring stay up
+  (`--all` stops them too); `off` starts it all and takes the page down only
+  once every service is healthy. **`arenactl stop` and `start`**, for the
+  whole stack or the services named.
 
 ### :bug: Bugs fixed
 
+- **llama.cpp's log was dropped whole**: the rule meant to drop only its
+  per-request timing lines matched every line of it (Promtail's match stage
+  has no expression); only those lines go now.
+- The power caps ran in the GPU exporter's image, which has no shell since
+  its 1.19: they run in the stack's Python image.
+- The chart's copy of code-intel's config had drifted from deploy's.
+- The README's and the scripts guide's clone steps went into a folder the
+  clone does not make (`cd farzan` now); every Source link names the
+  repository's new home, Binchitects/farzan.
 - **The stack without a GitLab**: code-intel no longer stops at its start
   when GITLAB_URL and GITLAB_TOKEN are empty (its config's placeholder
   address was taken for a GitLab, then refused for want of a token): it

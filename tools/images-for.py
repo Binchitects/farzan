@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """The stack's images a change is in: the services of deploy/docker-compose.yml built here whose Dockerfile copies a
 file that changed (or is the file that changed). Those are the images to build again, and the services to start again,
-for the change to run: a change to Code Arena is in the app's image (it serves Code Arena's builds) and in Code Studio's
-workspaces (each workspace's engine), not in one alone.
+for the change to run.
 
     python3 tools/images-for.py origin/main          what changed since origin/main, committed or not
     python3 tools/images-for.py A..B                 what changed from A to B

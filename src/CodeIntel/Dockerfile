@@ -53,8 +53,6 @@ COPY src/CodeIntel/CodeIntel.csproj src/CodeIntel/
 COPY tests/CodeIntel.Tests/CodeIntel.Tests.csproj tests/CodeIntel.Tests/
 RUN dotnet restore tests/CodeIntel.Tests/CodeIntel.Tests.csproj
 COPY src/CodeIntel/ src/CodeIntel/
-# Code Arena's scanners and code graph, linked by CodeIntel.csproj (the symbol graph): these files, not Code Arena.
-COPY src/CodeArena/CodeScan.cs src/CodeArena/CodeGraph.cs src/CodeArena/CodeIndex.cs src/CodeArena/CodeFiles.cs src/CodeArena/
 COPY tests/CodeIntel.Tests/ tests/CodeIntel.Tests/
 COPY tests/fixtures/code-intel/ tests/fixtures/code-intel/
 

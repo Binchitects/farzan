@@ -4,7 +4,7 @@
 - the code sandbox (profile sandbox): scripts/sandbox-check.py, its jobs, isolation and limits;
 - the 3D sandbox (profile 3d): scripts/blender-check.py, a model and the 3D tool's own script, its isolation and limits;
 - the proof checker (profile lean): scripts/lean-check.py, Mathlib and its limits;
-- the browser agent's browser (profile browser), Code Studio's workspaces (workspaces), the media studio's models (studio)
+- the browser agent's browser (profile browser), the media studio's models (studio)
   and Laya (laya): running, healthy where they have a health check, and answering where they serve.
 A sandbox whose feature is off is said and skipped. Exit status: the sandboxes that failed.
 """
@@ -21,7 +21,6 @@ SANDBOXES = {
     "3D sandbox": ("blender", "blender-check.py"),
     "proof checker (Lean)": ("lean", "lean-check.py"),
     "browser agent's browser": ("browser", None),
-    "Code Studio's workspaces": ("workspaces", None),
     "media studio's models": ("studio", None),
     "Laya": ("laya", None),
 }

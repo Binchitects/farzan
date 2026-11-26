@@ -200,8 +200,9 @@ class LmdeployImageTests(unittest.TestCase):
         self.assertRegex(text, r"(?m)^ARG PIP_INDEX_URL=$")
         self.assertIn("Acquire::http::Timeout=30", text)
         self.assertIn('${PIP_INDEX_URL:+--index-url "$PIP_INDEX_URL"}', text)
-        # A base with a compiler skips apt altogether.
-        self.assertIn("if command -v gcc >/dev/null && command -v ps >/dev/null; then exit 0; fi", text)
+        # Every base is brought up to date; one with a compiler installs none.
+        self.assertIn("upgrade -y", text)
+        self.assertIn("if ! command -v gcc >/dev/null || ! command -v ps >/dev/null; then", text)
         build = (REPO / "deploy" / "lmdeploy-build.yml").read_text()
         self.assertIn("APT_MIRROR: ${LMDEPLOY_APT_MIRROR:-}", build)
         self.assertIn("PIP_INDEX_URL: ${LMDEPLOY_PIP_INDEX:-}", build)

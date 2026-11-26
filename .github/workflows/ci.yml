@@ -38,39 +38,6 @@ jobs:
           git config --global user.email ci@code-intel.invalid && git config --global user.name ci
           dotnet test tests/CodeIntel.Tests -c Release
 
-  code-arena:
-    # The coding agent people download: against a fake gateway and fake MCP
-    # servers on real sockets, then packaged as one file with its IDE page and
-    # started.
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with: { global-json-file: global.json }
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm, cache-dependency-path: src/web/package-lock.json }
-      # The code index's scanners are measured against universal-ctags (CtagsFact).
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends universal-ctags
-      - run: dotnet test tests/CodeArena.Tests -c Release
-      - name: The package for Linux, and its program starts
-        run: |
-          (cd src/web && npm ci)
-          python3 arenactl code-arena linux-x64
-          (cd dist && sha256sum -c SHA256SUMS)
-          dist/code-arena/linux-x64/code-arena --version
-          dist/code-arena/linux-x64/code-arena --help
-      - name: The package has the IDE's page built in
-        # The project embeds the page only when it was built (web/code-arena.html): without it the
-        # program says "has no IDE" before anything else; with it, the next thing it needs is a sign-in.
-        run: |
-          test -f src/CodeArena/web/code-arena.html
-          said="$(CODE_ARENA_HOME="$(mktemp -d)" dist/code-arena/linux-x64/code-arena web --no-open 2>&1 || true)"
-          echo "$said"
-          case "$said" in
-            *"Not signed in"*) ;;
-            *) echo "The package's code-arena did not start its IDE (is the page built into it?)" >&2; exit 1 ;;
-          esac
-
   web:
     runs-on: ubuntu-24.04
     defaults: { run: { working-directory: src/web } }
@@ -155,53 +122,6 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@v4
         with: { name: web-playwright-report, path: src/web/playwright-report }
-
-  workspaces:
-    # Code Studio's workspaces for real: the workspaces image built from this checkout, run as compose runs it (its
-    # security options, the agent's commands in bubblewrap), beside a code host (GitLab's API, git over HTTP, the
-    # agent's model). RealWorkspaceTests drives the API end to end (clone, a dev server through its forward, the agent
-    # sandboxed, push, sleep, wake); then the same in Chromium through the app, the web and Traefik
-    # (e2e/workspaces.spec.ts on ci/workspaces-stack.sh).
-    needs: [api, web]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    env:
-      E2E_PASSWORD: ci admin password for tests
-      E2E_BASE_URL: https://llm.localhost:8443
-      E2E_WORKSPACES: "1"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with: { global-json-file: global.json }
-      - name: Build the images
-        run: |
-          docker build -t ws-e2e -f deploy/services/workspaces/Dockerfile .
-          docker build -t llm-app:ci --build-arg APP_VERSION=0.0.0-ci.${{ github.run_number }} -f src/Llm.Api/Dockerfile .
-          docker build -t llm-web:ci --build-arg APP_VERSION=0.0.0-ci.${{ github.run_number }} -f src/web/Dockerfile .
-      # Ubuntu 24.04 lets AppArmor refuse unprivileged user namespaces, which bubblewrap (the workspace's sandbox for
-      # the agent's commands) needs; a host of Arena's allows them. This runner is made to, as such a host is.
-      - name: Let the sandbox make its user namespace
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-      - name: A workspace end to end through the API
-        env: { STUDIO_E2E_IMAGE: ws-e2e }
-        run: dotnet test tests/Llm.Tests -c Release --filter "FullyQualifiedName~RealWorkspaceTests" --logger "console;verbosity=normal"
-      - name: Start the stack with workspaces
-        run: |
-          echo "127.0.0.1 llm.localhost" | sudo tee -a /etc/hosts
-          src/web/ci/workspaces-stack.sh up
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm, cache-dependency-path: src/web/package-lock.json }
-      - name: A workspace in the browser
-        working-directory: src/web
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
-          npx playwright test e2e/workspaces.spec.ts --project desktop
-      - if: failure()
-        run: src/web/ci/workspaces-stack.sh logs
-      - if: failure()
-        uses: actions/upload-artifact@v4
-        with: { name: workspaces-playwright-report, path: src/web/playwright-report, if-no-files-found: ignore }
 
   code-intel-browser:
     # code-intel's own app against its real backend, with fake GitLab, LiteLLM and

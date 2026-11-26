@@ -209,8 +209,7 @@ controls:
       the one resetting it, and a disabled person is enabled again only on the
       same terms. A permission held for some groups is given only for those
       groups (and a feature only to their people). Code Arena's memory needs
-      feature.memory, as the chat's does, and its IDE and terminal hide memory
-      when it is denied.
+      feature.memory, as the chat's does.
     frameworks:
       iso27001: [A.5.15, A.5.18, A.8.2, A.8.3]
       soc2: [CC6.1, CC6.3]
@@ -222,7 +221,7 @@ controls:
       nist80053: [AC-3, AC-5, AC-6]
       nist800171: [03.01.02, 03.01.04, 03.01.05]
       commoncriteria: [FDP_ACC, FDP_ACF, FMT_SMR]
-    docs: [admin.md#access-roles-and-rules, code-arena.md#sub-agents-and-tasks, code-arena.md#virtual-machines, chat.md#forwarded-ports]
+    docs: [admin.md#access-roles-and-rules]
     tests:
       - Llm.Tests/AdminAssistantTests.It_reads_as_the_person_proposes_a_change_and_makes_it_only_on_their_yes_audited_through_the_assistant
       - Llm.Tests/AdminAssistantTests.It_cannot_do_through_the_assistant_what_the_person_may_not_do_and_a_no_leaves_it_undone
@@ -239,13 +238,9 @@ controls:
       - Llm.Tests/CodeArenaGoalTests.Code_Arena_lists_the_assistants_the_person_may_use_with_their_skills
       - Llm.Tests/SkillTransferTests.Only_who_may_make_skills_imports_them_from_the_page_or_Code_Arena
       - Llm.Tests/ContextWindowTests.Code_Arena_counts_with_the_persons_key_and_only_for_the_models_they_may_use
-      - Llm.Tests/CodeArenaVmTests.Changing_a_VM_asks_the_person_and_always_covers_that_tool_on_that_VM_only
-      - Llm.Tests/CodeArenaVmTests.Deleting_a_VM_asks_the_person_every_time_in_every_mode
       - Llm.Tests/AccessPermissionsTests.The_people_list_with_emails_and_spend_needs_people_read_not_monitoring
       - Llm.Tests/AccessPermissionsTests.Sharing_with_the_company_is_a_permission_and_a_rule_keeps_a_shared_assistant_from_a_group
       - Llm.Tests/AccessPermissionsTests.A_persons_effective_permissions_say_why_each_is_held_or_not
-      - Llm.Tests/StudioPortsTests.A_dev_server_is_listed_and_reached_by_its_owner_alone_at_its_own_address_without_arenas_session
-      - Llm.Tests/StudioPortsTests.A_port_is_named_shared_with_everyone_signed_in_stopped_and_forwarded_by_hand
       - Llm.Tests/PeopleEscalationTests.People_edit_alone_renames_but_makes_nobody_Owner
       - Llm.Tests/PeopleEscalationTests.Only_an_Owner_makes_an_Owner_even_with_access_assign
       - Llm.Tests/PeopleEscalationTests.People_disable_alone_disables_and_enables
@@ -266,8 +261,7 @@ controls:
     meets: >-
       Each key belongs to one person and works only as them; an unknown,
       blocked or expired key is refused; rotating a key revokes the old one
-      first, and disabling a person stops their keys. Code Arena's log on the
-      person's machine never holds its IDE's key, and only its user reads it.
+      first, and disabling a person stops their keys.
     frameworks:
       iso27001: [A.5.17, A.8.5]
       soc2: [CC6.1]
@@ -279,11 +273,10 @@ controls:
       nist80053: [AC-2, IA-5]
       nist800171: [03.05.12]
       commoncriteria: [FIA_UAU]
-    docs: [authentication.md#as-a-machine-client-of-the-engine-api, code-arena.md#the-ide]
+    docs: [authentication.md#as-a-machine-client-of-the-engine-api]
     tests:
       - Llm.Tests/KeyCheckTests.An_unknown_blocked_or_expired_key_is_refused
       - Llm.Tests/IdentityTests.Rotating_a_key_revokes_the_old_one_first
-      - Llm.Tests/CodeArenaLogTests.Code_Arenas_log_never_holds_the_IDEs_key_and_only_its_user_reads_it
     operator: People keep their keys out of shared files and repositories.
 
   - id: IAM-07
@@ -585,9 +578,7 @@ controls:
       commands that do damage are kept from agents' tools, and data sent out
       through images and links is stopped. A message sent while an answer
       runs is checked when it is queued and again when it is edited, before
-      the answer takes it in. A VM's guest password, which Code
-      Arena's VM tools sign in with, never reaches the model, the session, the
-      log or a command line of Code Arena's own.
+      the answer takes it in.
     frameworks:
       iso27001: [A.8.11, A.8.12]
       soc2: [C1.1, CC6.7]
@@ -599,7 +590,7 @@ controls:
       nist80053: [AC-4, SI-15]
       nist800171: [03.01.03]
       commoncriteria: [FDP_IFC, FDP_IFF]
-    docs: [admin.md#safeguards, chat.md#safeguards, code-arena.md#virtual-machines]
+    docs: [admin.md#safeguards, chat.md#safeguards]
     tests:
       - Llm.Tests/SafeguardsTests.Personal_data_reaches_the_model_masked_and_the_chat_keeps_it_as_written
       - Llm.Tests/SafeguardRulesTests.Answers_are_masked_or_withheld_and_what_tools_send_and_bring_back_is_held_by_their_rules
@@ -612,7 +603,6 @@ controls:
       - Llm.Tests/SafeguardRulesTests.Every_block_names_its_rule_what_it_found_and_where_without_the_secret_itself
       - Llm.Tests/QueuedMessagesTests.A_queued_message_is_edited_until_it_is_taken_in_and_one_with_files_waits_for_the_answer_to_end
       - Llm.Tests/SkillTransferTests.An_imported_skill_goes_through_the_safeguards_and_one_holding_a_private_key_is_refused
-      - Llm.Tests/CodeArenaVmTests.A_VMs_guest_password_never_reaches_the_model_or_a_command_line
     operator: Decide which data may reach which model, and which models are outside the company.
 
   - id: DAT-05
@@ -905,10 +895,6 @@ controls:
     meets: >-
       Python, documents and a plugin's own server run in the sandbox: no
       network, a read-only root, its own limits, nothing that outlives a run.
-      In a Code workspace the agent's commands run in bubblewrap: they
-      write only in the clone, the build caches and a /tmp of their own, and
-      the engine's settings, sessions and the person's GitLab token are hidden
-      from them; the workspaces service says when it cannot make one.
     frameworks:
       iso27001: [A.8.22, A.8.7]
       soc2: [CC6.8]
@@ -919,11 +905,9 @@ controls:
       nist80053: [SC-39, SC-44]
       airmf: [MEASURE 2.7]
       euaiact: [Art.15]
-    docs: [plugins.md#a-server-of-its-own-in-the-sandbox, chat.md#code-workspaces]
+    docs: [plugins.md#a-server-of-its-own-in-the-sandbox]
     tests:
       - Llm.Tests/ChatToolsTests.Python_runs_in_the_sandbox_with_the_chats_files_and_what_it_writes_comes_back
-      - deploy/test_workspaces_supervisor.py::test_health_says_whether_the_agents_commands_have_a_sandbox
-      - deploy/test_workspaces_supervisor.py::test_a_clone_that_fails_says_why_without_the_token
       - Llm.Tests/ChatToolsTests.A_program_calls_the_chats_tools_as_the_person_through_the_sandbox_and_only_what_it_prints_comes_back
       - Llm.Tests/PluginTests.A_plugins_own_server_runs_in_the_sandbox_with_its_settings_one_job_a_call
     operator: Keep the sandbox's host patched.

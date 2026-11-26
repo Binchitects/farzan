@@ -1500,85 +1500,6 @@ needs the `feature.fixit` permission. Everyone holds it unless an admin
 denies it. Tests in other languages cannot run here yet: the agent says so,
 and you run them in your pipeline.
 
-### Code workspaces
-
-**Code → Code** (`/code`) lists your workspaces: Code Arena's IDE in
-the browser (the editor, terminals, search, Git, language servers, the
-debugger and its agent), on a project of yours that the server keeps.
-
-- **A new workspace** is a GitLab project and branch (its default branch
-  when none), read with your own GitLab token, the one Fix it links. It is
-  cloned once on the workspaces service; it pushes as you, and commits
-  under your name and email in Arena (until you set another with `git
-  config --global` in its terminal).
-- **Open** starts it and shows the IDE at `/code/w/…`, the whole window. Its
-  engine runs as a user of its own, with limits; it has no Docker socket, and
-  its network reaches the app, the gateway, Farzan Graph (with your own key) and the
-  internet, not the stack's databases, engines or browser. What the engine
-  says as it starts is kept beside the workspace, and its end is shown when
-  it does not start. Its agent uses a gateway key of its own,
-  against your credit. Only you reach it. Its user has a name (`ws0`,
-  `ws1`…) and its home in the system, so `whoami`, the prompt, Python's
-  `getpass`, Node.js's `os.userInfo()` and ssh know it. A GitLab on the
-  company's own CA ([deployment.md](deployment.md#gitlab-on-a-company-ca))
-  is trusted there too: the clone, `git push` in its terminals, curl,
-  Python, pip, .NET and Node.js.
-- **The agent's commands are sandboxed** there as on your own machine
-  ([code-arena.md](code-arena.md)): bubblewrap lets them write only in the
-  clone, the build tools' caches and a `/tmp` of their own, and hides the
-  engine's settings, sessions and your GitLab token, so a command the model
-  runs cannot read them (pushing is the IDE's, as you). Your terminals are
-  yours, unsandboxed, as in VS Code. `/sandbox` in the IDE's chat says which
-  it is; the workspaces service says so as it starts, and why when it cannot
-  make one (compose gives it what it needs; on Kubernetes it is
-  `workspaces.sandbox`).
-- **Ports.** A dev server you start in a workspace (`npm run dev`,
-  `dotnet run`, `python -m http.server`) is forwarded to you, as VS Code
-  does: see [Forwarded ports](#forwarded-ports).
-- **Asleep.** A workspace unused for 30 minutes stops; its files stay, and
-  **Open** wakes it. **Delete** takes its files and its key away.
-- **Your own machine.** In a folder on your computer, `code-arena web
-  --connect` (signed in with `code-arena login`) puts it in Code as
-  *the folder on that machine*, while it runs: **Open** shows its IDE here,
-  from any browser you sign in on, through a tunnel code-arena dials with
-  your API key ([code-arena.md](code-arena.md#the-ide)). Only you reach it;
-  offline, Code says how to connect it. Deleting it there disconnects
-  it; the folder stays. With several app replicas, the one it dialled holds
-  it, and the others reach it through that one (at its own address on the
-  stack's network, or `Workspaces__SelfUrl`), with the tunnel's own key.
-- **Where.** The workspaces service runs with the `workspaces` profile
-  ([deployment.md](deployment.md)); without it, Code lists no
-  server workspaces. It needs the `code.studio` permission, which everyone
-  holds unless an admin denies it. At most 8 workspaces each.
-
-#### Forwarded ports
-
-The IDE's **Ports** panel (beside Terminal, in a server workspace) lists what
-the workspace's programs listen on, found as they start, with the process
-that holds each port, and the ports you forwarded by hand.
-
-- **Each port has its own address**: `https://ws-<workspace>-<port>.DOMAIN/`,
-  **Open in Browser** or **Copy Address**. It is its own origin, so the
-  program's pages never run on Arena's, and its paths are its own (`/`,
-  `/@vite/client`): no base path to set. When a new one starts, the IDE says
-  so and offers to open it.
-- **Only you reach it**, signed in to Arena (your session covers the
-  domain's names; signed out, a page asks you to sign in first). **Share**
-  makes it reachable by everyone signed in who may use Code, until
-  you make it private again (audited as `studio.port.share`). **Stop
-  Forwarding** closes it to everyone, you too, until you forward it again.
-- **What it is sent.** Every request and WebSocket (a dev server's live
-  reload) goes on to the port in the workspace, as `Host: localhost:<port>`,
-  which dev servers allow, with `X-Forwarded-Host` and `-Proto` naming the
-  address you used. Arena's own cookies are taken out first, and the
-  program cannot set a cookie for Arena's domain or one of Arena's names.
-- **Forward a Port** adds one before its server starts, with a label; one
-  that is not listening says so when opened. A sleeping workspace's ports
-  are closed until it is opened again.
-- **Where.** The addresses need a DNS name for `*.DOMAIN` and a certificate
-  that covers it, as `./arenactl cert` makes
-  ([deployment.md](deployment.md#certificates)).
-
 ### The business map
 
 **Code → Business map** keeps what each system does for the business,
@@ -2118,7 +2039,7 @@ probability for every option, all questions in one forward pass.
 - **Where.** In Admin → Tools while the `laya` module runs (off by default:
   [deployment.md](deployment.md#laya)); outside agents get `decide` from
   Arena MCP, and Code Arena uses it to look at commands
-  ([code-arena.md](code-arena.md#laya-looks-at-commands)).
+  ([code-arena.md](code-arena.md)).
 
 ## Skills and slash commands
 
@@ -2149,7 +2070,7 @@ model reads it to choose it), its **instructions** and its **parameters**.
   is reminded to. A skill you make in its IDE "for you" (**New Skill**, or
   `/skills new NAME --mine` in its terminal) is one of yours here too, used
   at once; one made or changed here reaches a running Code Arena within half
-  a minute ([code-arena.md](code-arena.md#your-own-commands-sub-agents-and-skills)).
+  a minute ([code-arena.md](code-arena.md)).
 
 - **In the chat**, `/` at the start of the message opens the list: type to
   find by slash name, title or description, arrows to move, **Enter** or

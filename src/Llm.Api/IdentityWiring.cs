@@ -41,7 +41,6 @@ public static class IdentityWiring
         services.ConfigureHttpClientDefaults(b => b.ConfigurePrimaryHttpMessageHandler(Operations.CompanyCa.Handler));
         services.Configure<Downloads.CertificateOptions>(config.GetSection("Certificates"));
         services.AddSingleton<Downloads.SiteCertificate>();
-        services.AddSingleton<Downloads.CodeArenaClients>();
         services.AddSingleton<Operations.Replicas>();
         services.AddHostedService(sp => sp.GetRequiredService<Operations.Replicas>());
 
@@ -304,16 +303,6 @@ public static class IdentityWiring
         services.AddScoped<Vector.VectorSandbox>();
         services.AddScoped<Vector.VectorStore>();
         services.AddScoped<Chat.Tools.VectorTool>();
-        services.Configure<Code.Studio.WorkspacesOptions>(config.GetSection("Workspaces"));
-        services.AddScoped<Code.Studio.StudioWorkspaces>();
-        // A workspace's clone may take minutes, and an agent's turn streams for as long as it runs.
-        services.AddHttpClient(Code.Studio.StudioWorkspaces.Client, c => c.Timeout = Timeout.InfiniteTimeSpan);
-        if (Operations.Features.On(config, "workspaces"))
-        {
-            services.AddHostedService<Code.Studio.StudioIdle>();
-        }
-        services.AddSingleton<Code.Studio.MachineTunnels>();
-        Code.Studio.PortForwards.AddPortForwards(services);
         services.AddSingleton<Chat.Tools.CalculatorTool>();
         services.AddSingleton<Chat.Tools.TimeTool>();
         services.AddSingleton<Chat.Tools.AskTool>();
@@ -626,7 +615,7 @@ public static class IdentityWiring
             // Events for tasks (/api/hooks) and workflows (/api/studio/hooks), the chat bots' platforms and inbound mail come from other systems, with no
             // session: their secrets are the guard.
             // A SAML identity provider's answer is a form the browser posts from the provider's page: its signature is the guard.
-            if (ctx.Request.Path.StartsWithSegments("/api") && !Code.Studio.PortForwards.IsPortHost(ctx) && !ctx.Request.Path.StartsWithSegments("/api/authz") && !ctx.Request.Path.StartsWithSegments("/api/hooks") && !ctx.Request.Path.StartsWithSegments("/api/studio/hooks") &&
+            if (ctx.Request.Path.StartsWithSegments("/api") && !ctx.Request.Path.StartsWithSegments("/api/authz") && !ctx.Request.Path.StartsWithSegments("/api/hooks") && !ctx.Request.Path.StartsWithSegments("/api/studio/hooks") &&
                 !ctx.Request.Path.StartsWithSegments("/api/bots") && !ctx.Request.Path.StartsWithSegments("/api/mail/inbound") &&
                 !ctx.Request.Path.StartsWithSegments("/api/auth/company/saml/acs") &&
                 !(HttpMethods.IsGet(m) || HttpMethods.IsHead(m) || HttpMethods.IsOptions(m)) &&
@@ -659,7 +648,6 @@ public static class IdentityWiring
         Code.SecurityOverview.MapSecurityOverview(app);
         Code.ReviewRuleEndpoints.MapReviewRules(app);
         Code.CodeHostLinks.MapCodeHostLinks(app);
-        Code.Studio.StudioEndpoints.MapStudio(app);
         Code.Business.BusinessEndpoints.MapBusiness(app);
         Meetings.MeetingEndpoints.MapMeetings(app);
         Chat.Tools.Browser.BrowserEndpoints.MapBrowser(app);
@@ -731,6 +719,7 @@ public static class IdentityWiring
         Models.ModelHoursEndpoints.MapModelHours(app);
         Models.HuggingFaceEndpoints.MapHuggingFace(app);
         Notifications.NotificationEndpoints.MapNotifications(app);
+        Downloads.CertificateEndpoints.MapCertificate(app);
         Models.RemoteServerEndpoints.MapRemoteServers(app);
         app.MapGovernance();
         AnswerCacheEndpoints.MapAnswerCache(app);
@@ -738,7 +727,6 @@ public static class IdentityWiring
         Chat.VoiceEndpoints.MapVoices(app);
         Bots.BotEndpoints.MapBots(app);
         Notifications.PushEndpoints.MapPush(app);
-        Downloads.DownloadEndpoints.MapDownloads(app);
     }
 
     public static async Task BootstrapIdentityAsync(this WebApplication app)

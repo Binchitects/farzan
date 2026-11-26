@@ -149,14 +149,14 @@
 - **vLLM (add).**
   - Covers the features you asked about: TP, FP8/NVFP4, automatic prefix caching (on by default), chunked prefill, speculative decoding (MTP and EAGLE-3), priority scheduling, `/metrics`, sleep mode, and KV connectors (Offloading, LMCache, NIXL, Mooncake).
   - Has the widest sm_120 field experience.
-  - Pin a version, for example **v0.31.0** (released 05 Oct, CUDA 13.0 default).
+  - Pinned at **v0.34.0** (released 16 Nov, CUDA 13.0 default; v0.31.0 before 8.1).
 - **llama.cpp (keep).**
   - Serves GGUF, the small models, models partly offloaded to RAM (DeepSeek-class Q2/Q3), the embedder, and router mode for many small models.
   - Already supports per-model `device = CUDA0,…` (`ModelCatalog.cs:538`) and per-GPU fit targets.
 - **SGLang (added, the `sglang` feature).**
   - Offers its radix cache (every shared prefix reused, suited to agents and a common system prompt), HiCache (GPU, then host RAM) and strong MLA/DeepSeek kernels.
   - Runs under the same supervisor as vLLM (`ENGINE_SERVER=sglang`, through `services/sglang/serve.py`, which hands it the key inside its process), with the same desired state, status files and gateway registration; only its arguments and metrics differ (`ModelCatalog.SglangArgs`, `sglang:*`).
-  - Pinned at **v0.5.21** (CUDA 13 by default, torch 2.13, as vLLM 0.31). Earlier releases (0.5.8) had NaN outputs on sm_120: smoke-test each model at bring-up, as for vLLM.
+  - Pinned at **v0.5.23** (CUDA 13 by default, torch 2.14; v0.5.21 before 8.1). Earlier releases (0.5.8) had NaN outputs on sm_120: smoke-test each model at bring-up, as for vLLM.
 
 ### 3.2 How the app drives vLLM (no Docker socket)
 vLLM serves **one model per process** and has no router mode. Keep the pattern the stack already uses for llama.cpp (`router.sh` watching `models.ini`) and for media (`sd-serve.sh` with `gpu=N` and status files):

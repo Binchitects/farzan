@@ -257,7 +257,7 @@ print("%d %d" % (sum(cpu(x.get("cpu", "0")) for x in a), sum(mem(x.get("memory",
 # is its service's enabled (CHART_KEY), or, for a part of the app, a name in app.features.
 FEATURES_FILE="$HERE/../features"
 declare -A CHART_KEY=([chat-models]=llamacpp [vllm]=vllm [sglang]=sglang [lmdeploy]=lmdeploy [strata]=strata [knowledge]=embed [code-intel]=code-intel [pictures]=imagegen [video]=videogen
-  [speech]=audio [sandbox]=sandbox [web-search]=searxng [3d]=blender [lean]=lean [studio]=studio [workspaces]=workspaces
+  [speech]=audio [sandbox]=sandbox [web-search]=searxng [3d]=blender [lean]=lean [studio]=studio
   [laya]=laya [scanners]=scanners [monitoring]=monitoring [valkey]=valkey)
 FEAT_IDS=() FEATURES_ON=()
 declare -A FEAT_DEF=() FEAT_SVC=() FEAT_NEEDS=() FEAT_REQ=()
@@ -317,15 +317,15 @@ features_values() {   # features_values [replicas]: with the app's replicas too
 # The secrets as a manifest on stdin: never in a command line, a file or the log.
 make_secrets() {
   if KN get secret "$SECRET" >/dev/null 2>&1; then ok "secrets kept: $SECRET (APP_KEY never changes)"; return; fi
-  if [[ $DRY -eq 1 ]]; then note "would make the Secret $SECRET: ADMIN_PASSWORD, DB_PASSWORD, APP_KEY, ENGINE_KEY, CODE_INTEL_KEY, WORKSPACES_KEY"; return; fi
+  if [[ $DRY -eq 1 ]]; then note "would make the Secret $SECRET: ADMIN_PASSWORD, DB_PASSWORD, APP_KEY, ENGINE_KEY, CODE_INTEL_KEY"; return; fi
   local db gitlab=""
   db="$(gen_secret)"
   [[ $DATABASE == external ]] && db="$(head -n1 "$DB_PASSWORD_FILE")"
   [[ -n "$GITLAB_TOKEN_FILE" ]] && gitlab="$(head -n1 "$GITLAB_TOKEN_FILE")"
   {
     printf 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: %s\n  labels: { app.kubernetes.io/part-of: arena }\ntype: Opaque\nstringData:\n' "$SECRET"
-    printf '  ADMIN_PASSWORD: "%s"\n  DB_PASSWORD: "%s"\n  APP_KEY: "%s"\n  ENGINE_KEY: "%s"\n  CODE_INTEL_KEY: "%s"\n  WORKSPACES_KEY: "%s"\n' \
-      "$(gen_secret | cut -c1-24)" "$db" "$(gen_secret)" "$(gen_secret)" "$(gen_secret)" "$(gen_secret)"
+    printf '  ADMIN_PASSWORD: "%s"\n  DB_PASSWORD: "%s"\n  APP_KEY: "%s"\n  ENGINE_KEY: "%s"\n  CODE_INTEL_KEY: "%s"\n' \
+      "$(gen_secret | cut -c1-24)" "$db" "$(gen_secret)" "$(gen_secret)" "$(gen_secret)"
     [[ -z "$gitlab" ]] || printf '  GITLAB_TOKEN: "%s"\n' "$gitlab"
   } | KN apply -f - >/dev/null || die "could not make the Secret $SECRET"
   ok "secrets made in the cluster: $SECRET"
