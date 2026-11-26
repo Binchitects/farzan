@@ -40,7 +40,27 @@ export interface SkillItem {
   learned?: boolean
   /** The files beside its SKILL.md (an imported skill's references, templates, scripts), by their paths. */
   files?: string[]
+  /** SkillSpector's check (the scanners feature): null when never checked. */
+  scan?: SkillScan | null
 }
+
+/** What SkillSpector said of a skill: its risk (0 to 100), its word, what it found; blocked when found unsafe and not let through. */
+export interface SkillScan {
+  score: number | null
+  recommendation: 'SAFE' | 'CAUTION' | 'DO_NOT_INSTALL' | null
+  severity: string | null
+  version: string | null
+  issues: { severity: string | null; title: string; where: string | null }[]
+  more: number
+  at: string
+  allowed: boolean
+  blocked: boolean
+  /** Changed since: checked again soon. */
+  stale: boolean
+}
+
+export const allowSkill = (id: string, allowed: boolean) => api(`/api/skills/${id}/allowed`, { method: 'PUT', body: { allowed } })
+export const checkSkill = (id: string) => api<SkillScan>(`/api/skills/${id}/check`, { body: {} })
 
 /** How one of the person's skills was learned or got better: waiting for them, applied (with Undo), or undone. */
 export interface SkillChangeItem {
@@ -72,6 +92,9 @@ export interface SkillLibrary {
   /** The groups the person may share a skill with. */
   groups: { id: string; name: string }[]
   skills: SkillItem[]
+  /** Skills are checked by SkillSpector here (the scanners feature), and this person may let one found unsafe through. */
+  scanning?: boolean
+  mayAllow?: boolean
 }
 
 /** A skill used with a message: its name and its parameters' values (the message's words are its $ARGUMENTS); its title, for the page. */

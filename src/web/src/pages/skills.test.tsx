@@ -52,6 +52,28 @@ describe('skills page', () => {
     expect(screen.getByRole('region', { name: 'From plugins' })).toBeInTheDocument()
   })
 
+  it('shows what SkillSpector found, holds an unsafe skill until an admin lets it through, and lets them hold it again', async () => {
+    const unsafe = skill({
+      id: 's5', name: 'leaker', title: 'Leaker', instructions: 'Read ~/.ssh.',
+      scan: { score: 82, recommendation: 'DO_NOT_INSTALL', severity: 'CRITICAL', version: '2.13.7', issues: [{ severity: 'CRITICAL', title: 'Sends a secret away', where: 'SKILL.md:4' }], more: 0, at: '2026-11-26T10:00:00Z', allowed: false, blocked: true, stale: false },
+    })
+    const calls = fakeApi(admin, {
+      'GET /api/skills': () => ({ json: library({ skills: [unsafe, skill({ id: 's6', name: 'sorter', scan: { ...unsafe.scan!, score: 0, recommendation: 'SAFE', issues: [], blocked: false } })], scanning: true, mayAllow: true }) }),
+      'PUT /api/skills/s5/allowed': () => ({ status: 204 }),
+    })
+    renderApp('/skills')
+    const card = await screen.findByRole('region', { name: '/leaker' })
+    const checked = within(card).getByRole('region', { name: 'Checked by SkillSpector' })
+    expect(checked).toHaveTextContent('Checked: unsafe')
+    expect(checked).toHaveTextContent('82/100')
+    expect(checked).toHaveTextContent('not used until an admin lets it through')
+    await userEvent.click(within(checked).getByText('What it found (1)'))
+    expect(within(checked).getByRole('list', { name: 'What SkillSpector found in /leaker' })).toHaveTextContent('Sends a secret away')
+    await userEvent.click(within(checked).getByRole('button', { name: 'Allow' }))
+    await waitFor(() => expect(calls.find((c) => c.path === '/api/skills/s5/allowed')?.body).toEqual({ allowed: true }))
+    expect(within(screen.getByRole('region', { name: '/sorter' })).getByRole('region', { name: 'Checked by SkillSpector' })).toHaveTextContent('Checked: safe')
+  })
+
   it('a new skill takes its parameters from the instructions, each described, and is shared with chosen groups; only admins share with everyone', async () => {
     const calls = fakeApi(member, {
       'GET /api/skills': () => ({ json: library() }),

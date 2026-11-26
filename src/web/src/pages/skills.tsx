@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Download, FileText, GraduationCap, History, Pencil, Plus, Search, Sparkles, SquareSlash, Trash2, Undo2, Upload, X } from 'lucide-react'
+import { Check, Download, FileText, GraduationCap, History, Pencil, Plus, Search, ShieldAlert, ShieldCheck, Sparkles, SquareSlash, Trash2, Undo2, Upload, X } from 'lucide-react'
 import { useState } from 'react'
 import { PageHeader } from '@/components/app/page-header'
 import { PageSkeleton, QueryError } from '@/components/app/query-state'
@@ -17,7 +17,8 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { toast } from '@/components/ui/toaster'
 import { api, errorMessage, mayUse, meQuery } from '@/lib/api'
-import { applySkillChange, Arguments, dismissSkillChange, exportSkills, matchSkills, mustFill, skillsQuery, sourceLabel, undoSkillChange, variablesOf, type SkillChangeItem, type SkillItem, type SkillLibrary, type SkillParameter, type SkillSharing } from '@/lib/skills'
+import { cn } from '@/lib/utils'
+import { allowSkill, applySkillChange, Arguments, dismissSkillChange, exportSkills, matchSkills, mustFill, skillsQuery, sourceLabel, undoSkillChange, variablesOf, type SkillChangeItem, type SkillItem, type SkillLibrary, type SkillParameter, type SkillSharing } from '@/lib/skills'
 import { saveBlob } from '@/lib/zip'
 import { SkillImport } from './skills-import'
 
@@ -209,6 +210,7 @@ export function SkillsPage() {
                       onSelect={(on) => pick(p, on)}
                       onExport={(format) => download.mutate({ ids: [p.id], format })}
                       onTurn={library.data.mayTurnBuiltIn && p.source === 'builtin' ? () => turn.mutate(p) : undefined}
+                      mayAllow={library.data.mayAllow}
                       onEdit={() => setEditing(p)}
                       onDelete={async () => {
                         if (await confirm({ title: `Delete /${p.name}?`, description: p.sharing === 'Personal' ? undefined : 'Nobody it is shared with can use it any more.', confirm: 'Delete', destructive: true }))
@@ -235,6 +237,55 @@ export function SkillsPage() {
   )
 }
 
+const scanWords: Record<string, string> = { SAFE: 'Checked: safe', CAUTION: 'Checked: use with care', DO_NOT_INSTALL: 'Checked: unsafe' }
+
+/**
+ * SkillSpector's word on a skill: its risk out of 100, what it found (folded), and, found unsafe, that it is held from
+ * use until an admin lets it through (who sees Allow, and Hold again).
+ */
+function ScanLine({ skill, mayAllow }: { skill: SkillItem; mayAllow: boolean }) {
+  const queryClient = useQueryClient()
+  const scan = skill.scan!
+  const allow = useMutation({
+    mutationFn: (allowed: boolean) => allowSkill(skill.id, allowed),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: skillsQuery.queryKey }),
+    onError: (e) => toast.error(errorMessage(e)),
+  })
+  const unsafe = scan.recommendation === 'DO_NOT_INSTALL'
+  return (
+    <section aria-label="Checked by SkillSpector" className={cn('grid gap-1.5 rounded-md border px-3 py-2 text-xs', unsafe && !scan.allowed && 'border-destructive/40 bg-destructive/5')}>
+      <p className="flex flex-wrap items-center gap-2">
+        {unsafe ? <ShieldAlert className="size-3.5 text-destructive-ink" aria-hidden="true" /> : <ShieldCheck className="size-3.5 text-success-ink" aria-hidden="true" />}
+        <span className="font-medium">{scanWords[scan.recommendation ?? ''] ?? 'Checked'}</span>
+        {scan.score !== null && <Badge variant={unsafe ? 'destructive' : scan.recommendation === 'CAUTION' ? 'warning' : 'secondary'}>{scan.score}/100</Badge>}
+        {scan.stale && <span className="text-muted-foreground">changed since: checked again soon</span>}
+        {unsafe && (scan.allowed ? <span className="text-muted-foreground">let through by an admin</span> : <span className="text-destructive-ink">not used until an admin lets it through</span>)}
+        {mayAllow && unsafe && (
+          <Button size="sm" variant="outline" className="ml-auto h-7" loading={allow.isPending} onClick={() => allow.mutate(!scan.allowed)}>
+            {scan.allowed ? 'Hold again' : 'Allow'}
+          </Button>
+        )}
+      </p>
+      {scan.issues.length > 0 && (
+        <details>
+          <summary className="cursor-pointer text-muted-foreground">
+            What it found ({scan.issues.length + scan.more})
+          </summary>
+          <ul className="mt-1 grid gap-1" aria-label={`What SkillSpector found in /${skill.name}`}>
+            {scan.issues.map((i, n) => (
+              <li key={n} className="flex flex-wrap items-baseline gap-1.5">
+                {i.severity && <Badge variant="outline" className="px-1 py-0 text-[10px]">{i.severity.toLowerCase()}</Badge>}
+                <span className="[overflow-wrap:anywhere]">{i.title}</span>
+                {i.where && <span className="font-mono text-muted-foreground">{i.where}</span>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
+  )
+}
+
 function SkillCard({
   skill: p,
   history,
@@ -244,6 +295,7 @@ function SkillCard({
   onEdit,
   onDelete,
   onTurn,
+  mayAllow,
 }: {
   skill: SkillItem
   history: SkillChangeItem[]
@@ -253,6 +305,8 @@ function SkillCard({
   onEdit: () => void
   onDelete: () => void
   onTurn?: () => void
+  /** An admin's: let one found unsafe through, or hold it again. */
+  mayAllow?: boolean
 }) {
   const queryClient = useQueryClient()
   const undo = useMutation({
@@ -309,6 +363,7 @@ function SkillCard({
             ))}
           </p>
         )}
+        {p.scan && <ScanLine skill={p} mayAllow={!!mayAllow} />}
         {(p.files?.length ?? 0) > 0 && (
           <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <FileText className="size-3.5" aria-hidden="true" /> With

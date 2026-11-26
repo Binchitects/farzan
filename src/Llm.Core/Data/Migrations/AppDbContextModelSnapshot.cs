@@ -2732,6 +2732,26 @@ namespace Llm.Core.Data.Migrations
                     b.Property<bool>("Proposed")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("ScanAllowedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ScanHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ScanRecommendation")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ScanReport")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("ScanScore")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ScannedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("ServerId")
                         .HasColumnType("uuid");
 
@@ -2770,6 +2790,8 @@ namespace Llm.Core.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_skills_Name_BuiltIn")
                         .HasFilter("\"BuiltIn\"");
+
+                    b.HasIndex("ScanAllowedById");
 
                     b.HasIndex("ServerId");
 
@@ -8920,6 +8942,11 @@ namespace Llm.Core.Data.Migrations
 
             modelBuilder.Entity("Llm.Core.Chat.Skill", b =>
                 {
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("ScanAllowedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Llm.Core.Chat.McpServer", null)
                         .WithMany()
                         .HasForeignKey("ServerId")

@@ -66,11 +66,18 @@ RUN gitleaks version
 RUN pip install --no-cache-dir --only-binary=:all: bandit==1.9.4 pyyaml==6.0.3 \
  && bandit --version
 
+# SkillSpector (NVIDIA, Apache-2.0): an agent skill's instructions, scripts and dependencies checked for what a skill
+# should not do (hidden instructions, exfiltration, dangerous commands, known-vulnerable packages), as Arena's skills
+# are imported, made and changed. Static checks only at run time (--no-llm): the image reaches nothing.
+RUN pip install --no-cache-dir --only-binary=:all: skillspector==2.13.7 \
+ && skillspector --version
+
 COPY rules /opt/rules
 COPY scan.py /app/scan.py
 # The rules as the engine reads them, then the engine on their examples: the image is not built if one is wrong.
 RUN SCANNERS_RULES=/opt/rules python -I /app/scan.py --build-rules \
  && SCANNERS_RULES=/opt/rules python -I /app/scan.py --self-test \
+ && python -I /app/scan.py --skill-self-test \
  && find / -xdev -perm /6000 -type f -exec chmod a-s {} +
 
 ENV SCANNERS_PORT=7800 \

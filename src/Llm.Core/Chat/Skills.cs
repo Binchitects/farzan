@@ -59,6 +59,23 @@ public sealed class Skill
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
+    // Its check by SkillSpector (the scanners feature), each time what it says changes.
+    /// <summary>The print of what was checked (its name, words, parameters and files): a skill changed since is checked again.</summary>
+    public string? ScanHash { get; set; }
+    /// <summary>SkillSpector's risk, 0 to 100, and its word: SAFE, CAUTION or DO_NOT_INSTALL (null: not checked).</summary>
+    public int? ScanScore { get; set; }
+    public string? ScanRecommendation { get; set; }
+    /// <summary>What it found, JSON: its severity, version and issues, as the scanners answered.</summary>
+    public string? ScanReport { get; set; }
+    public DateTimeOffset? ScannedAt { get; set; }
+    /// <summary>The admin who let one found unsafe be used anyway (for what it says now: a change asks again).</summary>
+    public Guid? ScanAllowedById { get; set; }
+
+    /// <summary>Found unsafe and not let through: not offered to the model, nor used.</summary>
+    public bool Blocked => ScanRecommendation == UnsafeScan && ScanAllowedById is null;
+
+    public const string UnsafeScan = "DO_NOT_INSTALL";
+
     public const string Typed = "typed";
     public const string Learned = "learned";
 }

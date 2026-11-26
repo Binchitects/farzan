@@ -33,6 +33,9 @@ public static partial class SkillEndpoints
         g.MapPut("/{id:guid}", UpdateAsync);
         g.MapDelete("/{id:guid}", DeleteAsync);
         g.MapPut("/{id:guid}/off", OffAsync);
+        // One SkillSpector found unsafe, let through by an admin (or held again); and checked again now.
+        g.MapPut("/{id:guid}/allowed", AllowAsync).RequirePermission(Llm.Core.Access.Permissions.SkillsCompany);
+        g.MapPost("/{id:guid}/check", CheckAsync);
         // As files (Claude Code's SKILL.md folders): exported one or many, imported with a preview first.
         g.MapGet("/export", ExportAsync);
         g.MapPost("/import/preview", ImportPreviewAsync).RequirePermission(Llm.Core.Access.Permissions.SkillsCreate).DisableAntiforgery();
@@ -77,7 +80,9 @@ public static partial class SkillEndpoints
     {
         var who = await ViewerAsync(me, access, db, ct);
         // One learned and not kept yet is not used (the person keeps it on the Skills page).
-        return [.. (await db.Skills.AsNoTracking().Where(x => !x.Off && !x.Proposed && (x.UserId == me.Id || x.UserId == null || x.Sharing == SkillSharing.Groups)).ToListAsync(ct))
+        // One SkillSpector found unsafe is not used until an admin lets it through.
+        return [.. (await db.Skills.AsNoTracking().Where(x => !x.Off && !x.Proposed && !(x.ScanRecommendation == Skill.UnsafeScan && x.ScanAllowedById == null)
+                && (x.UserId == me.Id || x.UserId == null || x.Sharing == SkillSharing.Groups)).ToListAsync(ct))
             .Where(who.Sees).OrderBy(x => Rank(x, me.Id)).ThenBy(x => x.Name, StringComparer.Ordinal)];
     }
 
@@ -118,7 +123,7 @@ public static partial class SkillEndpoints
     internal static async Task<Skill?> FindAsync(AppUser me, string name, AccessService access, AppDbContext db, CancellationToken ct) =>
         (await UsableAsync(me, access, db, ct)).FirstOrDefault(s => string.Equals(s.Name, name.Trim().TrimStart('/'), StringComparison.OrdinalIgnoreCase));
 
-    private static async Task<IResult> ListAsync(ClaimsPrincipal p, UserManager<AppUser> users, AccessService access, AppDbContext db, CancellationToken ct)
+    private static async Task<IResult> ListAsync(ClaimsPrincipal p, UserManager<AppUser> users, AccessService access, AppDbContext db, SkillScans scans, CancellationToken ct)
     {
         var who = await ViewerAsync(p, users, access, db, ct);
         var me = who.Me.Id;
@@ -149,8 +154,52 @@ public static partial class SkillEndpoints
                 source = Source(x, me),
                 from = x.ServerId is { } s ? plugins.GetValueOrDefault(s) : x.UserId is { } o && o != me ? owners.GetValueOrDefault(o) : null,
                 canEdit = who.Edits(x), x.UpdatedAt, x.Proposed, x.Version, learned = x.Source == Skill.Learned,
+                scan = SkillScanWords.Shown(x),
             }),
+            // Whether skills are checked here (the scanners feature), and whether this person may let one found unsafe through.
+            scanning = scans.On, mayAllow = who.Member.Has(Core.Access.Permissions.SkillsCompany),
         });
+    }
+
+    public sealed record SkillAllowed(bool Allowed);
+
+    /// <summary>An admin lets a skill SkillSpector found unsafe be used (for what it says now: a change holds it again), or holds it again. Audited.</summary>
+    private static async Task<IResult> AllowAsync(Guid id, SkillAllowed body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, Audit audit, CancellationToken ct)
+    {
+        if (await db.Skills.SingleOrDefaultAsync(x => x.Id == id, ct) is not { } skill)
+        {
+            return Results.NotFound();
+        }
+        if (skill.ScanRecommendation != Skill.UnsafeScan)
+        {
+            return AuthEndpoints.Problem(409, "scan", "SkillSpector did not find it unsafe: there is nothing to let through.");
+        }
+        var me = (await users.GetUserAsync(p))!;
+        skill.ScanAllowedById = body.Allowed ? me.Id : null;
+        await db.SaveChangesAsync(ct);
+        await audit.WriteAsync(body.Allowed ? "skill.unsafe.allowed" : "skill.unsafe.held", "/" + skill.Name, detail: $"SkillSpector {skill.ScanScore}/100");
+        return Results.NoContent();
+    }
+
+    /// <summary>A skill the person may see checked by SkillSpector now: what it found.</summary>
+    private static async Task<IResult> CheckAsync(Guid id, ClaimsPrincipal p, UserManager<AppUser> users, AccessService access, AppDbContext db, SkillScans scans, CancellationToken ct)
+    {
+        var who = await ViewerAsync(p, users, access, db, ct);
+        if (await db.Skills.SingleOrDefaultAsync(x => x.Id == id, ct) is not { } skill || !who.Sees(skill))
+        {
+            return Results.NotFound();
+        }
+        if (!scans.On)
+        {
+            return AuthEndpoints.Problem(503, "scanners", "Skills are not checked here: the scanners feature is off.");
+        }
+        if (await scans.ScanAsync(skill, ct) is not { } scan)
+        {
+            return AuthEndpoints.Problem(503, "scanners", "SkillSpector did not answer: try again in a moment.");
+        }
+        scans.Keep(skill, scan);
+        await db.SaveChangesAsync(ct);
+        return Results.Ok(SkillScanWords.Shown(skill));
     }
 
     private static string Source(Skill p, Guid me) =>

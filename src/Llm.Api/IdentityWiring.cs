@@ -350,6 +350,11 @@ public static class IdentityWiring
         services.AddScoped<Decks.DeckMaker>();
         services.AddScoped<Decks.SlideCanvases>();
         // Automations: its runs (a singleton that runs them in the background, and its schedules), and the step runner.
+        // SkillSpector's checks of the skills, through the scanners (Skills:ScannerUrl; none, none checked).
+        services.Configure<Chat.SkillScanOptions>(config.GetSection("Skills"));
+        services.AddHttpClient(Chat.SkillScans.Client, c => c.Timeout = TimeSpan.FromMinutes(3));
+        services.AddSingleton<Chat.SkillScans>();
+        services.AddHostedService(sp => sp.GetRequiredService<Chat.SkillScans>());
         services.AddSingleton<Studio.StudioRuns>();
         if (Operations.Features.On(config, "agents"))
         {

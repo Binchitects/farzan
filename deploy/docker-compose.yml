@@ -98,6 +98,8 @@ services:
       Auth__HttpsPort: ${HTTPS_PORT:-443}
       Auth__AdminEmail: ${ADMIN_EMAIL:-admin@example.com}
       Auth__AdminPassword: ${ADMIN_PASSWORD:-}
+      # SkillSpector's checks of the skills, in the scanners (the scanners feature; off, they do not answer and skills say so).
+      Skills__ScannerUrl: http://scanners:7800
       Auth__DataKey: ${APP_KEY:?set APP_KEY in .env}
       # Postgres: this stack's, or an external one (DB_HOST and the rest in .env).
       Database__Host: ${DB_HOST:-postgres}
@@ -155,8 +157,8 @@ services:
         target: /backups
         read_only: true
         bind: { create_host_path: true }
-    # The stack's network, Laya's and the browser's, which lead nowhere else.
-    networks: [default, laya, browsing, studio]
+    # The stack's network, Laya's, the browser's and the scanners' (for SkillSpector's checks of skills), which lead nowhere else.
+    networks: [default, laya, browsing, studio, scanning]
     # Not required: with an external Postgres this stack's is left out.
     depends_on: { postgres: { condition: service_healthy, required: false } }
 
@@ -422,7 +424,7 @@ services:
       # Built knowledge packs to load (Admin -> Packs): the repository's packs/, or CODE_INTEL_PACK_LIBRARY_DIR.
       - ${CODE_INTEL_PACK_LIBRARY_DIR:-../packs}:/pack-library:ro
       - directory:/directory:ro
-    # It alone reaches the scanners.
+    # It and the app reach the scanners.
     networks: [default, scanning]
     # A GitLab on this machine.
     extra_hosts: ["host.docker.internal:host-gateway"]
@@ -596,8 +598,9 @@ services:
     cpus: 4
 
   # The security scanners: opengrep with Arena's own rules, Bandit, gitleaks and Trivy's configuration checks, run on
-  # a commit code-intel sends (a security review's). Off unless COMPOSE_PROFILES names scanners. Its network is code-intel's
-  # alone and leads nowhere: the scanners fetch nothing, and nothing they are sent is run. A read-only root, nobody's
+  # a commit code-intel sends (a security review's), and SkillSpector on a skill the app sends. Off unless COMPOSE_PROFILES
+  # names scanners. Its network is code-intel's and the app's and leads nowhere: the scanners fetch nothing, and nothing
+  # they are sent is run. A read-only root, nobody's
   # user, and each scan's files in memory, gone when it ends.
   scanners:
     <<: *service

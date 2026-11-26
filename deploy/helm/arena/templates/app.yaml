@@ -29,6 +29,10 @@ spec:
             - { name: Auth__Domain, value: {{ .Values.domain | quote }} }
             - { name: Auth__HttpsPort, value: "443" }
             - { name: Auth__AdminEmail, value: {{ .Values.adminEmail | quote }} }
+            {{- if .Values.scanners.enabled }}
+            # SkillSpector's checks of the skills, in the scanners.
+            - { name: Skills__ScannerUrl, value: "http://scanners:7800" }
+            {{- end }}
             {{- include "arena.secretEnv" (list $ "Auth__AdminPassword" "ADMIN_PASSWORD") | nindent 12 }}
             {{- include "arena.secretEnv" (list $ "Auth__DataKey" "APP_KEY") | nindent 12 }}
             - { name: Database__Host, value: {{ include "arena.dbHost" . | quote }} }
