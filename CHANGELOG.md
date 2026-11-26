@@ -18,8 +18,8 @@ Sections used:
 ## v8.2.4 (2026-11-26)
 
 The chat's tools are easier to call from code, an answer that ends without a
-word after its tools is asked again, and the browser tests pass on the live
-stack.
+word after its tools is asked again, and the browser tests read the pages as
+they are now.
 
 ### :bug: Bugs fixed
 
