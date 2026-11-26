@@ -221,6 +221,16 @@ export const topics = {
     manual: { doc: 'chat', section: 'apps' },
   },
 
+  'plugin-page': {
+    title: 'A plugin\'s page',
+    about: 'A page a plugin adds to Arena, in a frame of its own: it reaches Arena only through this page, as you, with only what an admin granted it, and it cannot read your other pages, your session or the network.',
+    parts: [
+      { name: 'Its frame', text: 'The plugin\'s own page. When it does not start or misbehaves, a card says it is not working, with **Try again**; the rest of Arena goes on.' },
+      { name: 'Dev', text: 'A dev install: a plugin its developer is making, seen only by them.' },
+    ],
+    tasks: [{ title: 'Find what a plugin may reach', steps: ['An admin opens **Admin → Plugins**, the plugin\'s card, **What it may reach**.'] }],
+  },
+
   wiki: {
     title: 'Wiki',
     about: 'The company\'s documents, code and data, searched and read directly, with no model: only what you may read.',
