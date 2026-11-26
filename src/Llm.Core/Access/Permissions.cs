@@ -102,6 +102,10 @@ public static class Permissions
     public const string PluginsInstall = "plugins.install";
     public const string PluginsConfigure = "plugins.configure";
     public const string PluginsRemove = "plugins.remove";
+    /// <summary>Grant and take back what a plugin asks for (its host API scopes and hosts), and trust publishers' keys.</summary>
+    public const string PluginsGrant = "plugins.grant";
+    /// <summary>Turn a plugin on and off (and on again after it turned itself off).</summary>
+    public const string PluginsEnable = "plugins.enable";
     public const string KnowledgeRead = "knowledge.read";
     public const string KnowledgeAdd = "knowledge.add";
     public const string KnowledgeEdit = "knowledge.edit";
@@ -172,6 +176,8 @@ public static class Permissions
     public const string AppsShare = "feature.apps.share";
     public const string ProjectsCreate = "feature.projects";
     public const string ProjectsGlobal = "feature.projects.global";
+    /// <summary>Push a plugin one is making to this Arena as a dev install only they see (arena-plugin dev).</summary>
+    public const string PluginsDevelop = "feature.plugins.develop";
 
     public static readonly IReadOnlyList<PermissionInfo> All =
     [
@@ -263,6 +269,8 @@ public static class Permissions
         new(PluginsInstall, "Models, tools and knowledge", "Install and update plugins.", true, PluginsManage),
         new(PluginsConfigure, "Models, tools and knowledge", "Set plugins' settings and who may use them.", true, PluginsManage),
         new(PluginsRemove, "Models, tools and knowledge", "Remove plugins.", true, PluginsManage),
+        new(PluginsGrant, "Models, tools and knowledge", "Grant plugins what they ask for (Arena's data, hosts on the internet), take it back, and trust publishers' keys.", true, PluginsManage),
+        new(PluginsEnable, "Models, tools and knowledge", "Turn plugins on and off, and on again after one turned itself off.", true, PluginsManage),
         new(KnowledgeRead, "Models, tools and knowledge", "See the knowledge sources and their documents.", true, KnowledgeManage),
         new(KnowledgeAdd, "Models, tools and knowledge", "Add knowledge sources.", true, KnowledgeManage),
         new(KnowledgeEdit, "Models, tools and knowledge", "Change knowledge sources and who may read them.", true, KnowledgeManage),
@@ -332,6 +340,7 @@ public static class Permissions
         new(AppsShare, "Sharing and rooms", "Open their apps to groups or everyone.", false),
         new(ProjectsCreate, "Sharing and rooms", "Make projects, and be their owner.", false),
         new(ProjectsGlobal, "Sharing and rooms", "Make global projects, which everyone sees and may add to.", false),
+        new(PluginsDevelop, "Build", "Push a plugin they are making as a dev install only they see and use (arena-plugin dev), where the company allows it.", false),
     ];
 
     private static readonly Dictionary<string, PermissionInfo> ByKey = All.ToDictionary(p => p.Key, StringComparer.Ordinal);

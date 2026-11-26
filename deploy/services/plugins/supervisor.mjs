@@ -15,7 +15,9 @@
 //     waiting longer each time it crashes again soon (at most a minute).
 //
 // The app's socket (one connection a replica), a JSON message a line:
-//   app -> here  {type: "start", plugin, version, source, entry, limits, init}   start (or restart) a worker
+//   app -> here  {type: "start", plugin, version, files, entry, limits, init}    start (or restart) a worker: files are the
+//                                                                              package's (path -> base64), checked by the app
+//                                                                              already; written under packages/, root's only
 //                {type: "stop", plugin}
 //                {type: "call", id, plugin, method, params, timeoutMs, token}   a call to the worker
 //                {type: "host.result", hid, result | error}                    the answer to a host API call
@@ -137,6 +139,34 @@ function readProc(pid) {
   } catch {
     return null
   }
+}
+
+/** A path a package may hold: relative, forward slashes, no "." or "..", no empty parts. */
+function safePath(name) {
+  return typeof name === 'string' && name.length > 0 && name.length <= 512 && !name.startsWith('/') && !name.includes('\\') && !/[\u0000-\u001f]/.test(name)
+    && name.split('/').every((p) => p !== '' && p !== '.' && p !== '..')
+}
+
+/** The package's files written under packages/<plugin>/<version>/ (root's, 0700): the copy each worker's code is made from. */
+function writePackage(plugin, version, files) {
+  const dir = path.join(ROOT, 'packages', plugin, version)
+  const tmp = `${dir}.tmp-${process.pid}-${Date.now()}`
+  let total = 0
+  fs.rmSync(tmp, { recursive: true, force: true })
+  fs.mkdirSync(tmp, { recursive: true, mode: 0o700 })
+  for (const [name, b64] of Object.entries(files)) {
+    if (!safePath(name)) throw new Error(`${name} is not a path a package may hold`)
+    const data = Buffer.from(String(b64), 'base64')
+    total += data.length
+    if (total > 64 * 1024 * 1024) throw new Error('the package is larger than 64 MB')
+    const file = path.join(tmp, name)
+    fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 })
+    fs.writeFileSync(file, data, { mode: 0o600 })
+  }
+  fs.rmSync(dir, { recursive: true, force: true })
+  fs.mkdirSync(path.dirname(dir), { recursive: true, mode: 0o700 })
+  fs.renameSync(tmp, dir)
+  return dir
 }
 
 // ---- a line-delimited JSON channel --------------------------------------------------------------------------------
@@ -436,10 +466,18 @@ function broadcast(m) {
 async function fromApp(app, m) {
   switch (m.type) {
     case 'start': {
-      if (!validName(m.plugin)) return app.send({ type: 'result', id: m.id, error: { code: -32602, message: 'not a plugin name', kind: 'error' } })
-      const source = path.resolve(String(m.source ?? ''))
-      if (!source.startsWith(path.join(ROOT, 'packages') + '/') || typeof m.entry !== 'string' || m.entry.includes('..') || m.entry.startsWith('/')) {
-        return app.send({ type: 'result', id: m.id, error: { code: -32602, message: 'the package must be under packages/ and its entry inside it', kind: 'error' } })
+      if (!validName(m.plugin) || !/^[0-9A-Za-z.+-]{1,64}$/.test(String(m.version ?? ''))) {
+        return app.send({ type: 'result', id: m.id, error: { code: -32602, message: 'not a plugin name and version', kind: 'error' } })
+      }
+      if (typeof m.entry !== 'string' || !safePath(m.entry) || typeof m.files !== 'object' || m.files === null || !(m.entry in m.files)) {
+        return app.send({ type: 'result', id: m.id, error: { code: -32602, message: 'the package\'s files, with its entry among them, are needed', kind: 'error' } })
+      }
+      let source
+      try {
+        source = writePackage(m.plugin, String(m.version), m.files)
+        delete m.files
+      } catch (e) {
+        return app.send({ type: 'result', id: m.id, error: { code: -32602, message: e.message, kind: 'error' } })
       }
       let p = plugins.get(m.plugin)
       if (p) {
@@ -520,13 +558,13 @@ function accept(socket) {
 loadUids()
 fs.mkdirSync(WORK, { recursive: true })
 fs.chmodSync(WORK, 0o711)
-// The packages: the app's (it writes them), readable by root here; no worker may list or read them.
+// The packages: written here from what the app sends, root's only; no worker may list or read them.
 const packagesDir = path.join(ROOT, 'packages')
-fs.mkdirSync(packagesDir, { recursive: true })
+fs.mkdirSync(packagesDir, { recursive: true, mode: 0o700 })
 if (AS_ROOT) {
-  fs.chownSync(packagesDir, SOCKET_GID, SOCKET_GID)
-  fs.chmodSync(packagesDir, 0o700)
+  fs.chownSync(packagesDir, 0, 0)
 }
+fs.chmodSync(packagesDir, 0o700)
 const server = net.createServer(accept)
 if (LISTEN.startsWith('unix:')) {
   const file = LISTEN.slice('unix:'.length)

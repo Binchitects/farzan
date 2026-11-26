@@ -397,6 +397,14 @@ public static class IdentityWiring
         services.AddSingleton<Schedules.GitLabBot>();
         services.AddHttpClient(Schedules.GitLabBot.Client, c => c.Timeout = TimeSpan.FromSeconds(30));
         services.AddSingleton<Plugins.PluginCatalog>();
+        // Plugins with code (v3): the runtime's connection, the gate every call into a plugin goes through (its breaker),
+        // the host API that answers plugins, their events and their jobs.
+        services.Configure<Plugins.PluginRuntimeOptions>(config.GetSection("PluginRuntime"));
+        services.AddSingleton<Plugins.PluginRuntime>();
+        services.AddSingleton<Plugins.PluginCalls>();
+        services.AddScoped<Plugins.PluginHost>();
+        services.AddScoped<Plugins.PluginEvents>();
+        services.AddHostedService<Plugins.PluginWork>();
         services.AddScoped<Plugins.PersonCredentials>();
         services.AddHttpClient(Plugins.PluginCatalog.Client, c => c.Timeout = TimeSpan.FromSeconds(60));
         services.AddSingleton<Chat.Tools.WebResolver>();
@@ -712,6 +720,8 @@ public static class IdentityWiring
         Chat.Tools.ToolEndpoints.MapTools(app);
         Chat.Tools.ToolCustomizationEndpoints.MapToolCustomization(app);
         Plugins.PluginEndpoints.MapPlugins(app);
+        Plugins.PluginAdminEndpoints.MapPluginAdmin(app);
+        Plugins.PluginFrontEndpoints.MapPluginFront(app);
         ArenaMcp.McpEndpoints.MapArenaMcp(app);
         Knowledge.KnowledgeEndpoints.MapKnowledge(app);
         Wiki.WikiEndpoints.MapWiki(app);

@@ -142,7 +142,7 @@ services:
       - vllm-status:/vllm-status:ro
       - directory:/directory
       - sandbox:/sandbox
-      # The plugin runtime's: the packages the app unpacks there (verified first) and the runtime's socket.
+      # The plugin runtime's socket (run/host.sock); the runtime keeps everything else there to itself.
       - plugin-runtime:/plugin-runtime
       - blender:/blender
       - lean:/lean

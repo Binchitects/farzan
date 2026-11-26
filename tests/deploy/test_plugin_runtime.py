@@ -9,6 +9,7 @@ Needs Docker and the node:22-alpine image (the runtime's base, in the offline bu
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -133,7 +134,9 @@ class Runtime:
         return self.read(lambda r: r.get("type") in ("result", "status") and r.get("id") == m["id"], timeout)
 
     def start_plugin(self, name: str, **limits) -> dict:
-        return self.request({"type": "start", "plugin": name, "version": "1", "source": f"/plugin-runtime/packages/{name}/1",
+        with zipfile.ZipFile(FIXTURES / f"{name}.fap") as z:
+            files = {i.filename: base64.b64encode(z.read(i)).decode() for i in z.infolist() if not i.filename.startswith("META-INF/")}
+        return self.request({"type": "start", "plugin": name, "version": "1", "files": files,
                              "entry": "server/index.js", "limits": {"timeoutMs": 2000, "busyMs": 4000, **limits},
                              "init": {"hostApi": 1, "arena": {"version": "8.3.0"}, "plugin": {"name": name, "version": "1"},
                                       "settings": {}, "scopes": ["storage"], "network": []}})
@@ -156,13 +159,6 @@ class PluginRuntimeTests(unittest.TestCase):
     def setUpClass(cls):
         docker("build", "--pull=false", "-t", IMAGE, str(SERVICE), timeout=600)
         cls.tmp = Path(tempfile.mkdtemp(prefix="arena-plugin-runtime-"))
-        for name in ("hello", "chaos"):
-            dest = cls.tmp / "packages" / name / "1"
-            dest.mkdir(parents=True)
-            with zipfile.ZipFile(FIXTURES / f"{name}.fap") as z:
-                for info in z.infolist():
-                    if not info.filename.startswith("META-INF/"):
-                        z.extract(info, dest)
         cls.rt = Runtime(cls.tmp)
         cls.rt.start()
         assert "result" in cls.rt.start_plugin("hello"), "hello starts"
@@ -276,12 +272,14 @@ class PluginRuntimeTests(unittest.TestCase):
         self.assertEqual(kinds.count("timeout"), 16)
         self.assert_unharmed()
 
-    def test_a_package_from_outside_its_folder_is_never_started(self):
-        r = self.rt.request({"type": "start", "plugin": "evil", "version": "1", "source": "/etc", "entry": "passwd", "limits": {}, "init": {}})
-        self.assertIn("packages/", r["error"]["message"])
-        r = self.rt.request({"type": "start", "plugin": "evil", "version": "1", "source": "/plugin-runtime/packages/hello/1",
-                             "entry": "../../../../etc/passwd", "limits": {}, "init": {}})
-        self.assertIn("error", r)
+    def test_a_package_whose_files_leave_its_folder_is_never_started(self):
+        for files, entry in (({"../../etc/cron.d/x": "eA=="}, "../../etc/cron.d/x"), ({"server/index.js": "eA=="}, "/etc/passwd"),
+                             ({"a/./b.js": "eA=="}, "a/./b.js"), ({"server/index.js": "eA=="}, "server/other.js")):
+            with self.subTest(entry=entry):
+                r = self.rt.request({"type": "start", "plugin": "evil", "version": "1", "files": files, "entry": entry, "limits": {}, "init": {}})
+                self.assertIn("error", r)
+        r = self.rt.request({"type": "start", "plugin": "../evil", "version": "1", "files": {"a.js": "eA=="}, "entry": "a.js", "limits": {}, "init": {}})
+        self.assertIn("not a plugin name", r["error"]["message"])
 
     def test_zz_a_worker_that_crashes_again_and_again_waits_longer_each_time(self):
         for _ in range(3):

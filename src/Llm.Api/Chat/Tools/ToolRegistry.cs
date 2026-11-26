@@ -151,7 +151,7 @@ public sealed class ToolRegistry(
     AppDbContext db, CodeIntelTool codeIntel, ImageTool image, VectorTool vector, VideoTool video, SpeechTool speech, CalculatorTool calculator, TimeTool time, FilesTool files, CanvasTool canvas, PythonTool python, WebTool web, AskTool ask, AgentsTool agents, MemoryTool memory, SkillTool skills,
     IHttpClientFactory http, IOptions<AuthOptions> auth, IOptionsMonitor<ChatOptions> chat, Plugins.PersonCredentials people, Knowledge.KnowledgeTool knowledge, LayaTool laya,
     ResearchTool research, BlenderTool blender, Browser.BrowserTool browser, DataTool data, Plans.PlansTool plans, Code.ReviewTool reviews, GatewayChat gateway, ToolUsage usage, CodeTool code, Lab.LabTool lab, Lab.ChemistryTool chemistry, Lab.BiologyTool biology, Lab.QuantumTool quantum, Lab.ProofTool proofs,
-    SandboxClient sandbox, IServiceScopeFactory scopes, IOptionsMonitor<SandboxOptions> sandboxOptions)
+    SandboxClient sandbox, IServiceScopeFactory scopes, IOptionsMonitor<SandboxOptions> sandboxOptions, Plugins.PluginCalls pluginCalls, Plugins.PluginRuntime pluginRuntime)
 {
     public const string McpClient = "mcp";
 
@@ -175,7 +175,8 @@ public sealed class ToolRegistry(
 
     /// <param name="client">The connection to use: a test's, with the form's certificate check.</param>
     public IServerTool Server(McpServer server, HttpClient client) =>
-        server.Url.StartsWith(Plugins.PluginManifest.SandboxScheme, StringComparison.Ordinal) ? new SandboxServerTool(server, sandbox, scopes, auth.Value.DataKey, sandboxOptions)
+        server.Url.StartsWith(Plugins.PluginManifest.PluginScheme, StringComparison.Ordinal) ? new Plugins.PluginServerTool(server, pluginCalls, pluginRuntime, scopes)
+        : server.Url.StartsWith(Plugins.PluginManifest.SandboxScheme, StringComparison.Ordinal) ? new SandboxServerTool(server, sandbox, scopes, auth.Value.DataKey, sandboxOptions)
         : server.Spec is { Length: > 0 }
         ? new OpenApiTool(server, client, auth.Value.DataKey, chat.CurrentValue.ToolCallTimeout) { People = people }
         : new McpServerTool(server, client, auth.Value.DataKey, chat.CurrentValue.ToolCallTimeout) { People = people };

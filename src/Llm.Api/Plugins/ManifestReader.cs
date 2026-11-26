@@ -383,8 +383,8 @@ internal sealed partial class ManifestReader(JsonObject doc)
             throw Fail("manifest.empty", "The plugin brings nothing: no server, tools, UI, skills, assistants or tasks.");
         }
 
-        // Where its tools are: its server code (plugin:), the sandbox's (sandbox:), or an address (an API's or an MCP server's).
-        var address = server is not null ? PluginScheme + name : sandbox is not null ? SandboxScheme + name : url ?? mcp ?? "";
+        // Where its tools are: its server code, or none but its pages and content (plugin:), the sandbox's (sandbox:), or an address.
+        var address = server is not null || (openapi is null && mcp is null && sandbox is null) ? PluginScheme + name : sandbox is not null ? SandboxScheme + name : url ?? mcp ?? "";
         return new PluginManifest(name, version, Str(doc["title"]) ?? name, Str(doc["description"]) ?? "",
             openapi, mcp, address, person, Str(auth["header"]) ?? "Authorization", Str(auth["value"]) ?? "Bearer {token}", oauth, Str(auth["help"]),
             Strings(doc["writes"], "writes"), [.. settings])

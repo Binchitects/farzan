@@ -15,6 +15,10 @@ public sealed class PluginOptions
     public string? CatalogUrl { get; set; }
     /// <summary>The catalog publisher's public key (PEM, ECDSA P-256): when set, index.json.sig must verify against it.</summary>
     public string? CatalogKey { get; set; }
+    /// <summary>Plugins with code or pages may install unsigned (or signed by a key not trusted here): for a test Arena, never a company's.</summary>
+    public bool AllowUnsigned { get; set; }
+    /// <summary>Developers may make dev installs of their own (arena-plugin dev), with plugins.develop.</summary>
+    public bool DevInstalls { get; set; }
 }
 
 /// <summary>An assistant a plugin brings (assistants/*.yaml): for everyone, with the plugin's tool among its own.</summary>
@@ -62,7 +66,7 @@ public sealed record CatalogEntry(string Name, string Version, string Title, str
 public sealed class PluginCatalog(IOptionsMonitor<PluginOptions> options, IHttpClientFactory http)
 {
     public const string Client = "plugins";
-    private const long MaxZipBytes = 10 * 1024 * 1024;
+    public const long MaxZipBytes = 10 * 1024 * 1024;
 
     public sealed class PluginException(string message, string code = "plugin") : Exception(message)
     {
