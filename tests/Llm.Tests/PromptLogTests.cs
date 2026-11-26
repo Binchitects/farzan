@@ -47,6 +47,55 @@ public sealed class PromptLogTests(AppFixture app)
 
     [Fact]
     [Trait("Control", "DAT-08")]
+    public async Task A_report_is_written_on_the_filtered_log_with_the_model_chosen_for_reviewers_only_and_audited()
+    {
+        await using var f = app.Create(app.ConnectionStringFor("promptrep_" + Guid.NewGuid().ToString("N")[..8]), new FakeGateway());
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        var name = "rp" + Guid.NewGuid().ToString("N")[..8];
+        var made = await admin.JsonAsync(await admin.PostAsync("/api/admin/people", new { userName = name, email = $"{name}@example.test" }));
+        var other = "ro" + Guid.NewGuid().ToString("N")[..8];
+        var otherMade = await admin.JsonAsync(await admin.PostAsync("/api/admin/people", new { userName = other, email = $"{other}@example.test" }));
+        await AskAsync(f, made.GetProperty("apiKey").GetString()!, "How do I sort a list in Python?");
+        await AskAsync(f, made.GetProperty("apiKey").GetString()!, "fix it");
+        await AskAsync(f, otherMade.GetProperty("apiKey").GetString()!, "What is the capital of France?");
+        await f.Services.GetRequiredService<PromptLogWriter>().FlushAsync();
+        for (var waited = 0; waited < 10_000 && (await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts?person={name}"))).GetProperty("items").GetArrayLength() < 2; waited += 50)
+        {
+            await Task.Delay(50);
+        }
+
+        // On one person's lines only: the report's events end with the report, which counts their two lines.
+        var res = await admin.PostAsync("/api/admin/prompts/write", new { ask = "How good are these prompts?", person = name, model = "Qwen3.8-Flash-Next" });
+        await StatusAssert.Is(HttpStatusCode.OK, res);
+        var events = (await res.Content.ReadAsStringAsync()).Split("\n\n", StringSplitOptions.RemoveEmptyEntries).Select(l => JsonDocument.Parse(l[6..]).RootElement).ToList();
+        var report = events.Last();
+        Assert.Equal("report", report.GetProperty("type").GetString());
+        Assert.Equal(2, report.GetProperty("lines").GetInt32());
+        Assert.False(string.IsNullOrWhiteSpace(report.GetProperty("markdown").GetString()));
+        // The model was given only those lines: theirs, not the other person's.
+        var asked = string.Join("\n", app.Model.Requests.Select(r => r.Body.ToJsonString()).Where(b => b.Contains("How good are these prompts", StringComparison.Ordinal)));
+        Assert.Contains("sort a list in Python", asked, StringComparison.Ordinal);
+        Assert.DoesNotContain("capital of France", asked, StringComparison.Ordinal);
+        // Audited: who, the filters, the model; and not for someone without prompts.review.
+        var audit = (await admin.JsonAsync(await admin.GetAsync("/api/admin/audit?action=prompts.report.written"))).EnumerateArray().Single();
+        Assert.Contains($"person {name}", audit.GetProperty("detail").GetString(), StringComparison.Ordinal);
+        Assert.Contains("2 lines", audit.GetProperty("detail").GetString(), StringComparison.Ordinal);
+        var person = await new TestBrowser(f).SignedInAsync(name, made.GetProperty("password").GetString()!);
+        await StatusAssert.Is(HttpStatusCode.Forbidden, await person.PostAsync("/api/admin/prompts/write", new { ask = "Everything" }));
+    }
+
+    [Fact]
+    public void A_long_log_is_read_a_part_at_a_time_no_line_split()
+    {
+        var lines = Enumerable.Range(0, 100).Select(i => new string('x', 1000) + i).ToList();
+        var parts = Llm.Api.Quality.PromptLogReports.Parts(lines);
+        Assert.True(parts.Count > 1);
+        Assert.All(parts, p => Assert.True(p.Length <= Llm.Api.Quality.PromptLogReports.PartChars + 1100));
+        Assert.Equal(lines, parts.SelectMany(p => p.Split('\n', StringSplitOptions.RemoveEmptyEntries)));
+    }
+
+    [Fact]
+    [Trait("Control", "DAT-08")]
     public async Task A_run_is_shown_whole_each_step_with_its_new_messages_thinking_words_and_tool_calls_by_thread_for_reviewers_only()
     {
         await using var f = app.Create(app.ConnectionStringFor("promptrun_" + Guid.NewGuid().ToString("N")[..8]), new FakeGateway());

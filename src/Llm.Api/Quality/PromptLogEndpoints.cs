@@ -29,12 +29,13 @@ public static class PromptLogEndpoints
         g.MapGet("", SearchAsync);
         g.MapGet("/files/{source}/{id:guid}", FileAsync);
         g.MapPromptLogDetail();
+        g.MapPromptLogReports();
     }
 
     /// <summary>A file of a question (a picture, a document) or one its answer made (a picture, a file Python wrote), read at /files/SOURCE/ID.</summary>
-    private sealed record FileRef(Guid Id, string Name, string Kind, string ContentType, long Size);
+    internal sealed record FileRef(Guid Id, string Name, string Kind, string ContentType, long Size);
 
-    private sealed record Row(string Source, DateTimeOffset At, Guid Person, string? Model, string Question, string? Answer, Guid? Chat, string? Title, bool Deleted, int? Tokens,
+    internal sealed record Row(string Source, DateTimeOffset At, Guid Person, string? Model, string Question, string? Answer, Guid? Chat, string? Title, bool Deleted, int? Tokens,
         string State, string? Error, int? DurationMs, Guid? Id = null, Guid? Answered = null, IReadOnlyList<string>? Tags = null, string? Brief = null, Guid? Run = null)
     {
         public IReadOnlyList<FileRef> Asked { get; set; } = [];
@@ -72,13 +73,15 @@ public static class PromptLogEndpoints
 
     private static string Like(string q) => "%" + q.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal) + "%";
 
-    /// <param name="model">Answered by this model.</param>
-    /// <param name="project">In this project: a chat's, or an API step of one of its chats or sessions.</param>
-    /// <param name="tool">Its answer called this tool.</param>
-    /// <param name="run">A step of this chat or Code Arena session.</param>
-    private static async Task<IResult> SearchAsync(string? q, string? person, string? source, string? state, string? tag, DateTimeOffset? from, DateTimeOffset? to, DateTimeOffset? before,
-        string? model, Guid? project, string? tool, Guid? run, AppDbContext db, Audit audit, Chat.AnswerJobs jobs, TimeProvider clock, CancellationToken ct)
+    /// <summary>What a search asks for: the words, the person, where, the state, the tag, the time, the model, the project, the tool, the run.</summary>
+    public sealed record LogFilter(string? Q = null, string? Person = null, string? Source = null, string? State = null, string? Tag = null, DateTimeOffset? From = null,
+        DateTimeOffset? To = null, DateTimeOffset? Before = null, string? Model = null, Guid? Project = null, string? Tool = null, Guid? Run = null);
+
+    /// <summary>The newest lines that match, at most <paramref name="take"/> (the chat's and the API's, each up to it), newest first.</summary>
+    internal static async Task<(List<Row>? Rows, IResult? Problem)> FindAsync(LogFilter filter, int take, AppDbContext db, Chat.AnswerJobs jobs, TimeProvider clock, CancellationToken ct)
     {
+        var (q, person, source, state, tag, from, to, before, model, project, tool, run) =
+            (filter.Q, filter.Person, filter.Source, filter.State, filter.Tag, filter.From, filter.To, filter.Before, filter.Model, filter.Project, filter.Tool, filter.Run);
         model = model?.Trim() is { Length: > 0 } m0 ? m0 : null;
         tool = tool?.Trim() is { Length: > 0 } t0 ? t0 : null;
         source = source is "chat" or "api" ? source : "all";
@@ -92,7 +95,7 @@ public static class PromptLogEndpoints
             who = await db.Users.AsNoTracking().Where(u => u.UserName == lower || u.Email == named).Select(u => (Guid?)u.Id).FirstOrDefaultAsync(ct);
             if (who is null)
             {
-                return AuthEndpoints.Problem(404, "person", $"There is no one named {named}.");
+                return (null, AuthEndpoints.Problem(404, "person", $"There is no one named {named}."));
             }
         }
         var end = before ?? to ?? clock.GetUtcNow().AddMinutes(1);
@@ -133,7 +136,7 @@ public static class PromptLogEndpoints
             {
                 questions = questions.Where(_ => false);
             }
-            var asked = await questions.OrderByDescending(x => x.m.CreatedAt).Take(state is null ? Page : Scanned)
+            var asked = await questions.OrderByDescending(x => x.m.CreatedAt).Take(state is null ? take : Math.Max(Scanned, take))
                 .Select(x => new { x.m.Id, x.m.Content, x.m.CreatedAt, Person = x.m.AuthorId ?? x.c.UserId, Chat = x.c.Id, x.c.Title, Deleted = x.c.DeletedAt != null, x.m.AttachmentsJson, x.c.Tags, x.c.Brief })
                 .ToListAsync(ct);
             var ids = asked.Select(a => (Guid?)a.Id).ToList();
@@ -163,7 +166,7 @@ public static class PromptLogEndpoints
                 {
                     Asked = [.. Chat.ChatService.ParseIds(a.AttachmentsJson).Select(id => new FileRef(id, "", "", "", 0))],
                 });
-                if (rows.Count == Page)
+                if (rows.Count == take)
                 {
                     break;
                 }
@@ -183,10 +186,31 @@ public static class PromptLogEndpoints
             {
                 api = api.Where(p => EF.Functions.ILike(p.Prompt, Like(text), "\\") || EF.Functions.ILike(p.Answer!, Like(text), "\\"));
             }
-            rows.AddRange((await api.OrderByDescending(p => p.At).Take(Page).ToListAsync(ct)).Select(p => new Row("api", p.At, p.UserId, p.Model, Cut(p.Prompt), p.Answer is null ? null : Cut(p.Answer),
+            rows.AddRange((await api.OrderByDescending(p => p.At).Take(take).ToListAsync(ct)).Select(p => new Row("api", p.At, p.UserId, p.Model, Cut(p.Prompt), p.Answer is null ? null : Cut(p.Answer),
                 null, null, false, (p.PromptTokens ?? 0) + (p.CompletionTokens ?? 0) is > 0 and var n ? n : null, p.State, p.Error, p.DurationMs, p.Id, null, p.Tags, p.Brief, p.ChatId)));
         }
-        var page = rows.OrderByDescending(r => r.At).Take(Page).ToList();
+        return ([.. rows.OrderByDescending(r => r.At).Take(take)], null);
+    }
+
+    /// <param name="model">Answered by this model.</param>
+    /// <param name="project">In this project: a chat's, or an API step of one of its chats or sessions.</param>
+    /// <param name="tool">Its answer called this tool.</param>
+    /// <param name="run">A step of this chat or Code Arena session.</param>
+    private static async Task<IResult> SearchAsync(string? q, string? person, string? source, string? state, string? tag, DateTimeOffset? from, DateTimeOffset? to, DateTimeOffset? before,
+        string? model, Guid? project, string? tool, Guid? run, AppDbContext db, Audit audit, Chat.AnswerJobs jobs, TimeProvider clock, CancellationToken ct)
+    {
+        source = source is "chat" or "api" ? source : "all";
+        state = state is not null && States.Contains(state) ? state : null;
+        model = model?.Trim() is { Length: > 0 } m0 ? m0 : null;
+        tool = tool?.Trim() is { Length: > 0 } t0 ? t0 : null;
+        var text = q?.Trim() is { Length: > 0 } t ? t : null;
+        var tagged = Tags.Tagging.One(tag);
+        var (found, problem) = await FindAsync(new LogFilter(q, person, source, state, tag, from, to, before, model, project, tool, run), Page, db, jobs, clock, ct);
+        if (problem is not null)
+        {
+            return problem;
+        }
+        var page = found!;
         await FilesAsync(db, page, ct);
         var people = page.Select(r => r.Person).Distinct().ToList();
         var names = await db.Users.AsNoTracking().Where(u => people.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => new { u.Id, u.UserName, u.DisplayName }, ct);
