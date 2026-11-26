@@ -150,7 +150,9 @@ public static class PluginFrontEndpoints
         h.ContentSecurityPolicy = FrameCsp;
         h.XFrameOptions = "SAMEORIGIN";
         h.CacheControl = "private, max-age=3600";
-        h["Cross-Origin-Resource-Policy"] = "same-origin";
+        // Its own frame has an opaque origin, never the same as Arena's: same-origin would block the frame's own scripts. The key in
+        // the address keeps other sites out, and nothing here is a secret (the plugin's UI code).
+        h["Cross-Origin-Resource-Policy"] = "cross-origin";
         return Results.Bytes(data, Types.GetValueOrDefault(Path.GetExtension(path)) ?? "application/octet-stream");
     }
 

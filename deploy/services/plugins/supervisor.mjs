@@ -40,7 +40,8 @@ import path from 'node:path'
 
 const env = process.env
 const LISTEN = env.PLUGINS_LISTEN ?? 'unix:/plugin-runtime/run/host.sock'
-const KEY = env.PLUGINS_KEY ?? ''
+// The key for tcp: from a file (PLUGINS_KEY_FILE, a secret mounted read-only) or the environment.
+const KEY = (env.PLUGINS_KEY_FILE ? fs.readFileSync(env.PLUGINS_KEY_FILE, 'utf8') : env.PLUGINS_KEY ?? '').trim()
 const ROOT = env.PLUGINS_ROOT ?? '/plugin-runtime'
 const WORK = env.PLUGINS_WORK ?? '/work'
 const FIRST_UID = Number(env.PLUGINS_FIRST_UID ?? 40000)
