@@ -144,6 +144,13 @@ public sealed class PromptLogTests(AppFixture app)
         Assert.Equal(0.2, first.GetProperty("settings").GetProperty("temperature").GetDouble());
         var made1 = Assert.Single(first.GetProperty("answer").GetProperty("toolCalls").EnumerateArray());
         Assert.Equal(("read_file", """{"path":"src/a.cs"}"""), (made1.GetProperty("name").GetString(), made1.GetProperty("arguments").GetString()));
+        // And what the tool gave back, beside the call: the thread's next step carried it.
+        Assert.Equal("class A { int x = ; }", made1.GetProperty("result").GetString());
+        // The run lists each step's calls with their arguments and results; a step that called nothing has none.
+        var runCall = Assert.Single(steps[0].GetProperty("calls").EnumerateArray());
+        Assert.Equal(("read_file", """{"path":"src/a.cs"}""", "class A { int x = ; }"),
+            (runCall.GetProperty("name").GetString(), runCall.GetProperty("arguments").GetString(), runCall.GetProperty("result").GetString()));
+        Assert.Equal(JsonValueKind.Null, steps[2].GetProperty("calls").ValueKind);
         // The second: only what is new (the call and the tool's result), not the whole history again.
         var second = await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts/api/{steps[1].GetProperty("id").GetGuid()}/detail"));
         Assert.Equal((2, 4), (second.GetProperty("from").GetInt32(), second.GetProperty("total").GetInt32()));
@@ -151,6 +158,7 @@ public sealed class PromptLogTests(AppFixture app)
         Assert.Equal(["assistant", "tool"], news.Select(m => m.GetProperty("role").GetString()));
         Assert.Equal("class A { int x = ; }", news[1].GetProperty("content").GetString());
         Assert.Equal("read_file", news[0].GetProperty("toolCalls")[0].GetProperty("name").GetString());
+        Assert.Equal("class A { int x = ; }", news[0].GetProperty("toolCalls")[0].GetProperty("result").GetString());
         Assert.False(string.IsNullOrEmpty(second.GetProperty("answer").GetProperty("content").GetString()));
 
         // A chat question's answer round by round: its tool call and the tool's result.
@@ -162,6 +170,9 @@ public sealed class PromptLogTests(AppFixture app)
         Assert.Contains(rounds, r => r.GetProperty("role").GetString() == "assistant" && r.GetProperty("toolCalls").ValueKind == JsonValueKind.Array
             && r.GetProperty("toolCalls")[0].GetProperty("name").GetString() == "calculate");
         Assert.Contains(rounds, r => r.GetProperty("role").GetString() == "tool" && r.GetProperty("tool").GetString() == "calculate");
+        // The call carries what the tool gave back.
+        var calc = rounds.First(r => r.GetProperty("toolCalls").ValueKind == JsonValueKind.Array).GetProperty("toolCalls")[0];
+        Assert.Equal(rounds.First(r => r.GetProperty("role").GetString() == "tool").GetProperty("content").GetString(), calc.GetProperty("result").GetString());
 
         // Reviewers only, and each look audited.
         await StatusAssert.Is(HttpStatusCode.Forbidden, await person.GetAsync($"/api/admin/prompts/runs/{chat}"));
