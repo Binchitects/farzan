@@ -301,6 +301,19 @@ public sealed class PluginRuntimeTests(AppFixture app, PluginRuntimeFixture runt
     }
 
     [Fact]
+    public async Task The_same_plugin_installed_twice_at_once_is_installed_once_and_the_other_is_told_so()
+    {
+        await using var f = NewApp();
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        await TrustAsync(admin);
+        var zip = Fap("hello");
+        var both = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => admin.PostAsync("/api/admin/plugins/install", new { zip, accept = true })));
+        Assert.Equal([HttpStatusCode.Created, HttpStatusCode.Conflict, HttpStatusCode.Conflict, HttpStatusCode.Conflict], both.Select(r => r.StatusCode).Order());
+        await using var scope = f.Services.CreateAsyncScope();
+        Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<AppDbContext>().McpServers.CountAsync(s => s.Plugin == "hello"));
+    }
+
+    [Fact]
     public async Task A_person_made_is_announced_to_the_plugins_allowed_to_them()
     {
         await using var f = NewApp();

@@ -22,6 +22,12 @@ async function install(request: APIRequestContext, name: string) {
 
 const frame = (page: Page, plugin: string) => page.locator(`iframe[data-plugin="${plugin}"]`)
 
+/** The Hello plugin's page from the menu: on a phone the menu is a drawer, opened first. */
+async function openHello(page: Page, isMobile: boolean) {
+  if (isMobile) await page.getByRole('button', { name: 'Open navigation' }).click()
+  await page.getByRole('link', { name: 'Hello', exact: true }).filter({ visible: true }).first().click()
+}
+
 /**
  * The frame has painted, and the page around it: Chrome drops input to an out-of-process frame until its first frames
  * are drawn (measured: one click in about fifteen right after load reached nothing), so a click waits for both.
@@ -35,12 +41,12 @@ async function painted(page: Page, plugin: string) {
 test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async ({ request }) => {
-  for (const name of ['hello', 'chaos']) await install(request, name)
+  for (const name of ['hello', 'chaos', 'ticket-desk']) await install(request, name)
 })
 
-test('a plugin page is in the menu, sandboxed, and reaches Arena only through the bridge', async ({ page }) => {
+test('a plugin page is in the menu, sandboxed, and reaches Arena only through the bridge', async ({ page, isMobile }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: 'Hello', exact: true }).filter({ visible: true }).first().click()
+  await openHello(page, isMobile)
   await expect(page).toHaveURL(/\/p\/hello\/home$/)
   const f = frame(page, 'hello')
   await expect(f).toHaveAttribute('sandbox', 'allow-scripts allow-forms allow-modals')
@@ -54,11 +60,11 @@ test('a plugin page is in the menu, sandboxed, and reaches Arena only through th
   await expect(page.getByText(/Hello, .+! \(\d+\)/).first()).toBeVisible()
 })
 
-test('a page that throws as it loads shows its card, and the rest of Arena works', async ({ page }) => {
+test('a page that throws as it loads shows its card, and the rest of Arena works', async ({ page, isMobile }) => {
   await page.goto('/p/chaos/throws')
   await expect(page.locator('[data-plugin-error]')).toContainText('Chaos is not working', { timeout: 15_000 })
   await expect(page.locator('[data-plugin-error]')).toContainText('did not start')
-  await page.getByRole('link', { name: 'Hello', exact: true }).filter({ visible: true }).first().click()
+  await openHello(page, isMobile)
   await expect(frame(page, 'hello').contentFrame().locator('#who')).toContainText('Signed in as')
 })
 
@@ -103,3 +109,12 @@ test('a frame that navigates itself to another site, with what it read, is refus
   expect(left).toEqual([])
   await expect(page).toHaveURL(/\/p\/chaos\/leave$/)
 })
+
+test('IDE panels show on the Code page; one that throws shows its card while the other works', async ({ page }) => {
+  await page.goto('/code?tab=plugins')
+  const desk = frame(page, 'ticket-desk')
+  await expect(desk).toHaveAttribute('data-slot', 'ide-panel')
+  await expect(desk.contentFrame().locator('#app')).toContainText(/open tickets|:/, { timeout: 15_000 })
+  await expect(page.locator('[data-plugin-error]')).toContainText('Chaos is not working', { timeout: 15_000 })
+})
+

@@ -203,7 +203,15 @@ public static class PluginEndpoints
         }
         server.PluginPermissions = [.. permissions.Select(p => p.Key)];
         db.McpServers.Add(server);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23505" })
+        {
+            // The same plugin installed at the same moment by another request (its name is unique): that one is the install.
+            return AuthEndpoints.Problem(409, "installed", $"{package.Manifest.Title} is installed already: update it or change its settings.");
+        }
         var adminId = (await users.GetUserAsync(principal))?.Id;
         var release = PluginContent.Release(server, package, adminId);
         db.PluginReleases.Add(release);
