@@ -13,7 +13,7 @@ test('home: signed in, the admin sees the system summary, no console errors', as
 })
 
 for (const theme of ['light', 'dark'] as const) {
-  for (const path of ['/', '/account', '/setup', '/design', '/chat', '/tasks', '/memory', '/skills', '/no-such-page']) {
+  for (const path of ['/', '/account', '/setup', '/design', '/chat', '/studio', '/memory', '/skills', '/no-such-page']) {
     test(`${path} is accessible in the ${theme} theme`, async ({ page }, info) => {
       const errors = watchConsole(page)
       await withTheme(page, theme)
@@ -155,7 +155,7 @@ test('the bell lists each kind of news, leads to it, and can say it on the deskt
   )
   const cleared: string[] = []
   await page.route('**/api/notifications/n*', (route) => (route.request().method() === 'DELETE' ? (cleared.push(route.request().url()), route.fulfill({ status: 204 })) : route.fallback()))
-  await page.goto('/tasks')
+  await page.goto('/studio')
   await page.getByRole('button', { name: 'Notifications, 4 new' }).click()
   const bell = page.getByRole('dialog', { name: 'Notifications' })
   // By day: a list under each day's heading.

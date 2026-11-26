@@ -42,6 +42,39 @@ describe('Automations', () => {
     expect(within(canvas).getByRole('button', { name: 'Agent with tools: Find the news' })).toHaveTextContent('News · web')
   })
 
+  it('a schedule is chosen in words, and a webhook step keeps its address sealed until a new one is typed', async () => {
+    let saved: Workflow['flow'] | null = null
+    const scheduled: Workflow = {
+      ...workflow,
+      flow: { trigger: { kind: 'schedule', cron: '0 9 * * 1-5', timeZone: 'UTC' }, steps: [{ id: 'post', kind: 'webhook', name: 'Post it', text: '{{input.text}}', secret: 'sealed' }] },
+    }
+    fakeApi(member, {
+      'GET /api/studio/w1': () => ({ json: scheduled }),
+      'GET /api/studio/tools': () => ({ json: [] }),
+      'PUT /api/studio/w1': (body) => {
+        saved = (body as { flow: Workflow['flow'] }).flow
+        return { json: { workflow: { ...scheduled, flow: saved }, secret: null } }
+      },
+    })
+    renderApp('/studio/w1')
+    const canvas = await screen.findByRole('region', { name: 'The workflow' })
+    expect(within(canvas).getByRole('button', { name: 'Post to a chat channel: Post it' })).toHaveTextContent('To the channel set')
+    await userEvent.click(within(canvas).getByRole('button', { name: 'Trigger: On a schedule' }))
+    const panel = screen.getByRole('complementary', { name: 'Settings of what is chosen' })
+    expect(within(panel).getByText('Weekdays at 09:00.')).toBeInTheDocument()
+    await userEvent.click(within(panel).getByRole('combobox', { name: 'Repeat' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Once a week' }))
+    await userEvent.click(within(panel).getByRole('combobox', { name: 'On' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Tuesday' }))
+    expect(within(panel).getByText('Tuesdays at 09:00.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Save/ }))
+    await waitFor(() => expect(saved).not.toBeNull())
+    expect(saved!.trigger.cron).toBe('0 9 * * 2')
+    // Saved as shown, the address stays sealed: only a new one replaces it.
+    expect(saved!.steps[0]).toMatchObject({ kind: 'webhook', secret: 'sealed' })
+    expect(saved!.steps[0]!.url).toBeUndefined()
+  })
+
   it('a step is added on the canvas, changed in the panel with a value put in, and saved', async () => {
     let saved: unknown = null
     fakeApi(member, {

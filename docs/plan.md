@@ -261,6 +261,11 @@ Headlines: **dashboards whose numbers are right, per GPU and per model**; **a pr
   Media studio is Media; Tools as code moves into the tool-mode setting.
 - **Proof.** The upgrade test moves tasks and plans with nothing lost (counts and each field), Code Arena's routes answer
   as before (both clients), Vitest and Playwright on the renamed pages, the manual and help updated.
+- **Done.** Canvas holds slides (v8.2's decks commits); the renames and the tool mode (156d1499); tasks into Automations
+  (e7d60731, 6d402cc1: a task is the workflow of its id with its runs, chats, webhook and secret; `/api/hooks/<id>`
+  and Code Arena's `/scheduled` answer from workflows; a kept schedule saves past the limits; upgrade tests); plans into
+  projects (852a5d66: a project chat's plan is its goal and tasks, tasks with a status, owner, dates and waits, a
+  board; upgrade test). Left: Playwright on the renamed pages once a v8.2 stack runs.
 
 ### Order
 

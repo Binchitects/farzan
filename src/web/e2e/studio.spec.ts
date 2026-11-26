@@ -34,3 +34,29 @@ test('a workflow from a template runs: a JSON list, a step for each item, and th
     if (workflow) await page.request.delete(`/api/studio/${workflow}`, { headers })
   }
 })
+
+test('a workflow on a schedule, chosen in words, has its next run; what scheduled tasks were', async ({ page }, info) => {
+  const errors = watchConsole(page)
+  let workflow: string | null = null
+  try {
+    await page.goto('/studio')
+    await page.getByRole('list', { name: 'Templates' }).getByRole('button', { name: /Morning digest/ }).click()
+    await expect(page).toHaveURL(/\/studio\/[0-9a-f-]+$/)
+    workflow = page.url().split('/').pop() ?? null
+    await page.getByRole('region', { name: 'The workflow' }).getByRole('button', { name: /On a schedule/ }).click()
+    await page.getByRole('combobox', { name: 'Repeat', exact: true }).click()
+    await page.getByRole('option', { name: 'Once a week' }).click()
+    await page.getByLabel('At', { exact: true }).fill('07:30')
+    await page.getByRole('combobox', { name: 'On', exact: true }).click()
+    await page.getByRole('option', { name: 'Monday' }).click()
+    await expect(page.getByText('Mondays at 07:30.')).toBeVisible()
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('switch', { name: 'On' }).click()
+    await expect(page.getByText(/^Next: /)).toBeVisible()
+    await expectAccessible(page, info, 'studio-schedule')
+    await screenshot(page, info, 'studio-schedule')
+    expect(errors).toEqual([])
+  } finally {
+    if (workflow) await page.request.delete(`/api/studio/${workflow}`, { headers })
+  }
+})
