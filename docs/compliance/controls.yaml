@@ -895,10 +895,6 @@ controls:
     meets: >-
       Python, documents and a plugin's own server run in the sandbox: no
       network, a read-only root, its own limits, nothing that outlives a run.
-      In a Code workspace the agent's commands run in bubblewrap: they
-      write only in the clone, the build caches and a /tmp of their own, and
-      the engine's settings, sessions and the person's GitLab token are hidden
-      from them; the workspaces service says when it cannot make one.
     frameworks:
       iso27001: [A.8.22, A.8.7]
       soc2: [CC6.8]
@@ -909,11 +905,9 @@ controls:
       nist80053: [SC-39, SC-44]
       airmf: [MEASURE 2.7]
       euaiact: [Art.15]
-    docs: [plugins.md#a-server-of-its-own-in-the-sandbox, chat.md#code-workspaces]
+    docs: [plugins.md#a-server-of-its-own-in-the-sandbox]
     tests:
       - Llm.Tests/ChatToolsTests.Python_runs_in_the_sandbox_with_the_chats_files_and_what_it_writes_comes_back
-      - deploy/test_workspaces_supervisor.py::test_health_says_whether_the_agents_commands_have_a_sandbox
-      - deploy/test_workspaces_supervisor.py::test_a_clone_that_fails_says_why_without_the_token
       - Llm.Tests/ChatToolsTests.A_program_calls_the_chats_tools_as_the_person_through_the_sandbox_and_only_what_it_prints_comes_back
       - Llm.Tests/PluginTests.A_plugins_own_server_runs_in_the_sandbox_with_its_settings_one_job_a_call
     operator: Keep the sandbox's host patched.

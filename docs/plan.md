@@ -273,6 +273,21 @@ Headlines: **dashboards whose numbers are right, per GPU and per model**; **a pr
 between; then every suite, the compliance check, release-scan, the upgrade from 7.x and 8.x, and (when the installer,
 compose or the bundle changed) the offline scenarios, before 8.2.0.
 
+## Next (after v8.2.0)
+
+Left of v8.2 (released 2026-11-26), each to do:
+
+- **Item 2.** Exports of every dashboard under 2 s on a million-request ledger (measured on live's small data only:
+  0.03–1.3 s); the truth audit run on live once it is upgraded (its new pair, the stack's tokens a second two ways).
+- **Item 1.** Coverage per test, to find single tests whose lines others cover: coverlet instruments the app for ten
+  minutes a run, so it needs a collector that keeps its instrumented build or resets its counts between tests.
+- **Item 4.** Goals' contribution checked by hand on live data; **item 5** speed proved on a large log, and
+  prompt_log_bodies in the data export; **item 6** filters on Accounting and the other reports, and speed on a
+  million-row log; **item 8** Playwright on a v8.2 stack, and with a real model.
+- **Code's workspaces' tables** (studio_workspaces and their rows, the workspaces folder under DATA_DIR): kept by the
+  upgrade; dropped only on the user's word.
+- **Playwright** on a v8.2 stack: the Automations schedule spec has not run against one yet.
+
 ## Next
 
 1. **Farzan Graph's code graphs.** Who calls a method, what implements an interface,

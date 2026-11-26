@@ -791,7 +791,7 @@ scripts/backup.sh backs up the databases, the settings and the files, with a sec
 
 ### OPS-02: Code the model writes runs apart
 
-Python, documents and a plugin's own server run in the sandbox: no network, a read-only root, its own limits, nothing that outlives a run. In a Code workspace the agent's commands run in bubblewrap: they write only in the clone, the build caches and a /tmp of their own, and the engine's settings, sessions and the person's GitLab token are hidden from them; the workspaces service says when it cannot make one.
+Python, documents and a plugin's own server run in the sandbox: no network, a read-only root, its own limits, nothing that outlives a run.
 
 **Serves**
 
@@ -805,13 +805,11 @@ Python, documents and a plugin's own server run in the sandbox: no network, a re
 - [NIST AI Risk Management Framework 1.0 (AI 100-1): Govern, Map, Measure and Manage, as its Playbook lists them](frameworks/airmf.md): MEASURE 2.7 AI system security and resilience – as identified in the MAP function – are evaluated and documented.
 - [EU Artificial Intelligence Act, Regulation (EU) 2024/1689: its articles and annexes](frameworks/euaiact.md): Art.15 Accuracy, robustness and cybersecurity
 
-**Documented in** [plugins.md#a-server-of-its-own-in-the-sandbox](../plugins.md#a-server-of-its-own-in-the-sandbox), [chat.md#code-workspaces](../chat.md#code-workspaces)
+**Documented in** [plugins.md#a-server-of-its-own-in-the-sandbox](../plugins.md#a-server-of-its-own-in-the-sandbox)
 
 **Proved by**
 
 - `Llm.Tests/ChatToolsTests.Python_runs_in_the_sandbox_with_the_chats_files_and_what_it_writes_comes_back`
-- `deploy/test_workspaces_supervisor.py::test_health_says_whether_the_agents_commands_have_a_sandbox`
-- `deploy/test_workspaces_supervisor.py::test_a_clone_that_fails_says_why_without_the_token`
 - `Llm.Tests/ChatToolsTests.A_program_calls_the_chats_tools_as_the_person_through_the_sandbox_and_only_what_it_prints_comes_back`
 - `Llm.Tests/PluginTests.A_plugins_own_server_runs_in_the_sandbox_with_its_settings_one_job_a_call`
 

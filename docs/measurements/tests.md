@@ -29,6 +29,16 @@ The slowest classes are the engines' (EngineMoveTests: a model moved between lla
 36 s the slowest test), ConcurrencyTests (40 tests, 208 s), LdapTests (a real directory) and Code Arena's sync.
 They run real processes and real waits for a model's load: they stay, as they prove what nothing else does.
 
+## At the release (v8.2.0)
+
+The suite on the release's code, with coverage, 3 shards: **1,752 tests in 33.2 minutes** (48.7 test-minutes summed;
+1 h 57 min and 104 summed at the start of v8.2). Llm.Api **86.1%** of its lines and 72.3% of its branches, Llm.Core 96.1%
+and 76.9%. Lower than the 88.7% above: Code Arena left the repository with its C# client, whose end-to-end tests
+(CodeArenaLiveSyncTests and the rest, 46 tests) drove much of the server's sync from a real client; the routes the
+Rust client calls keep their HTTP-level tests (CodeArenaSyncTests and the others), and the client's own tests are its
+repository's. The run's five failures were fixed and their classes run again (the gateway's test, a race with the
+ledger's booking, 10 runs in a row).
+
 ## The other suites
 
 Before: as branched. After: `v8.2` at 9d0ddb44, run the same way (`tools/dn test tests/<suite> -c Release --collect "XPlat

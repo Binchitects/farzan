@@ -83,7 +83,8 @@ public sealed partial class ObserveTests(AppFixture app) : IAsyncLifetime
         var res = await b.Http.PostAsJsonAsync(new Uri($"/api/dashboards/stack-performance/panels/{panel.GetProperty("key").GetInt32()}/query", UriKind.Relative),
             new { from = before.AddDays(-400).AddHours(1), to = before.AddDays(-399) });
         await StatusAssert.Is(HttpStatusCode.OK, res);
-        var asked = Assert.Single(app.Observe.To("/api/v1/query"));
+        // Its own query (the GPU choice's options are asked as an instant query too).
+        var asked = Assert.Single(app.Observe.To("/api/v1/query"), a => a.Args["query"]?.Contains("nvidia_smi_index", StringComparison.Ordinal) != true);
         var at = DateTimeOffset.FromUnixTimeMilliseconds((long)(double.Parse(asked.Args["time"]!, CultureInfo.InvariantCulture) * 1000));
         Assert.InRange(at, before.AddSeconds(-1), DateTimeOffset.UtcNow.AddSeconds(1));
         Assert.Empty(app.Observe.To("/api/v1/query_range"));

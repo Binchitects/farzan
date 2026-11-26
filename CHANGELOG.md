@@ -113,6 +113,8 @@ here too (below, under v8.1.0).
   forwarded port reached by its owner alone, the IDE's log without its key).
   What they proved is not in this product any more; the controls' own clauses
   about it went with them. The Rust client's own tests are its repository's.
+- **OPS-02**: its clause on a Code workspace's commands in bubblewrap, and its two tests, went with
+  the workspaces; the sandbox's own clause and tests stay.
 
 ## v8.1.0 (never released on its own: part of v8.2.0)
 
