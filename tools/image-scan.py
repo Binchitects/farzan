@@ -76,7 +76,10 @@ def scan(image: str, engine: str, work: Path) -> dict:
         for k in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"):
             if os.environ.get(k):
                 cmd += ["-e", f"{k}={os.environ[k]}"]
-        cmd += [TRIVY, "image", "--quiet", "--input", "/work/image.tar", "--scanners", "vuln", "--format", "json",
+        # The databases from GitHub's registry: Google's mirror (Trivy's first choice) answers 403 from some networks.
+        cmd += [TRIVY, "image", "--quiet", "--db-repository", "ghcr.io/aquasecurity/trivy-db:2",
+                "--java-db-repository", "ghcr.io/aquasecurity/trivy-java-db:1",
+                "--input", "/work/image.tar", "--scanners", "vuln", "--format", "json",
                 "--output", "/work/out.json", "--timeout", "30m"]
         r = subprocess.run(cmd, capture_output=True, text=True)
         if r.returncode != 0:
@@ -114,7 +117,8 @@ def main(argv: list[str] | None = None) -> int:
         ap.error("name images, or --stack")
     ok = accepted_ids(date.today())
     failed = 0
-    with tempfile.TemporaryDirectory(prefix="image-scan-") as tmp:
+    # On disk, not /tmp (often memory): an engine's image is tens of GB.
+    with tempfile.TemporaryDirectory(prefix="image-scan-", dir=os.environ.get("IMAGE_SCAN_TMP", "/var/tmp")) as tmp:
         work = Path(tmp)
         os.chmod(work, 0o777)
         for image in images:

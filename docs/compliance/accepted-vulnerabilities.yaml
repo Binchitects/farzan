@@ -53,3 +53,23 @@
   package: "image:arena-sandbox deb:libmbedcrypto7"
   reason: "a buffer overflow in Mbed TLS's FFDH key export: no key exchange is made in the sandbox (no network); bookworm's 2.28 has no fix"
   until: 2027-02-28
+- id: CVE-2025-14009
+  package: "image:lmsysorg/sglang:v0.5.23-cu130-runtime python:nltk 3.9.1"
+  reason: "nltk is imported only by SGLang's video generation (multimodal_gen's Cosmos 3 guardrails, for cosmos-guardrail); the stack runs SGLang's language-model server, which never loads it, and SGLang 0.5.23 is the newest release"
+  until: 2027-02-28
+- id: CVE-2026-78683
+  package: "image:lmsysorg/sglang:v0.5.23-cu130-runtime python:nltk 3.9.1"
+  reason: "nltk is imported only by SGLang's video generation (multimodal_gen's Cosmos 3 guardrails, for cosmos-guardrail); the stack runs SGLang's language-model server, which never loads it, and SGLang 0.5.23 is the newest release"
+  until: 2027-02-28
+- id: CVE-2026-79657
+  package: "image:lmsysorg/sglang:v0.5.23-cu130-runtime python:nltk 3.9.1"
+  reason: "nltk is imported only by SGLang's video generation (multimodal_gen's Cosmos 3 guardrails, for cosmos-guardrail); the stack runs SGLang's language-model server, which never loads it, and SGLang 0.5.23 is the newest release"
+  until: 2027-02-28
+- id: CVE-2026-79675
+  package: "image:lmsysorg/sglang:v0.5.23-cu130-runtime python:nltk 3.9.1"
+  reason: "nltk is imported only by SGLang's video generation (multimodal_gen's Cosmos 3 guardrails, for cosmos-guardrail); the stack runs SGLang's language-model server, which never loads it, and SGLang 0.5.23 is the newest release"
+  until: 2027-02-28
+- id: CVE-2026-115905
+  package: "image:lmsysorg/sglang:v0.5.23-cu130-runtime cargo:zip 0.6.6 (sglang-radix-tree's Cargo.lock)"
+  reason: "only the radix tree's source lock file names it: the built module (libmem_cache.so) carries none of it, and its Cargo.toml does not ask for it"
+  until: 2027-02-28
