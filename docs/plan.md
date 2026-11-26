@@ -386,8 +386,16 @@ Newest versions of the engines' images, and four engines more: TokenSpeed, FreeT
     `ft serve`; built from PyPI on CUDA 13 (its kernels compiled in the image, nothing at first use).
   - **Ollama** 0.40.18 (MIT): GGUF files of the library made into its models with no pull; it has no key of its own,
     so its launcher fronts it with one, else it is not a managed engine.
-  - **Unsloth** (Apache-2.0, beta): its OpenAI-compatible server, if it can be run per model with a key from the
-    environment and nothing downloaded; else said why, as TensorRT-LLM was.
+  - **Unsloth** (Apache-2.0, beta): weighed and left out (2026-11-26). Its server is Unsloth Studio, an application with
+    its own accounts and passwords and the keys it mints itself (`sk-unsloth-`), which cannot take the engine key; its
+    image (10.5 GB) carries JupyterLab (a shell on the GPU host) and a Cloudflare tunnel and checks from the internet
+    whether its port answers; and what it serves runs on its prebuilt llama.cpp, which Arena runs already, newer.
+    Unsloth's own GGUF files (the library's `unsloth/`) run on llama.cpp, Ollama and FreeToken.
+- **Where it stands** (2026-11-26): FreeToken and Ollama done and run for real on the RTX 3090 (SmolLM2-135M from the
+  library: the key asked, answers through the launcher; FreeToken's first start compiles its kernels, about 3 minutes);
+  llama.cpp pinned to b12767 (1.1.0-dev, every preset key the app writes still a flag; run for real); the vLLM PyPI
+  build pinned to 0.34.0 (the same vLLM, torch and GGUF plugin as arena-vllm; not rebuilt here). TokenSpeed's launcher
+  waits for its image (7.3 GB, the proxy cut its first pull), to check its key, metrics and readiness on it.
 - **Proof.** Each launcher's arguments, key and GPUs (test_engine_launchers.py), its kind's settings in the app
   (EngineKindTests, VllmBackendTests, the advisor), the form (engine-fields), parity with Helm, and each engine run
   for real on this machine's GPU with a model of the library. The images scanned, the bundle and offline scenarios
