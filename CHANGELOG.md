@@ -15,6 +15,22 @@ Sections used:
   makes weaker (gone, a clause or a check dropped, fewer tests), by its id,
   and why ([compliance](docs/compliance/README.md#when-a-change-weakens-a-control))
 
+## v8.2.2 (2026-11-26)
+
+The prompt log shows each tool call with what it gave back.
+
+### :bug: Bugs fixed
+
+- **The prompt log showed a tool call without its result.** A step's answer
+  had the call and its arguments, but the tool's output came only with the
+  thread's next request, a separate line of the log. Now each call carries
+  what the tool gave back, beside its arguments: in a step opened whole (its
+  own calls, and the calls among what it sent), in a chat's answer round by
+  round, and in a run, where every step lists its calls with their arguments
+  and results (short there; the step opened has them whole). A result is no
+  longer shown twice. Lines kept before 8.2.0 had only their question and
+  answer, and still do.
+
 ## v8.2.1 (2026-11-26)
 
 An upgrade from a checkout to 8.2 no longer stops on the Code workspaces
