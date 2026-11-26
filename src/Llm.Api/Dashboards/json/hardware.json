@@ -1986,7 +1986,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select to_char(started_at, 'HH24') || ':00' as \"Hour\", count(*) as \"Requests\", coalesce(sum(total_tokens),0) as \"Tokens\", round(coalesce(sum(duration_ms),0) / 3600000.0, 2) as \"Answering, hours\", round(coalesce(percentile_cont(0.95) within group (order by extract(epoch from (first_token_at - started_at))), 0)::numeric, 2) as \"p95 first token, s\", count(distinct person) as \"People\" from requests where $__timeFilter(started_at) AND $__filter(model, model) and status <> 'refused' group by 1 order by 1"
+          "rawSql": "select a.\"Hour\", a.\"Requests\", a.\"Tokens\", a.\"Answering, hours\", round(coalesce(b.p95, 0)::numeric, 2) as \"p95 first token, s\", a.\"People\" from (select to_char(started_at, 'HH24') || ':00' as \"Hour\", coalesce(sum(requests), 0) as \"Requests\", coalesce(sum(total_tokens),0) as \"Tokens\", round(coalesce(sum(duration_ms),0) / 3600000.0, 2) as \"Answering, hours\", count(distinct person) as \"People\" from $__requests requests where $__timeFilter(started_at) AND $__filter(model, model) and status <> 'refused' group by 1) a left join (select to_char(s.started_at, 'HH24') || ':00' as hour, sketch_quantile(0.95, array_agg(s.bucket), array_agg(s.n)) / 1000.0 as p95 from $__spread s where $__timeFilter(s.started_at) AND $__filter(s.model, model) and s.metric = 'f' and not s.refused group by 1) b on b.hour = a.\"Hour\" order by 1"
         }
       ],
       "fieldConfig": {

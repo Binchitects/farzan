@@ -210,7 +210,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms),0) AS \"p50\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' AND surface <> 'media'"
+          "rawSql": "SELECT COALESCE(sketch_quantile(0.5, array_agg(s.bucket), array_agg(s.n)),0) AS \"p50\" from $__spread s WHERE $__timeFilter(s.started_at) AND $__filter(s.model, model) AND s.metric = 'd' AND NOT s.refused AND NOT s.media"
         }
       ],
       "fieldConfig": {
@@ -267,7 +267,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms),0) AS \"p95\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' AND surface <> 'media'"
+          "rawSql": "SELECT COALESCE(sketch_quantile(0.95, array_agg(s.bucket), array_agg(s.n)),0) AS \"p95\" from $__spread s WHERE $__timeFilter(s.started_at) AND $__filter(s.model, model) AND s.metric = 'd' AND NOT s.refused AND NOT s.media"
         }
       ],
       "fieldConfig": {
@@ -554,7 +554,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms) AS \"p50\", percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms) AS \"p95\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' AND surface <> 'media' GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(s.started_at, $__interval), sketch_quantile(0.5, array_agg(s.bucket), array_agg(s.n)) AS \"p50\", sketch_quantile(0.95, array_agg(s.bucket), array_agg(s.n)) AS \"p95\" from $__spread s WHERE $__timeFilter(s.started_at) AND $__filter(s.model, model) AND s.metric = 'd' AND NOT s.refused AND NOT s.media GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -609,7 +609,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_token_at - started_at))*1000) AS \"p50 TTFT\", percentile_cont(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_token_at - started_at))*1000) AS \"p95 TTFT\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND first_token_at IS NOT NULL GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(s.started_at, $__interval), sketch_quantile(0.5, array_agg(s.bucket), array_agg(s.n)) AS \"p50 TTFT\", sketch_quantile(0.95, array_agg(s.bucket), array_agg(s.n)) AS \"p95 TTFT\" from $__spread s WHERE $__timeFilter(s.started_at) AND $__filter(s.model, model) AND s.metric = 'f' GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -781,7 +781,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT model AS \"Model\", count(*) AS \"Requests\", COALESCE(sum(prompt_tokens),0) AS \"Prompt tokens\", COALESCE(sum(completion_tokens),0) AS \"Completion tokens\", COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache hit %\", round(COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms),0)::numeric,0) AS \"p50 ms\", round(COALESCE(sum(cost),0)::numeric,4) AS \"Spend\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1 ORDER BY 2 DESC"
+          "rawSql": "SELECT a.\"Model\", a.\"Requests\", a.\"Prompt tokens\", a.\"Completion tokens\", a.\"Cache hit %\", round(COALESCE(b.p50,0)::numeric,0) AS \"p50 ms\", a.\"Spend\" FROM (SELECT model AS \"Model\", coalesce(sum(requests), 0) AS \"Requests\", COALESCE(sum(prompt_tokens),0) AS \"Prompt tokens\", COALESCE(sum(completion_tokens),0) AS \"Completion tokens\", COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache hit %\", round(COALESCE(sum(cost),0)::numeric,4) AS \"Spend\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1) a LEFT JOIN (SELECT s.model, sketch_quantile(0.5, array_agg(s.bucket), array_agg(s.n)) AS p50 FROM $__spread s WHERE $__timeFilter(s.started_at) AND $__filter(s.model, model) AND s.metric = 'd' AND NOT s.refused GROUP BY 1) b ON b.model = a.\"Model\" ORDER BY 2 DESC"
         }
       ],
       "fieldConfig": {

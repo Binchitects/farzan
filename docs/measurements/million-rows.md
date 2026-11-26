@@ -8,48 +8,48 @@ measured. The host is the live stack's, and was busy with other test runs: numbe
 
 | What | Cold | Warm | Under 2 s |
 |---|---|---|---|
-| Accounting, 30 days | 1,781 ms | 1,679 ms | yes |
-| Accounting, CSV | 1,508 ms | 1,501 ms | yes |
-| Accounting, Excel | 1,529 ms | 1,487 ms | yes |
-| Accounting, PDF | 1,461 ms | 1,525 ms | yes |
-| Accounting, by tokens | 1,504 ms | 1,506 ms | yes |
-| Accounting, one model | 1,402 ms | 1,340 ms | yes |
-| Accounting, one person | 1,255 ms | 1,267 ms | yes |
-| Dashboard code-intel, CSV | 31 ms | 10 ms | yes |
-| Dashboard code-intel, PDF | 12 ms | 18 ms | yes |
-| Dashboard gpu-hardware, CSV | 19 ms | 23 ms | yes |
-| Dashboard gpu-hardware, PDF | 15 ms | 15 ms | yes |
-| Dashboard hardware, CSV | 1,763 ms | 2,885 ms | **no** |
-| Dashboard hardware, PDF | 2,789 ms | 1,694 ms | yes |
-| Dashboard host-containers, CSV | 12 ms | 7 ms | yes |
-| Dashboard host-containers, PDF | 7 ms | 10 ms | yes |
-| Dashboard llm-overview, CSV | 1,477 ms | 1,320 ms | yes |
-| Dashboard llm-overview, PDF | 1,291 ms | 1,325 ms | yes |
-| Dashboard llm-users, CSV | 1,660 ms | 1,678 ms | yes |
-| Dashboard llm-users, PDF | 1,655 ms | 1,559 ms | yes |
-| Dashboard resources, CSV | 9 ms | 8 ms | yes |
-| Dashboard resources, PDF | 6 ms | 7 ms | yes |
-| Dashboard stack-health, CSV | 7 ms | 5 ms | yes |
-| Dashboard stack-health, PDF | 6 ms | 8 ms | yes |
-| Dashboard stack-indexing, CSV | 7 ms | 10 ms | yes |
-| Dashboard stack-indexing, PDF | 9 ms | 14 ms | yes |
-| Dashboard stack-logs, CSV | 9 ms | 9 ms | yes |
-| Dashboard stack-logs, PDF | 14 ms | 9 ms | yes |
-| Dashboard stack-performance, CSV | 1,840 ms | 1,877 ms | yes |
-| Dashboard stack-performance, PDF | 1,896 ms | 1,656 ms | yes |
-| Dashboard system, CSV | 11 ms | 7 ms | yes |
-| Dashboard system, PDF | 13 ms | 18 ms | yes |
-| Dashboard usage-by-user, CSV | 1,113 ms | 1,094 ms | yes |
-| Dashboard usage-by-user, PDF | 1,086 ms | 1,037 ms | yes |
-| Prompt log, a model | 14 ms | 8 ms | yes |
-| Prompt log, a person | 10 ms | 5 ms | yes |
-| Prompt log, a tool called | 10 ms | 5 ms | yes |
-| Prompt log, failed | 7 ms | 4 ms | yes |
-| Prompt log, newest | 46 ms | 12 ms | yes |
-| Prompt log, words | 19 ms | 10 ms | yes |
+| Accounting, 30 days | 1,678 ms | 1,476 ms | yes |
+| Accounting, CSV | 1,383 ms | 1,364 ms | yes |
+| Accounting, Excel | 1,302 ms | 1,408 ms | yes |
+| Accounting, PDF | 1,322 ms | 1,322 ms | yes |
+| Accounting, by tokens | 1,440 ms | 1,457 ms | yes |
+| Accounting, one model | 1,241 ms | 1,302 ms | yes |
+| Accounting, one person | 1,119 ms | 1,167 ms | yes |
+| Dashboard code-intel, CSV | 28 ms | 12 ms | yes |
+| Dashboard code-intel, PDF | 10 ms | 9 ms | yes |
+| Dashboard gpu-hardware, CSV | 18 ms | 8 ms | yes |
+| Dashboard gpu-hardware, PDF | 11 ms | 13 ms | yes |
+| Dashboard hardware, CSV | 1,144 ms | 1,165 ms | yes |
+| Dashboard hardware, PDF | 1,120 ms | 1,127 ms | yes |
+| Dashboard host-containers, CSV | 9 ms | 14 ms | yes |
+| Dashboard host-containers, PDF | 7 ms | 7 ms | yes |
+| Dashboard llm-overview, CSV | 564 ms | 536 ms | yes |
+| Dashboard llm-overview, PDF | 513 ms | 528 ms | yes |
+| Dashboard llm-users, CSV | 820 ms | 810 ms | yes |
+| Dashboard llm-users, PDF | 813 ms | 788 ms | yes |
+| Dashboard resources, CSV | 11 ms | 8 ms | yes |
+| Dashboard resources, PDF | 10 ms | 7 ms | yes |
+| Dashboard stack-health, CSV | 6 ms | 9 ms | yes |
+| Dashboard stack-health, PDF | 6 ms | 7 ms | yes |
+| Dashboard stack-indexing, CSV | 10 ms | 9 ms | yes |
+| Dashboard stack-indexing, PDF | 9 ms | 11 ms | yes |
+| Dashboard stack-logs, CSV | 8 ms | 13 ms | yes |
+| Dashboard stack-logs, PDF | 7 ms | 10 ms | yes |
+| Dashboard stack-performance, CSV | 1,313 ms | 1,272 ms | yes |
+| Dashboard stack-performance, PDF | 1,264 ms | 1,266 ms | yes |
+| Dashboard system, CSV | 7 ms | 6 ms | yes |
+| Dashboard system, PDF | 8 ms | 7 ms | yes |
+| Dashboard usage-by-user, CSV | 1,021 ms | 1,068 ms | yes |
+| Dashboard usage-by-user, PDF | 1,007 ms | 1,115 ms | yes |
+| Prompt log, a model | 7 ms | 4 ms | yes |
+| Prompt log, a person | 11 ms | 7 ms | yes |
+| Prompt log, a tool called | 8 ms | 3 ms | yes |
+| Prompt log, failed | 9 ms | 5 ms | yes |
+| Prompt log, newest | 45 ms | 6 ms | yes |
+| Prompt log, words | 10 ms | 6 ms | yes |
 | Prompt log, words and a model, 30 days | 9 ms | 5 ms | yes |
-| Usage by person, CSV | 343 ms | 344 ms | yes |
-| Usage by person, one model, Excel | 107 ms | 81 ms | yes |
+| Usage by person, CSV | 319 ms | 302 ms | yes |
+| Usage by person, one model, Excel | 102 ms | 93 ms | yes |
 
 ## What made the exports faster
 
@@ -58,23 +58,26 @@ measured. The host is the live stack's, and was busy with other test runs: numbe
 2. The ledger by hour, `gateway.requests_hourly`, kept by statement triggers on `gateway.requests`: the 38 panels that sum
    or count it read `$__requests`, whole hours from the rollup and the minutes either side from the rows, so every number
    is the rows' own (`LedgerRollupTests` runs each of them both ways over windows that start and end inside an hour, and
-   fails when the edges are left out); the usage exports read it too. Percentiles and single requests stay on the rows.
+   fails when the edges are left out); the usage exports read it too. Single requests stay on the rows.
+3. Their times as a sketch by hour, `gateway.requests_hourly_spread` (each request's time and its time to the first token,
+   counted in buckets of a log scale 2% wide, by model, refused or not, media or not), kept by the same kind of triggers:
+   the 12 percentile panels read `$__spread` and `gateway.sketch_quantile`, which ranks as `percentile_disc` and is within
+   1% of the rows' own (`LedgerRollupTests` checks every quantile by model and by hour against the rows). Stack
+   Performance's "Tokens generated, by model" reads the rows once for all models (its busiest minute and decode speed),
+   not once a model.
 
-| Export (CSV, warm) | One after another | Eight at once | With the rollup |
-|---|---|---|---|
-| hardware | 3,936 ms | 3,091 ms | 2,885 ms |
-| llm-overview | 3,980 ms | 1,569 ms | 1,320 ms |
-| llm-users | 6,763 ms | 2,387 ms | 1,678 ms |
-| stack-performance | 3,252 ms | 1,814 ms | 1,877 ms |
-| usage-by-user | 6,826 ms | 3,160 ms | 1,094 ms |
-| Usage by person | 1,421 ms | 1,268 ms | 344 ms |
+| Export (CSV, warm) | One after another | Eight at once | With the rollup | With the sketch |
+|---|---|---|---|---|
+| hardware | 3,936 ms | 3,091 ms | 2,885 ms | 1,165 ms |
+| llm-overview | 3,980 ms | 1,569 ms | 1,320 ms | 536 ms |
+| llm-users | 6,763 ms | 2,387 ms | 1,678 ms | 810 ms |
+| stack-performance | 3,252 ms | 1,814 ms | 1,877 ms | 1,272 ms |
+| usage-by-user | 6,826 ms | 3,160 ms | 1,094 ms | 1,068 ms |
+| Usage by person | 1,421 ms | 1,268 ms | 344 ms | 302 ms |
 
 (The first two columns were measured with a seed whose every request had its own mix of model, source and project, which
-no rollup shrinks; the third with people working as people do. Both seeds are a million rows over 30 days.)
-
-**Left:** Hardware's export lands between 1.7 and 2.9 s: its "Each hour of the day" has the 95th percentile of the time to
-the first token by hour over the 30 days, which reads every row (a percentile cannot be summed by hour).
+no rollup shrinks; the last two with people working as people do. All seeds are a million rows over 30 days.)
 
 The prompt log answers in milliseconds on a million lines (its newest page, words by trigram index, a model, a tool, a
-person, a state), and Accounting (whole, by tokens, narrowed to a model or a person, its PDF, Excel and CSV) in 1.3 to
-1.7 s.
+person, a state), and Accounting (whole, by tokens, narrowed to a model or a person, its PDF, Excel and CSV) in 1.2 to
+1.5 s.

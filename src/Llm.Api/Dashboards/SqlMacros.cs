@@ -28,9 +28,14 @@ public static partial class SqlMacros
     {
         parameters = [];
         // The ledger's rows as a panel sums them, before $__interval is read: whether its buckets are whole hours.
+        var hourly = rollup && (!sql.Contains("$__interval", StringComparison.Ordinal) || (interval >= TimeSpan.FromHours(1) && interval.Ticks % TimeSpan.TicksPerHour == 0));
         if (sql.Contains(Requests, StringComparison.Ordinal))
         {
-            sql = sql.Replace(Requests, LedgerRows(sql, from, to, interval, rollup), StringComparison.Ordinal);
+            sql = sql.Replace(Requests, hourly ? Ledger(from, to) : $"(select {RawColumns} from requests)", StringComparison.Ordinal);
+        }
+        if (sql.Contains(Spread, StringComparison.Ordinal))
+        {
+            sql = sql.Replace(Spread, hourly ? SpreadOf(from, to) : $"({RawSpread("true")})", StringComparison.Ordinal);
         }
         // Plain variables first: $__interval can be an argument of a macro.
         sql = sql
@@ -77,10 +82,45 @@ public static partial class SqlMacros
     /// rows themselves, so every sum is the rows' own; the rows alone when the panel's buckets ($__interval) are not
     /// whole hours, or <paramref name="rollup"/> is off.
     /// </summary>
-    private static string LedgerRows(string sql, DateTimeOffset from, DateTimeOffset to, TimeSpan interval, bool rollup)
+    /// <summary>The ledger's spread as panels read percentiles from it: <c>from $__spread s</c> (gateway.sketch_quantile over its buckets).</summary>
+    public const string Spread = "$__spread";
+
+    /// <summary>
+    /// The rows' own spread where <paramref name="where"/> holds: each request's time ("d", ms) and its time to the first
+    /// token ("f", ms, when it had one), in the sketch's buckets, a count of 1 each.
+    /// </summary>
+    private static string RawSpread(string where) =>
+        "select started_at, model, status = 'refused' as refused, surface = 'media' as media, 'd'::char(1) as metric, sketch_bucket(duration_ms::float8) as bucket, 1::bigint as n "
+        + $"from requests where {where} union all select started_at, model, status = 'refused', surface = 'media', 'f'::char(1), "
+        + $"sketch_bucket(extract(epoch from (first_token_at - started_at)) * 1000), 1::bigint from requests where first_token_at is not null and ({where})";
+
+    /// <summary>
+    /// $__spread over a window (columns started_at, model, refused, media, metric, bucket, n): whole hours from
+    /// gateway.requests_hourly_spread, the minutes either side from the rows in the same buckets, so a percentile is the
+    /// same as from the rows alone (within 1% of the requests' own either way).
+    /// </summary>
+    private static string SpreadOf(DateTimeOffset from, DateTimeOffset to)
     {
-        var hourly = interval >= TimeSpan.FromHours(1) && interval.Ticks % TimeSpan.TicksPerHour == 0;
-        return !rollup || (sql.Contains("$__interval", StringComparison.Ordinal) && !hourly) ? $"(select {RawColumns} from requests)" : Ledger(from, to);
+        if (WholeHours(from, to) is not { } hours)
+        {
+            return $"({RawSpread("true")})";
+        }
+        var (start, end) = hours;
+        var (f, t, a, b) = (Rfc3339(from), Rfc3339(to), Rfc3339(start), Rfc3339(end));
+        return $"(select hour as started_at, model, refused, media, metric, bucket, n from requests_hourly_spread where hour >= '{a}' and hour < '{b}' "
+            + $"union all {RawSpread($"(started_at >= '{f}' and started_at < '{a}') or (started_at >= '{b}' and started_at <= '{t}')")})";
+    }
+
+    /// <summary>The whole hours of a window (the first at or after its start, the end at or before its end); null with none.</summary>
+    private static (DateTimeOffset Start, DateTimeOffset End)? WholeHours(DateTimeOffset from, DateTimeOffset to)
+    {
+        var start = new DateTimeOffset(from.UtcTicks - from.UtcTicks % TimeSpan.TicksPerHour, TimeSpan.Zero);
+        if (start < from)
+        {
+            start = start.AddHours(1);
+        }
+        var end = new DateTimeOffset(to.UtcTicks - to.UtcTicks % TimeSpan.TicksPerHour, TimeSpan.Zero);
+        return end > start ? (start, end) : null;
     }
 
     /// <summary>
@@ -93,16 +133,11 @@ public static partial class SqlMacros
     public static string Ledger(DateTimeOffset from, DateTimeOffset to, string schema = "")
     {
         var raw = $"(select {RawColumns} from {schema}requests)";
-        var start = new DateTimeOffset(from.UtcTicks - from.UtcTicks % TimeSpan.TicksPerHour, TimeSpan.Zero);
-        if (start < from)
-        {
-            start = start.AddHours(1);
-        }
-        var end = new DateTimeOffset(to.UtcTicks - to.UtcTicks % TimeSpan.TicksPerHour, TimeSpan.Zero);
-        if (end <= start)
+        if (WholeHours(from, to) is not { } hours)
         {
             return raw;
         }
+        var (start, end) = hours;
         var (f, t, a, b) = (Rfc3339(from), Rfc3339(to), Rfc3339(start), Rfc3339(end));
         return $"(select hour as started_at, person, model, surface, credit_kind, key_alias, status, project_id, requests, prompt_tokens, cached_tokens, "
             + $"completion_tokens, total_tokens, cost, duration_ms from {schema}requests_hourly where hour >= '{a}' and hour < '{b}' "

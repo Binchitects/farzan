@@ -586,7 +586,10 @@ took, the tokens, the time to the first token, the time and the cost.
   source, kind, key, state and project, kept exact by statement triggers on
   `gateway.requests` (added, changed, deleted, emptied): the dashboards' sums
   and counts and the usage exports read it for whole hours
-  ([million-rows.md](measurements/million-rows.md)).
+  ([million-rows.md](measurements/million-rows.md)). `gateway.requests_hourly_spread`
+  is its times as a sketch (each request's time and time to the first token,
+  by hour, model, refused or not, media or not, in log buckets 2% wide), kept
+  the same way, for the percentile panels (`gateway.sketch_quantile`, within 1%).
 - `gateway.rate_windows` counts each key's and person's requests and tokens a
   minute, for the rate limits every replica shares; the views
   `gateway.key_owners` and `gateway.month_spend` are what the dashboards read

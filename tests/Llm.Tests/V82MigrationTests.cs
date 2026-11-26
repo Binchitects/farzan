@@ -312,4 +312,42 @@ public sealed class V82MigrationTests(AppFixture app)
             Assert.Equal(["10 a@x.test 2 30 2 12 42 0.750000000 3000", "10 b@x.test 1 1 0 1 2 0.000000000 500", "11 - 1 4 0 4 8 0.000000000 100", "11 a@x.test 1 3 0 3 6 0.125000000 100"], got);
         }
     }
+    [Fact]
+    public async Task The_ledger_before_the_upgrade_is_counted_into_the_spread_its_percentiles_read()
+    {
+        var cs = app.ConnectionStringFor("v82s_" + Guid.NewGuid().ToString("N")[..8]);
+        var options = new DbContextOptionsBuilder<AppDbContext>();
+        options.UseNpgsql(cs);
+        options.UseOpenIddict<Guid>();
+        await using var db = new AppDbContext(options.Options);
+        var all = db.Database.GetMigrations().ToList();
+        await db.GetService<IMigrator>().MigrateAsync(all[all.FindIndex(m => m.EndsWith("_RequestsSpread", StringComparison.Ordinal)) - 1]);
+        await using (var conn = new NpgsqlConnection(cs))
+        {
+            await conn.OpenAsync();
+            // Ten requests in one hour, 100 to 1000 ms, their first tokens a tenth of that; one refused.
+            await using var ledger = new NpgsqlCommand("""
+                insert into gateway.requests (id, started_at, first_token_at, ended_at, duration_ms, surface, call, protocol, credit_kind, model, prompt_tokens,
+                  cached_tokens, completion_tokens, usage_estimated, cost, status, http_status)
+                select gen_random_uuid(), '2026-10-01 10:00:00Z'::timestamptz + (g || ' min')::interval, '2026-10-01 10:00:00Z'::timestamptz + (g || ' min')::interval + (g * 10 || ' ms')::interval,
+                       '2026-10-01 10:30:00Z', g * 100, 'api', 'chat', 'openai', 'api', 'qwen', 1, 0, 1, false, 0, case when g = 10 then 'refused' else 'done' end, 200
+                from generate_series(1, 10) g
+                """, conn);
+            await ledger.ExecuteNonQueryAsync();
+        }
+        await db.Database.MigrateAsync();
+        await using (var conn = new NpgsqlConnection(cs))
+        {
+            await conn.OpenAsync();
+            await using var q = new NpgsqlCommand("""
+                select (select sum(n) from gateway.requests_hourly_spread where metric = 'd'), (select sum(n) from gateway.requests_hourly_spread where metric = 'f'),
+                       (select gateway.sketch_quantile(0.5, array_agg(bucket), array_agg(n)) from gateway.requests_hourly_spread where metric = 'd' and not refused)
+                """, conn);
+            await using var r = await q.ExecuteReaderAsync();
+            await r.ReadAsync();
+            Assert.Equal((10L, 10L), (Convert.ToInt64(r.GetValue(0), System.Globalization.CultureInfo.InvariantCulture), Convert.ToInt64(r.GetValue(1), System.Globalization.CultureInfo.InvariantCulture)));
+            // The median of 100..900 (the refused left out) is 500, within 1%.
+            Assert.InRange(r.GetDouble(2), 495, 505);
+        }
+    }
 }

@@ -2170,8 +2170,12 @@ them itself. Each panel's query runs on the app's server:
   from `gateway.requests_hourly` (the ledger by hour, person, model, source,
   kind, key, state and project, kept by triggers) and the minutes either side
   from the rows, so its numbers are the rows' own; buckets shorter than an hour
-  read the rows alone. Percentiles, single requests and other columns read
-  `requests` itself.
+  read the rows alone. A percentile reads `from $__spread s` with
+  `sketch_quantile(0.95, array_agg(s.bucket), array_agg(s.n))`: each request's
+  time (`metric = 'd'`) and time to its first token (`'f'`), in ms, as a sketch
+  by hour (`gateway.requests_hourly_spread`, buckets 2% wide), within 1% of the
+  rows' own percentile_disc. Single requests and other columns read `requests`
+  itself.
 - **Prometheus and Loki**: the step Grafana would use (the panel's minimum
   interval, the scrape interval, Loki's 11,000-point limit), the range aligned to
   it, `$__rate_interval`, `$__auto` and the rest, the dashboard's variables
