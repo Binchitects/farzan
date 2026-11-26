@@ -23,8 +23,7 @@ again; projects take their keys, their people and their chats' plans; the
 prompt log keeps each request whole and is searched, filtered and summed up by
 a model; an assistant helps run Arena from every admin page; decks are worth
 showing. Scheduled tasks are Automations, plans are the project's, and Code
-Arena is its own project. v8.1.0 was never released on its own: its work is
-here too (below, under v8.1.0).
+Arena is its own project.
 
 ### :rocket: Epics and highlights
 
@@ -116,7 +115,7 @@ here too (below, under v8.1.0).
 - **OPS-02**: its clause on a Code workspace's commands in bubblewrap, and its two tests, went with
   the workspaces; the sandbox's own clause and tests stay.
 
-## v8.1.0 (never released on its own: part of v8.2.0)
+## v8.1.0 (2026-11-26)
 
 Work that goes on by itself and is counted as it goes. An answer cut at its
 longest carries on until it ends; the time of the model, the tools and the
