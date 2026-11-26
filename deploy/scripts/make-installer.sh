@@ -17,8 +17,6 @@
 #                      waits for it)
 #   --models-dir DIR   the model library (as airgap.sh: MODELS_DIR in .env, else ./models)
 #   --packs            the knowledge packs in packs/ (*.kpack)
-#   --code-arena DIR   Code Arena's packages (default dist/: code-arena-*.tar.gz and .zip,
-#                      which ./arenactl code-arena makes, and this when there are none)
 #   --without A,B      features (deploy/features) whose images are left out: a smaller bundle;
 #                      the installer then cannot turn them on
 #   --deps DIR         the host's dependencies, put in deps/ (./arenactl deps fetches them: Docker's
@@ -27,7 +25,7 @@
 #   --no-known         without a git tag of the oldest release (a download, a shallow clone): known/ is
 #                      left out, and an upgrade from it keeps every file it finds changed
 #   --images-in-engine the images named, not saved: they stay in the engine, built or pulled there
-#                      (arenactl install, from a checkout); no speech models, Code Arena or .run
+#                      (arenactl install, from a checkout); no speech models or .run
 #   --stage-only DIR   the bundle unpacked into DIR/arena-VERSION, not a .run
 #   --image-cache DIR  each image packed once, by its id and the name it is saved under (default
 #                      OUT/.image-cache): the next bundle saves and gzips only the images that changed
@@ -52,7 +50,7 @@
 #                  upgrade tells the files a host changed from the ones it was shipped with
 #                  (5.2.0's tag must be here: git fetch --tags)
 #   models/, audio/  as airgap.sh packs them; models/library/ has the embedding model always
-#   docs/, LICENSE.md, LICENSING.md, VERSION, code-arena/, packs/
+#   docs/, LICENSE.md, LICENSING.md, VERSION, packs/
 #
 # The file is the installer's shell header, then a small tar (the installer, MANIFEST,
 # SHA256SUMS, deploy/, docs/: enough for a dry run, status and remove), then the rest.
@@ -94,7 +92,7 @@ vercmp() {
   elif [[ "$(printf '%s\n%s\n' "$ap" "$bp" | sort -V | head -n1)" == "$ap" ]]; then echo -1; else echo 1; fi
 }
 
-OUT_ARG="" VERSION_ARG="" PROJECT=arena ENGINE=docker WITH_MODELS=0 NO_CHAT=0 MODELS_ARG="" PACKS=0 CA_ARG="" WITHOUT="" LEAVE="" DRY=0
+OUT_ARG="" VERSION_ARG="" PROJECT=arena ENGINE=docker WITH_MODELS=0 NO_CHAT=0 MODELS_ARG="" PACKS=0 WITHOUT="" LEAVE="" DRY=0
 DEPS_ARG="" NO_KNOWN=0 IN_ENGINE=0 STAGE_ONLY="" CACHE_ARG="" NO_CACHE=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -106,7 +104,6 @@ while [[ $# -gt 0 ]]; do
     --no-chat-models) NO_CHAT=1 ;;
     --models-dir) [[ $# -gt 1 ]] || usage_error "--models-dir needs a folder"; MODELS_ARG="$2"; shift ;;
     --packs) PACKS=1 ;;
-    --code-arena) [[ $# -gt 1 ]] || usage_error "--code-arena needs a folder"; CA_ARG="$2"; shift ;;
     --without) [[ $# -gt 1 ]] || usage_error "--without needs features"; WITHOUT="${WITHOUT:+$WITHOUT,}$2"; shift ;;
     --deps) [[ $# -gt 1 ]] || usage_error "--deps needs a folder"; DEPS_ARG="$2"; shift ;;
     --no-known) NO_KNOWN=1 ;;
@@ -138,7 +135,6 @@ valid_version "$VERSION" || usage_error "not a version: \"$VERSION\" (VERSION, o
 [[ "$(vercmp "$VERSION" "$UPGRADES_FROM")" != -1 ]] || usage_error "$VERSION is older than $UPGRADES_FROM, the oldest release an upgrade starts from"
 command -v "$ENGINE" >/dev/null || die "$ENGINE is not installed"
 OUT_DIR="$(abspath "${OUT_ARG:-$REPO/dist}")"
-CA_DIR="$(abspath "${CA_ARG:-$REPO/dist}")"
 RUN="$OUT_DIR/arena-$VERSION-offline.run"
 TOP="arena-$VERSION"
 [[ -z "$STAGE_ONLY" && -e "$RUN" ]] && die "$RUN is there already"
@@ -200,13 +196,6 @@ fi
 [[ $WITH_MODELS -eq 1 ]] && AIRGAP+=(--models)
 [[ $NO_CHAT -eq 1 ]] && AIRGAP+=(--no-chat-models)
 [[ -n "$MODELS_ARG" ]] && AIRGAP+=(--models-dir "$MODELS_ARG")
-# Code Arena's packages of this release (older ones in dist/ stay out); made here when there are none and they
-# come from dist/: the .NET packs fetched at the SDK's version, then every system published and packed.
-ca_files() { CA_FILES=(); for f in "$CA_DIR"/code-arena-"$VERSION"-*.tar.gz "$CA_DIR"/code-arena-"$VERSION"-*.zip; do [[ -f "$f" ]] && CA_FILES+=("$f"); done; }
-ca_files
-# A checkout's bundle carries none: the app's image serves Code Arena's builds already.
-[[ $IN_ENGINE -eq 1 ]] && CA_FILES=()
-CA_MAKE=0; [[ ${#CA_FILES[@]} -eq 0 && -z "$CA_ARG" && $IN_ENGINE -eq 0 && -f "$REPO/arenactl" ]] && CA_MAKE=1
 # The newest pack of each name (packs/ keeps the weeks before too: tools/packs-weekly.py), by the version it records.
 PACKS_NEWEST='
 import re, sqlite3, sys
@@ -264,7 +253,6 @@ if [[ $DRY -eq 1 ]]; then
   say "  the embedding model ($EMBED_FILE): $(case "$EMBEDDING" in packed) echo "from $MODELS_DIR" ;; missing) echo "NOT IN $MODELS_DIR: the embedding server would wait for it on the other host" ;; *) echo "$EMBEDDING" ;; esac)"
   say "  then gzipped, with installer.sh, docs/, LICENSE.md, LICENSING.md, VERSION, known/ ($(printf '%s\n' ${KNOWN[@]+"${KNOWN[@]}"} | cut -f2 | paste -sd' ' -))"
   [[ -n "$KNOWN_MISSING" ]] && say "  known/: NOT MADE: $KNOWN_MISSING"
-  say "  Code Arena's packages: ${#CA_FILES[@]} of $VERSION in $CA_DIR$([[ $CA_MAKE -eq 1 ]] && echo " (none: made first, ./arenactl code-arena)")"
   [[ -n "$DEPS_ARG" ]] && say "  the host's dependencies, from $DEPS_ARG: $(cut -f1,2 "$DEPS_ARG/DEPS" | tr '\t' ' ' | paste -sd, -)"
   say "  knowledge packs: $([[ $PACKS -eq 1 ]] && echo "${#PACK_FILES[@]} from packs/" || echo "none (--packs)")"
   exit 0
@@ -272,11 +260,6 @@ fi
 
 [[ -n "$STAGE_ONLY" ]] || mkdir -p "$OUT_DIR" || die "cannot make $OUT_DIR"
 say "make-installer: $PRODUCT $VERSION ($COMMIT), from $ENGINE's store"
-if [[ $CA_MAKE -eq 1 ]]; then
-  say "==> Code Arena's packages of $VERSION: none in $CA_DIR, made now"
-  python3 "$REPO/arenactl" code-arena --out "$CA_DIR" || die "Code Arena could not be packed (./arenactl code-arena; ./arenactl doctor --for code-arena says what it needs), or pass --code-arena DIR"
-  ca_files
-fi
 say "==> the release's own images, as arena-SERVICE:$VERSION"
 for s in "${BUILT[@]}"; do
   left "$s" && continue
@@ -383,7 +366,7 @@ cp -p "$ROOT/scripts/installer.sh" "$B/installer.sh" && chmod 755 "$B/installer.
 echo "$VERSION" > "$B/VERSION"
 for f in LICENSE.md LICENSING.md; do cp -p "$REPO/$f" "$B/$f" || die "no $f in $REPO"; done
 # The names people read, as this bundle's images were built with them: beside installer.sh, and in deploy/
-# for the installation's scripts (make-cert.sh, sign-code-arena.sh, its own installer.sh).
+# for the installation's scripts (make-cert.sh, its own installer.sh).
 for f in "$B/branding.env" "$B/deploy/branding.env"; do
   { [[ -f "$REPO/branding.env" ]] && grep '^#' "$REPO/branding.env"
     echo "PRODUCT_NAME=${PRODUCT_NAME:-$(sed -n 's/^PRODUCT_NAME=//p' "$REPO/branding.env" 2>/dev/null)}"
@@ -394,15 +377,6 @@ mkdir -p "$B/docs" && cp -a "$REPO/docs/." "$B/docs/" || die "no docs/ in $REPO"
 rm -f "$B/docs/plan.md"
 say "  installer.sh, $(find "$B/docs" -type f | wc -l) docs, LICENSE.md, LICENSING.md, VERSION"
 
-say "==> Code Arena's packages"
-if [[ ${#CA_FILES[@]} -gt 0 ]]; then
-  mkdir -p "$B/code-arena"
-  for f in "${CA_FILES[@]}"; do cp -p "$f" "$B/code-arena/"; done
-  (cd "$B/code-arena" && sha256sum -- * > SHA256SUMS)
-  say "  ${#CA_FILES[@]} from $CA_DIR"
-else
-  say "  none in $CA_DIR (./arenactl code-arena makes them): the app's image still carries them for download"
-fi
 if [[ -n "$DEPS_ARG" ]]; then
   say "==> the host's dependencies (deps/)"
   mkdir -p "$B/deps"
@@ -468,7 +442,6 @@ ai() { sed -n "s/^$1: //p" <<<"$AIRGAP_MANIFEST" | head -n1; }
   echo "embedding: $EMBEDDING"
   echo "audio: $(ai audio)"
   echo "packs: ${#PACK_FILES[@]}"
-  echo "code-arena: ${#CA_FILES[@]}"
   echo "deps: $([[ -f "$B/deps/DEPS" ]] && cut -f1 "$B/deps/DEPS" | paste -sd' ' - || echo none)"
   # From a checkout (arenactl install): the images are the engine's, and missing ones are built from it.
   [[ $IN_ENGINE -eq 1 ]] && { echo "images-in: engine"; echo "source: $REPO"; }

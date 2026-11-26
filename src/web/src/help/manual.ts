@@ -116,7 +116,7 @@ export const manualGroups: ManualGroup[] = [
       doc('studio.md', 'Automations', 'Workflows that do the work as you: triggers, steps, approvals, runs to replay, forms to share.', 'everyone', studio),
       doc('integrations.md', 'Bots, email and the app', 'Slack, Mattermost and Teams bots, email in, the installed app with push notifications, the browser extension.', 'everyone', integrations),
       doc('mcp.md', 'Arena MCP', 'Your chat tools for your own agent, at /mcp (or as code at /mcp/code), signed in with your API key.', 'everyone', mcp),
-      doc('code-arena.md', 'Code Arena', 'Our own coding agent and its IDE: getting it, signing in, modes, tools and sessions.', 'everyone', codeArena),
+      doc('code-arena.md', 'Code Arena', 'Our own coding agent, its own project now: getting it, and what this Arena serves it.', 'everyone', codeArena),
       doc('ci.md', 'The API in CI', 'A review of each merge request and an explanation of each failed pipeline, from your own GitLab pipeline.', 'everyone', ci),
       doc('hermes.md', 'Hermes', `Pointing Hermes at the model and at ${codeIntelName}.`, 'everyone', hermes),
     ],

@@ -5,7 +5,7 @@
                                                   exits 1 when a critical vulnerability is not accepted
     python3 tools/release-scan.py --no-dotnet     without asking .NET for its packages (no SDK here)
 
-What it lists: the .NET packages of the app, code-intel and Code Arena (every transitive one, as `dotnet list package`
+What it lists: the .NET packages of the app and code-intel (every transitive one, as `dotnet list package`
 resolves them), the web apps' npm packages (their lock files, without the build tools), the Python packages the
 images pin (`pip install name==version` in their Dockerfiles), the programs they download by version (Trivy and
 gitleaks as Go modules, opengrep), and the base images. What it asks: OSV
@@ -29,7 +29,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OSV = "https://api.osv.dev/v1"
-DOTNET_PROJECTS = ("src/Llm.Api", "src/CodeIntel", "src/CodeArena")
+DOTNET_PROJECTS = ("src/Llm.Api", "src/CodeIntel")
 LOCKS = ("src/web/package-lock.json", "src/code-intel-web/package-lock.json")
 ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "unknown": 4}
 

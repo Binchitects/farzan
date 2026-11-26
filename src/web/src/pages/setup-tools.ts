@@ -15,21 +15,6 @@ export const KEY = 'LLM_SERVICE_API_KEY'
 /** The name the page saves the site's CA certificate under, in the person's home folder. */
 export const CA_FILE = 'arena-ca.crt'
 
-/** The install line's word on the signature: whose certificate signed the builds, which the installer checks with the CA your machine trusts. */
-const signedBy = (c: { codeArena: { signature?: { signer: string; issuer: string } | null } | null }) =>
-  c.codeArena?.signature ? ` and that this Arena's CA, ${c.codeArena.signature.issuer}, signed it (${c.codeArena.signature.signer}: the installer carries that CA and keeps it for updates)` : ''
-
-/** A build of Code Arena the app serves (/api/downloads/code-arena). */
-export interface CodeArenaBuild {
-  rid: string
-  system: string
-  fileName: string
-  size: number
-  sha256: string | null
-  /** On Windows, the IDE's launcher beside it (code-arena-ide.exe): a GUI program that starts code-arena.exe with no console window. */
-  ide?: { fileName: string; size: number; sha256: string | null } | null
-}
-
 export type System = 'unix' | 'windows'
 
 export interface Context {
@@ -44,9 +29,6 @@ export interface Context {
   apiKey?: string
   /** This Arena's own address, https://DOMAIN. */
   origin: string
-  /** Code Arena's builds; null when none could be listed. */
-  /** signature: who signed the builds' list (the stack's CA's code-signing certificate); null: not signed. */
-  codeArena: { version: string; builds: CodeArenaBuild[]; signature?: { signer: string; issuer: string; expires: string } | null } | null
   /** The system the commands are for: a Unix shell (Linux, macOS) or Windows PowerShell. */
   os: System
   /** True when the site's certificate comes from a private CA that tools must be told to trust. */
@@ -78,8 +60,6 @@ export interface Tool {
 }
 
 const json = (v: unknown) => JSON.stringify(v, null, 2)
-const megabytes = (bytes: number) => `${Math.round(bytes / 1024 / 1024)} MB`
-const kilobytes = (bytes: number) => `${Math.max(1, Math.round(bytes / 1024))} KB`
 const unix = (c: Context) => c.os === 'unix'
 
 /** The key in a setup that cannot read it from the environment. */
@@ -152,83 +132,19 @@ export const tools: Tool[] = [
     title: 'Code Arena (our own agent)',
     group: 'Coding agents',
     about:
-      "Our own coding agent, with an IDE around it in your browser (or in your terminal): one file with nothing to install, that talks only to this Arena (the model through the gateway, all of Arena's tools as you), with file, shell and git tools on your machine.",
-    steps: (c) => {
-      const builds = c.codeArena?.builds ?? []
-      if (builds.length === 0)
-        return [
-          {
-            text: "This Arena has no builds of it yet. An admin adds them from the checkout: ./arenactl build --services app builds them into the app's image (the .NET packs from nuget.org, or, on a host with no network, from tools/offline-nuget, which tools/fetch-code-arena-packs.sh fills), and the app is started again on it; or ./arenactl code-arena makes the packages to hand out, in dist/.",
-          },
-        ]
-      return [
-        {
-          text: `Install it as an application (version ${c.codeArena!.version}): download the installer for your system and open it. It puts Code Arena in your Start menu, Applications or app menu, with "Open in Code Arena" on folders, checked against its SHA-256${signedBy(c)}, and needs no administrator rights. code-arena uninstall takes it off again.`,
-          links: [
-            { label: 'Windows', href: '/api/downloads/code-arena/setup/windows', detail: 'Install Code Arena.cmd' },
-            { label: 'macOS', href: '/api/downloads/code-arena/setup/macos', detail: 'Install Code Arena.command (Finder opens it in Terminal)' },
-            { label: 'Linux', href: '/api/downloads/code-arena/setup/linux', detail: 'install-code-arena.sh (sh install-code-arena.sh)' },
-          ],
-        },
-        unix(c)
-          ? {
-              text: `Or install it in one line (version ${c.codeArena!.version}): the build for your machine, checked against its SHA-256${signedBy(c)}, in ~/.local/bin.`,
-              file: 'shell',
-              code: `curl -fsSL ${c.origin}/api/downloads/code-arena/install.sh | sh`,
-            }
-          : {
-              text: `Or install it in one line (version ${c.codeArena!.version}), in PowerShell: the build checked against its SHA-256${signedBy(c)}, on your PATH, with a Code Arena shortcut on your desktop and in the Start menu that opens the IDE with no console window.`,
-              file: 'powershell',
-              code: `irm ${c.origin}/api/downloads/code-arena/install.ps1 | iex`,
-            },
-        {
-          text: 'Or download it for your system yourself:',
-          links: builds.flatMap((b) => [
-            { label: b.system, href: `/api/downloads/code-arena/${b.rid}`, detail: megabytes(b.size) },
-            ...(b.ide ? [{ label: `${b.system}, the IDE launcher (code-arena-ide.exe)`, href: `/api/downloads/code-arena/${b.rid}/ide`, detail: kilobytes(b.ide.size) }] : []),
-          ]),
-        },
-        unix(c)
-          ? {
-              text: 'Downloaded by hand: make it runnable and put it on your PATH.',
-              file: 'shell',
-              code: `chmod +x code-arena
-xattr -d com.apple.quarantine code-arena   # macOS only: the browser's download mark
-mkdir -p ~/.local/bin && mv code-arena ~/.local/bin/`,
-            }
-          : {
-              text: 'Downloaded by hand: put code-arena.exe in a folder on your PATH (or run it from where it is, as .\\code-arena.exe), and code-arena-ide.exe beside it. code-arena.exe is for terminals; for the IDE from a double-click or a shortcut, open code-arena-ide.exe, which starts it with no console window.',
-            },
-        {
-          text: "Sign in with this Arena's address and your API key. It asks for the key, checks it with the gateway, and keeps it in your config folder, readable by you only.",
-          file: 'shell',
-          code: `code-arena login --url ${c.origin}`,
-        },
-        {
-          text: "Start it in your project: it opens an IDE in your browser (the project's files, an editor, search, terminals and the agent's chat), served on your machine only. Over SSH, add --port 8765 --no-open and forward that port.",
-          file: 'shell',
-          code: 'cd your-project\ncode-arena',
-        },
-        {
-          text: 'Or keep the agent in this terminal: code-arena chat for a conversation, code-arena -p "…" to answer once (for scripts).',
-          file: 'shell',
-          code: 'cd your-project\ncode-arena chat',
-        },
-        {
-          text: 'It keeps itself current: once a day it asks this Arena for a newer version and says so (the IDE shows Update in its status bar); this installs it:',
-          file: 'shell',
-          code: 'code-arena update',
-        },
-      ]
-    },
+      "Our own coding agent, in your terminal: one file, that talks only to this Arena (the model through the gateway, all of Arena's tools as you), with file, shell and git tools on your machine, its sessions synced with your chats here.",
+    steps: (c) => [
+      {
+        text: "Install it from its own releases (Code Arena is its own project, github.com/Binchitects/code-arena): one file for Linux, macOS or Windows, put on your PATH. Then sign in to this Arena with your API key (Your account → API key):",
+        file: 'shell',
+        code: `code-arena login --url ${c.origin}`,
+      },
+      { text: 'Work in a folder:', file: 'shell', code: 'cd your-project\ncode-arena' },
+      { text: 'code-arena doctor says what this Arena offers it, feature by feature.', file: 'shell', code: 'code-arena doctor' },
+    ],
     trust: (c) => [
       {
-        text: 'Install it trusting the CA (curl checks the download with it):',
-        file: 'shell',
-        code: `curl --cacert ${caShell(c)} -fsSL ${c.origin}/api/downloads/code-arena/install.sh | CODE_ARENA_CA=${caShell(c)} sh`,
-      },
-      {
-        text: "Sign in with the CA's file instead (or set ARENA_CA_CERT to it): Code Arena keeps it, for the gateway and for Arena MCP.",
+        text: "Sign in with the CA's file (or set ARENA_CA_CERT to it): Code Arena keeps it, for the gateway and for Arena MCP.",
         file: 'shell',
         code: `code-arena login --url ${c.origin} --ca ${caShell(c)}`,
       },

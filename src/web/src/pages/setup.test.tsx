@@ -162,75 +162,28 @@ describe('connect your tools', () => {
     expect(screen.queryByText('Arena MCP (all your tools)')).not.toBeInTheDocument()
   })
 
-  it('offers Code Arena to download for each system it was built for, with the login and the CA note', async () => {
-    const build = (rid: string, system: string, fileName = 'code-arena') => ({ rid, system, fileName, size: 38 * 1024 * 1024, sha256: 'abc' })
-    fakeApi(member, {
-      'GET /api/chat/config': () => ({ json: config({ codeIntel: true }) }),
-      'GET /api/downloads/code-arena': () => ({
-        json: {
-          version: '4.2.0',
-          builds: [
-            build('linux-x64', 'Linux (x64)'),
-            build('osx-arm64', 'macOS (Apple silicon)'),
-            { ...build('win-x64', 'Windows (x64)', 'code-arena.exe'), ide: { fileName: 'code-arena-ide.exe', size: 4096, sha256: 'def' } },
-          ],
-        },
-      }),
-    })
+  it('sends Code Arena to its own releases, signs in to this Arena and checks it answers', async () => {
+    fakeApi(member, { 'GET /api/chat/config': () => ({ json: config({ codeIntel: true }) }) })
     renderApp('/setup')
     await userEvent.click(await screen.findByRole('combobox', { name: 'Your tool' }))
     await userEvent.click(await screen.findByRole('option', { name: 'Code Arena (our own agent)' }))
     const steps = screen.getByRole('region', { name: 'Setting up Code Arena (our own agent)' })
-    expect(within(steps).getAllByText(/version 4.2.0/).length).toBeGreaterThan(0)
-    // An installer per system to download and open: Code Arena as an application.
-    expect(within(steps).getByRole('link', { name: 'Download for Windows, Install Code Arena.cmd' })).toHaveAttribute('href', '/api/downloads/code-arena/setup/windows')
-    expect(within(steps).getByRole('link', { name: /^Download for macOS, Install Code Arena\.command/ })).toHaveAttribute('href', '/api/downloads/code-arena/setup/macos')
-    expect(within(steps).getByRole('link', { name: /^Download for Linux, install-code-arena\.sh/ })).toHaveAttribute('href', '/api/downloads/code-arena/setup/linux')
-    expect(steps).toHaveTextContent('code-arena uninstall takes it off again')
-    // Or one line installs it (checked against its checksum); updates come from this Arena.
-    expect(within(steps).getByText(`curl -fsSL ${window.location.origin}/api/downloads/code-arena/install.sh | sh`)).toBeInTheDocument()
-    expect(within(steps).getByText('code-arena update')).toBeInTheDocument()
-    expect(within(steps).getByRole('link', { name: /Linux \(x64\)/ })).toHaveAttribute('href', '/api/downloads/code-arena/linux-x64')
-    expect(within(steps).getByRole('link', { name: 'Download for Windows (x64), 38 MB' })).toHaveAttribute('href', '/api/downloads/code-arena/win-x64')
-    // Beside it on Windows, the IDE's launcher: no console window on a double-click.
-    expect(within(steps).getByRole('link', { name: 'Download for Windows (x64), the IDE launcher (code-arena-ide.exe), 4 KB' })).toHaveAttribute('href', '/api/downloads/code-arena/win-x64/ide')
-    expect(within(steps).getByRole('link', { name: 'Download for macOS (Apple silicon), 38 MB' })).toHaveAttribute('download')
-    expect(within(steps).queryByRole('link', { name: /Linux \(ARM64\)/ })).not.toBeInTheDocument()
-    // Signing in names this Arena; a public certificate needs no CA step, and a check closes the steps.
+    expect(steps).toHaveTextContent('github.com/Binchitects/code-arena')
     expect(within(steps).getByText(`code-arena login --url ${window.location.origin}`)).toBeInTheDocument()
     expect(within(steps).queryByText(/--ca/)).not.toBeInTheDocument()
     expect(within(steps).getByText('code-arena -p "Reply with exactly: ok"')).toBeInTheDocument()
-    // code-arena alone is the IDE in the browser, on the person's machine; code-arena chat keeps the agent in the terminal.
-    expect(steps).toHaveTextContent("Start it in your project: it opens an IDE in your browser (the project's files, an editor, search, terminals and the agent's chat)")
-    expect(steps).toHaveTextContent('Or keep the agent in this terminal: code-arena chat for a conversation')
-    expect(within(steps).getByText(/^cd your-project\s+code-arena chat$/)).toBeInTheDocument()
-    expect(steps).not.toHaveTextContent('code-arena web')
-    // code-intel comes through Arena's own tools: no GitLab token to add.
+    expect(within(steps).queryByRole('link', { name: /Download/ })).not.toBeInTheDocument()
     expect(within(steps).getByText(/Code Arena connects to Farzan Graph by itself, beside Arena's own tools/)).toBeInTheDocument()
   })
 
   it('does not offer Code Arena to one who may not use it (feature.code_arena)', async () => {
     fakeApi(member, {
       'GET /api/chat/config': () => ({ json: config({ denied: ['feature.code_arena'] }) }),
-      'GET /api/downloads/code-arena': () => ({ json: { version: '4.2.0', builds: [] } }),
     })
     renderApp('/setup')
     await userEvent.click(await screen.findByRole('combobox', { name: 'Your tool' }))
     expect(await screen.findByRole('option', { name: /Claude Code/ })).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: 'Code Arena (our own agent)' })).toBeNull()
-  })
-
-  it('says how to add Code Arena when this Arena has no builds of it', async () => {
-    fakeApi(member, {
-      'GET /api/chat/config': () => ({ json: config() }),
-      'GET /api/downloads/code-arena': () => ({ json: { version: '4.2.0', builds: [] } }),
-    })
-    renderApp('/setup')
-    await userEvent.click(await screen.findByRole('combobox', { name: 'Your tool' }))
-    await userEvent.click(await screen.findByRole('option', { name: 'Code Arena (our own agent)' }))
-    const steps = screen.getByRole('region', { name: 'Setting up Code Arena (our own agent)' })
-    expect(within(steps).getByText(/no builds of it yet/)).toHaveTextContent('./arenactl build --services app builds them into the app')
-    expect(within(steps).queryByRole('link')).not.toBeInTheDocument()
   })
 
   it('each tool has its own steps, filled in with the address, the model and its limits', async () => {

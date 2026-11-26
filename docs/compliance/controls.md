@@ -129,7 +129,7 @@ People come from the company's directory (LDAP or Active Directory), OIDC or SAM
 
 ### IAM-05: Least privilege, by roles and rules
 
-What a person may do comes from roles (built in, or made by the company) held directly, through a group or by everyone, and from rules that give or take a feature; admin roles can be scoped to some groups. The checker says why a person may or may not do something. The wiki finds and shows each person only the documents they may read, and searches only the code they may read in GitLab, as them. A feature taken from a person is hidden from their menus and pages, not only refused. Taking a request out of the line needs usage.line, restarting an engine runtimes.restart; only a chat's owner rewinds it, and Code Arena's key reads and adds to its own person's chats alone. Code Arena asks the person before each VM it deletes, in every mode. Code Arena reaches only the person's own chats' goals and the assistants they may use, and an assistant uses only skills its maker may use. Its sub-agents get only the tools they are given, never more than the session's mode allows, and one that changes files never asks: what its mode would ask is refused. What fills a chat's window is shown to its people only, and Code Arena counts tokens with the person's key, only with the models they may use. Code Arena's agent changes a VM only when the person allows it, for that VM. Sharing with the whole company or with any group is a permission of its own (sharing.company, sharing.groups), not being Owner; a rule can keep one shared assistant, skill or app from people its sharing reaches; the people list with emails and spend needs people.read. Each person's effective permissions are listed with why. A Code workspace's forwarded port is reached only by its owner, signed in, at an origin of its own, or by everyone signed in who may use Code once its owner shares it (audited); Arena's session cookies never reach the program, which cannot set one for Arena's domain. Nobody gives more than they hold: changing a person's role needs access.assign, disabling people.disable alone, and no assignment, role edit, group membership, approved request or bulk change gives anyone a permission the one making it does not hold. Only an Owner makes, takes away, disables or deletes an Owner, sets who is an admin through the directory or company sign-in, or makes the SCIM token; a password, second factor or key is reset only for someone who holds nothing beyond the one resetting it, and a disabled person is enabled again only on the same terms. A permission held for some groups is given only for those groups (and a feature only to their people). Code Arena's memory needs feature.memory, as the chat's does, and its IDE and terminal hide memory when it is denied.
+What a person may do comes from roles (built in, or made by the company) held directly, through a group or by everyone, and from rules that give or take a feature; admin roles can be scoped to some groups. The checker says why a person may or may not do something. The wiki finds and shows each person only the documents they may read, and searches only the code they may read in GitLab, as them. A feature taken from a person is hidden from their menus and pages, not only refused. Taking a request out of the line needs usage.line, restarting an engine runtimes.restart; only a chat's owner rewinds it, and Code Arena's key reads and adds to its own person's chats alone. Code Arena asks the person before each VM it deletes, in every mode. Code Arena reaches only the person's own chats' goals and the assistants they may use, and an assistant uses only skills its maker may use. Its sub-agents get only the tools they are given, never more than the session's mode allows, and one that changes files never asks: what its mode would ask is refused. What fills a chat's window is shown to its people only, and Code Arena counts tokens with the person's key, only with the models they may use. Code Arena's agent changes a VM only when the person allows it, for that VM. Sharing with the whole company or with any group is a permission of its own (sharing.company, sharing.groups), not being Owner; a rule can keep one shared assistant, skill or app from people its sharing reaches; the people list with emails and spend needs people.read. Each person's effective permissions are listed with why. A Code workspace's forwarded port is reached only by its owner, signed in, at an origin of its own, or by everyone signed in who may use Code once its owner shares it (audited); Arena's session cookies never reach the program, which cannot set one for Arena's domain. Nobody gives more than they hold: changing a person's role needs access.assign, disabling people.disable alone, and no assignment, role edit, group membership, approved request or bulk change gives anyone a permission the one making it does not hold. Only an Owner makes, takes away, disables or deletes an Owner, sets who is an admin through the directory or company sign-in, or makes the SCIM token; a password, second factor or key is reset only for someone who holds nothing beyond the one resetting it, and a disabled person is enabled again only on the same terms. A permission held for some groups is given only for those groups (and a feature only to their people). Code Arena's memory needs feature.memory, as the chat's does.
 
 **Serves**
 
@@ -144,7 +144,7 @@ What a person may do comes from roles (built in, or made by the company) held di
 - [NIST SP 800-171 Rev. 3, protecting controlled unclassified information (CMMC builds on it)](frameworks/nist800171.md): 03.01.02 Access Enforcement; 03.01.04 Separation of Duties; 03.01.05 Least Privilege
 - [Common Criteria CC:2022 (ISO/IEC 15408): the functional (Part 2) and assurance (Part 3) families](frameworks/commoncriteria.md): FDP_ACC Access control policy; FDP_ACF Access control functions; FMT_SMR Security management roles
 
-**Documented in** [admin.md#access-roles-and-rules](../admin.md#access-roles-and-rules), [code-arena.md#sub-agents-and-tasks](../code-arena.md#sub-agents-and-tasks), [code-arena.md#virtual-machines](../code-arena.md#virtual-machines), [chat.md#forwarded-ports](../chat.md#forwarded-ports)
+**Documented in** [admin.md#access-roles-and-rules](../admin.md#access-roles-and-rules)
 
 **Proved by**
 
@@ -163,13 +163,9 @@ What a person may do comes from roles (built in, or made by the company) held di
 - `Llm.Tests/CodeArenaGoalTests.Code_Arena_lists_the_assistants_the_person_may_use_with_their_skills`
 - `Llm.Tests/SkillTransferTests.Only_who_may_make_skills_imports_them_from_the_page_or_Code_Arena`
 - `Llm.Tests/ContextWindowTests.Code_Arena_counts_with_the_persons_key_and_only_for_the_models_they_may_use`
-- `Llm.Tests/CodeArenaVmTests.Changing_a_VM_asks_the_person_and_always_covers_that_tool_on_that_VM_only`
-- `Llm.Tests/CodeArenaVmTests.Deleting_a_VM_asks_the_person_every_time_in_every_mode`
 - `Llm.Tests/AccessPermissionsTests.The_people_list_with_emails_and_spend_needs_people_read_not_monitoring`
 - `Llm.Tests/AccessPermissionsTests.Sharing_with_the_company_is_a_permission_and_a_rule_keeps_a_shared_assistant_from_a_group`
 - `Llm.Tests/AccessPermissionsTests.A_persons_effective_permissions_say_why_each_is_held_or_not`
-- `Llm.Tests/StudioPortsTests.A_dev_server_is_listed_and_reached_by_its_owner_alone_at_its_own_address_without_arenas_session`
-- `Llm.Tests/StudioPortsTests.A_port_is_named_shared_with_everyone_signed_in_stopped_and_forwarded_by_hand`
 - `Llm.Tests/PeopleEscalationTests.People_edit_alone_renames_but_makes_nobody_Owner`
 - `Llm.Tests/PeopleEscalationTests.Only_an_Owner_makes_an_Owner_even_with_access_assign`
 - `Llm.Tests/PeopleEscalationTests.People_disable_alone_disables_and_enables`
@@ -188,7 +184,7 @@ What a person may do comes from roles (built in, or made by the company) held di
 
 ### IAM-06: API keys are personal, revocable and checked
 
-Each key belongs to one person and works only as them; an unknown, blocked or expired key is refused; rotating a key revokes the old one first, and disabling a person stops their keys. Code Arena's log on the person's machine never holds its IDE's key, and only its user reads it.
+Each key belongs to one person and works only as them; an unknown, blocked or expired key is refused; rotating a key revokes the old one first, and disabling a person stops their keys.
 
 **Serves**
 
@@ -203,13 +199,12 @@ Each key belongs to one person and works only as them; an unknown, blocked or ex
 - [NIST SP 800-171 Rev. 3, protecting controlled unclassified information (CMMC builds on it)](frameworks/nist800171.md): 03.05.12 Authenticator Management
 - [Common Criteria CC:2022 (ISO/IEC 15408): the functional (Part 2) and assurance (Part 3) families](frameworks/commoncriteria.md): FIA_UAU User authentication
 
-**Documented in** [authentication.md#as-a-machine-client-of-the-engine-api](../authentication.md#as-a-machine-client-of-the-engine-api), [code-arena.md#the-ide](../code-arena.md#the-ide)
+**Documented in** [authentication.md#as-a-machine-client-of-the-engine-api](../authentication.md#as-a-machine-client-of-the-engine-api)
 
 **Proved by**
 
 - `Llm.Tests/KeyCheckTests.An_unknown_blocked_or_expired_key_is_refused`
 - `Llm.Tests/IdentityTests.Rotating_a_key_revokes_the_old_one_first`
-- `Llm.Tests/CodeArenaLogTests.Code_Arenas_log_never_holds_the_IDEs_key_and_only_its_user_reads_it`
 
 **The company's part** People keep their keys out of shared files and repositories.
 
@@ -515,7 +510,7 @@ People download everything of theirs from Your account; an admin exports a perso
 
 ### DAT-04: Personal data and secrets kept from the model
 
-Safeguards mask personal data before a question reaches the model while the chat keeps it as written; answers are masked or withheld by rule; what tools send and bring back is held by their rules; a pasted secret or private key is refused and audited by its kind only, a name in code not taken for one; each refusal names its rule, what it found and where, a secret cut to its first characters; words and prompt injection are read through their disguises and in eleven languages, commands that do damage are kept from agents' tools, and data sent out through images and links is stopped. A message sent while an answer runs is checked when it is queued and again when it is edited, before the answer takes it in. A VM's guest password, which Code Arena's VM tools sign in with, never reaches the model, the session, the log or a command line of Code Arena's own.
+Safeguards mask personal data before a question reaches the model while the chat keeps it as written; answers are masked or withheld by rule; what tools send and bring back is held by their rules; a pasted secret or private key is refused and audited by its kind only, a name in code not taken for one; each refusal names its rule, what it found and where, a secret cut to its first characters; words and prompt injection are read through their disguises and in eleven languages, commands that do damage are kept from agents' tools, and data sent out through images and links is stopped. A message sent while an answer runs is checked when it is queued and again when it is edited, before the answer takes it in.
 
 **Serves**
 
@@ -530,7 +525,7 @@ Safeguards mask personal data before a question reaches the model while the chat
 - [NIST SP 800-171 Rev. 3, protecting controlled unclassified information (CMMC builds on it)](frameworks/nist800171.md): 03.01.03 Information Flow Enforcement
 - [Common Criteria CC:2022 (ISO/IEC 15408): the functional (Part 2) and assurance (Part 3) families](frameworks/commoncriteria.md): FDP_IFC Information flow control policy; FDP_IFF Information flow control functions
 
-**Documented in** [admin.md#safeguards](../admin.md#safeguards), [chat.md#safeguards](../chat.md#safeguards), [code-arena.md#virtual-machines](../code-arena.md#virtual-machines)
+**Documented in** [admin.md#safeguards](../admin.md#safeguards), [chat.md#safeguards](../chat.md#safeguards)
 
 **Proved by**
 
@@ -545,7 +540,6 @@ Safeguards mask personal data before a question reaches the model while the chat
 - `Llm.Tests/SafeguardRulesTests.Every_block_names_its_rule_what_it_found_and_where_without_the_secret_itself`
 - `Llm.Tests/QueuedMessagesTests.A_queued_message_is_edited_until_it_is_taken_in_and_one_with_files_waits_for_the_answer_to_end`
 - `Llm.Tests/SkillTransferTests.An_imported_skill_goes_through_the_safeguards_and_one_holding_a_private_key_is_refused`
-- `Llm.Tests/CodeArenaVmTests.A_VMs_guest_password_never_reaches_the_model_or_a_command_line`
 
 **The company's part** Decide which data may reach which model, and which models are outside the company.
 

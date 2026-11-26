@@ -1,7 +1,6 @@
 """
 tools/images-for.py: the stack's images a change is in, read from deploy/docker-compose.yml and the Dockerfiles it
-builds, so a redeploy builds and starts again every one that holds the change (Code Arena's: the app and Code
-Studio's workspaces).
+builds, so a redeploy builds and starts again every one that holds the change.
 """
 from __future__ import annotations
 
@@ -25,24 +24,15 @@ class ImagesFor(unittest.TestCase):
     def of(self, *paths: str) -> list[str]:
         return images_for.services_for(list(paths), self.built)
 
-    def test_a_code_arena_change_is_in_the_app_and_the_workspaces(self):
-        self.assertEqual(self.of("src/CodeArena/IdeGit.cs"), ["app", "workspaces"])
-        self.assertEqual(self.of("skills/code-review/SKILL.md"), ["app", "workspaces"])
-        # The files Code Arena shares with the app go into both; the rest of Llm.Core only into the app.
-        self.assertEqual(self.of("src/Llm.Core/Chat/HistoryWords.cs"), ["app", "workspaces"])
-        self.assertEqual(self.of("src/Llm.Core/Chat/ChatEntities.cs"), ["app"])
-
-    def test_a_change_to_code_arenas_page_is_in_the_app_and_the_web(self):
-        # The same page is in Code Arena's builds (the app serves them) and in Code Studio (Arena's web).
-        self.assertEqual(self.of("src/web/src/code-arena/scm.tsx"), ["app", "web"])
-        self.assertEqual(self.of("docs/code-arena.md"), ["web"])
+    def test_the_apps_own_files_and_the_skills_it_carries_are_in_the_app(self):
+        self.assertEqual(self.of("skills/code-review/SKILL.md"), ["app"])
+        self.assertEqual(self.of("src/Llm.Core/Chat/HistoryWords.cs"), ["app"])
+        self.assertEqual(self.of("docs/chat.md"), ["web"])
 
     def test_a_service_s_own_files_and_what_others_copy_of_them(self):
-        self.assertEqual(self.of("deploy/services/workspaces/Dockerfile"), ["workspaces"])
-        self.assertEqual(self.of("deploy/services/workspaces/supervisor.py"), ["workspaces"])
-        # The sandbox's runner is in the 3D sandbox and Lean too; its arena module in what runs code mode.
+        # The sandbox's runner is in the 3D sandbox and Lean too.
         self.assertEqual(self.of("deploy/services/sandbox/runner.py"), ["blender", "lean", "sandbox"])
-        self.assertEqual(self.of("deploy/services/sandbox/arena/__init__.py"), ["app", "sandbox", "workspaces"])
+        self.assertEqual(self.of("deploy/services/sandbox/arena/__init__.py"), ["sandbox"])
         self.assertEqual(self.of("tests/deploy/test_images_for.py", "CHANGELOG.md"), [])
 
     def test_copy_and_add_from_the_context_only(self):
@@ -58,9 +48,9 @@ class ImagesFor(unittest.TestCase):
 
     def test_prints_the_services_of_the_paths_given(self):
         out = io.StringIO()
-        with mock.patch("sys.stdin", io.StringIO("src/CodeArena/Program.cs\nsrc/web/src/code-arena/answer.tsx\n")), redirect_stdout(out):
+        with mock.patch("sys.stdin", io.StringIO("src/Llm.Api/Program.cs\nsrc/web/src/app/nav.ts\n")), redirect_stdout(out):
             self.assertEqual(images_for.main(["-"]), 0)
-        self.assertEqual(out.getvalue(), "app\nweb\nworkspaces\n")
+        self.assertEqual(out.getvalue(), "app\nweb\n")
 
 
 if __name__ == "__main__":

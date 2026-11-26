@@ -18,7 +18,6 @@ const lazy = (load: () => Promise<{ Component: ComponentType }>) => ({
 export const routes: RouteObject[] = [
   { path: '/login', ...lazy(() => import('@/pages/login').then((m) => ({ Component: m.LoginPage }))), errorElement: <RouteErrorPage /> },
   // Code's IDE: the whole window, under its own bar (not the app's).
-  { path: '/code/w/:id', ...lazy(() => import('@/pages/code/studio').then((m) => ({ Component: m.WorkspacePage }))), errorElement: <RouteErrorPage /> },
   {
     path: '/',
     element: <Shell />,

@@ -58,10 +58,6 @@ const tokens = (n: number | null) => (n ? n.toLocaleString('en-US') : '—')
 export function ConnectPage() {
   const config = useQuery({ queryKey: ['chat', 'config'], queryFn: ({ signal }) => api<ChatConfig>('/api/chat/config', { signal }) })
   const mcp = useQuery({ queryKey: ['account', 'mcp'], queryFn: ({ signal }) => api<McpInfo>('/api/account/mcp', { signal }) })
-  const codeArena = useQuery({
-    queryKey: ['downloads', 'code-arena'],
-    queryFn: ({ signal }) => api<NonNullable<Context['codeArena']>>('/api/downloads/code-arena', { signal }),
-  })
   const certificate = useQuery({
     queryKey: ['downloads', 'certificate'],
     queryFn: ({ signal }) => api<SiteCertificate>('/api/downloads/certificate', { signal }),
@@ -85,7 +81,7 @@ export function ConnectPage() {
   const tool = offered.find((t) => t.id === toolId) ?? offered.find((t) => t.id === 'claude') ?? offered[0]!
   const context: Context = {
     root, base: `${root}/v1`, model, context: current?.context ?? 32768, maxOutput: current?.maxOutput ?? 8192, codeIntelUrl,
-    apiKey: fill && newKey ? newKey : undefined, origin: window.location.origin, codeArena: codeArena.data ?? null,
+    apiKey: fill && newKey ? newKey : undefined, origin: window.location.origin,
     os, ca: !!certificate.data?.available && !certificate.data.trusted,
   }
   const choose = (id: string) => {

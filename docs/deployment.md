@@ -98,14 +98,9 @@ The addresses, all on port 443:
 | `https://DOMAIN` | the app |
 | `https://gateway.DOMAIN/v1` | the API (OpenAI and Anthropic protocols), with a person's key |
 | `https://code-intel.DOMAIN/mcp` | Farzan Graph for coding agents, with a person's API key (not a GitLab token) |
-| `https://ws-<workspace>-<port>.DOMAIN` | with Code's workspaces: a dev server in a workspace, for its owner ([chat.md](chat.md#forwarded-ports)) |
 
 `*.localhost` resolves to this machine in browsers; for other tools,
-`./arenactl hosts` adds the names to `/etc/hosts`. With Code's
-workspaces, a forwarded port has a name of its own under `DOMAIN`: the
-company's DNS needs a wildcard record (`*.DOMAIN`) for this machine, and
-the certificate must cover `*.DOMAIN` (the one `./arenactl cert` makes does;
-Let's Encrypt's, made per name, does not).
+`./arenactl hosts` adds the names to `/etc/hosts`.
 
 People connect their tools from **Connect your tools** in the app. A team's
 GitLab pipeline uses the gateway too: a review of each merge request and an
@@ -225,7 +220,6 @@ on; its API answers 404; and its background work does not run.
 | `3d` | no | `blender` | |
 | `lean` | no | `lean` (an image of about 13 GB) | the lab |
 | `studio` | no | `studio` | a GPU; the media studio |
-| `workspaces` | no | `workspaces` | Code |
 | `laya` | no | `laya` | |
 | `scanners` | no | `scanners` (an image of about 700 MB) | Farzan Graph |
 | `monitoring` | yes | `prometheus`, `alertmanager`, `loki`, `alloy`, `node-exporter`, `cpu-temp-exporter` | |
@@ -258,7 +252,7 @@ were).
 answers typed questions about a text with a probability for every option, in
 one forward pass, on the CPU: the chat's **Decide (Laya)** tool
 ([chat.md](chat.md#decide-laya)), which Arena MCP serves to agents, and Code
-Arena's look at commands ([code-arena.md](code-arena.md#laya-looks-at-commands)).
+Arena's look at commands ([code-arena.md](code-arena.md)).
 It is off by default. To turn it on, with the installer:
 
 ```bash
@@ -450,8 +444,7 @@ the power limits run with compose only.
    them to a registry the cluster pulls from; name them under `images` (the tag
    defaults to the app's version).
 2. Make a TLS Secret for `DOMAIN`, `gateway.DOMAIN` and `code-intel.DOMAIN` (a
-   wildcard, or the files `./arenactl cert` makes; with `workspaces.enabled`,
-   `*.DOMAIN` too, for Code's forwarded ports): `kubectl create secret tls
+   wildcard, or the files `./arenactl cert` makes): `kubectl create secret tls
    arena-tls --cert=... --key=...`.
 3. Install:
 
@@ -823,8 +816,7 @@ GitLab token and apps (Fix it, Code, Automations, knowledge
 sources), every other HTTP client the app makes without a check of its own,
 Farzan Graph's API client and its git clones (the app writes the CA to
 `company-ca.pem` beside the directory file, which Farzan Graph reads again whenever
-it changes: `CODE_INTEL_GITLAB_CA_EXTRA`), and Code's workspaces (their
-clone, `git push` in their terminals, curl, Python, pip, .NET and Node.js).
+it changes: `CODE_INTEL_GITLAB_CA_EXTRA`).
 A certificate must still be for GitLab's name and within its dates; one of
 another CA is still refused. Before the CA is given, linking a token says
 that GitLab's certificate is not trusted and where to add the CA, instead of

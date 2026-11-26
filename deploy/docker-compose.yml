@@ -116,9 +116,6 @@ services:
       # LMCache's remote store for the vLLM models' token cache (redis://valkey:6379 with the valkey profile); empty: none.
       Engine__LmcacheRemote: ${LMCACHE_REMOTE:-}
       CodeIntel__AdminToken: ${CODE_INTEL_KEY:?set CODE_INTEL_KEY in .env}
-      # Code Studio's workspaces (the workspaces profile): the service and its key.
-      Workspaces__Url: http://workspaces:4000
-      Workspaces__Key: ${WORKSPACES_KEY:-}
       CodeIntel__GitlabUrl: ${GITLAB_URL:-}
       CodeIntel__Host: ${CODE_INTEL_HOST:-code-intel}
       # GitLab's CA when it is the company's own (GITLAB_CA_FILE), trusted by every client the app makes; Settings can add one.
@@ -148,8 +145,6 @@ services:
       - audit:/audit
       # GitLab's CA (GITLAB_CA_FILE), read only; none given: an empty file.
       - ${GITLAB_CA_FILE:-/dev/null}:/etc/arena/company-ca.pem:ro
-      # The Code Arena builds' signature, made on the host with the CA's key (scripts/sign-code-arena.sh).
-      - code-arena-signature:/downloads-signature:ro
       # scripts/backup.sh's backups, for Admin -> Storage: their sizes and how each ended.
       # Read only: they hold .env and the compose files a restore puts back, so the app
       # never changes or deletes them (scripts/backup.sh --prune removes old ones).
@@ -161,7 +156,7 @@ services:
         read_only: true
         bind: { create_host_path: true }
     # The stack's network, Laya's and the browser's, which lead nowhere else.
-    networks: [default, laya, browsing, studio, workspaces]
+    networks: [default, laya, browsing, studio]
     # Not required: with an external Postgres this stack's is left out.
     depends_on: { postgres: { condition: service_healthy, required: false } }
 
@@ -427,8 +422,8 @@ services:
       # Built knowledge packs to load (Admin -> Packs): the repository's packs/, or CODE_INTEL_PACK_LIBRARY_DIR.
       - ${CODE_INTEL_PACK_LIBRARY_DIR:-../packs}:/pack-library:ro
       - directory:/directory:ro
-    # Code Studio's workspaces ask it too, each with the person's own key; it alone reaches the scanners.
-    networks: [default, workspaces, scanning]
+    # It alone reaches the scanners.
+    networks: [default, scanning]
     # A GitLab on this machine.
     extra_hosts: ["host.docker.internal:host-gateway"]
 
@@ -579,34 +574,6 @@ services:
     networks: [studio]
     mem_limit: 24g
     cpus: 8
-
-  # Code Studio's workspaces: Code Arena's own engine per workspace (a clone of a project the person works on in the
-  # browser's IDE), each as its own user with limits (services/workspaces/supervisor.py). Off unless COMPOSE_PROFILES
-  # names workspaces. No Docker socket; only the capabilities to switch users and clean up after them. Its network
-  # reaches the app (the IDE's requests come through it, and its agents' model calls), code-intel (with the person's own key)
-  # and the internet (the code host, package registries), not the stack's databases, engines or browser.
-  workspaces:
-    <<: *service
-    build: { context: .., dockerfile: deploy/services/workspaces/Dockerfile, args: { PRODUCT_NAME: "${PRODUCT_NAME:-}", CODE_INTEL_NAME: "${CODE_INTEL_NAME:-}" } }
-    image: arena-workspaces
-    container_name: workspaces
-    profiles: [workspaces]
-    init: true
-    cap_drop: [ALL]
-    cap_add: [SETUID, SETGID, CHOWN, DAC_OVERRIDE, FOWNER, KILL]
-    # The agent's commands run in bubblewrap, which makes user, PID and mount namespaces without any capability: the
-    # seccomp profile allows the calls for them (Podman's default, config/workspaces-seccomp.json; Docker's refuses them
-    # without CAP_SYS_ADMIN), AppArmor's docker-default refuses its mounts, and a masked /proc refuses its own /proc.
-    # The container keeps no capability to use them for itself.
-    security_opt: [no-new-privileges:true, seccomp=./config/workspaces-seccomp.json, apparmor=unconfined, systempaths=unconfined]
-    pids_limit: 4096
-    mem_limit: ${WORKSPACES_MEMORY:-16g}
-    cpus: ${WORKSPACES_CPUS:-4}
-    environment:
-      WORKSPACES_KEY: ${WORKSPACES_KEY:-}
-      WORKSPACES_SLOTS: ${WORKSPACES_SLOTS:-32}
-    volumes: [workspaces:/workspaces]
-    networks: [workspaces]
 
   # Laya: typed decisions (a text and questions in, probabilities out) for the chat's
   # Decide tool and Code Arena, on the CPU. Off unless COMPOSE_PROFILES names laya. The
@@ -782,9 +749,6 @@ networks:
   studio: { internal: true }
   # Between code-intel and the security scanners only: internal, so no way out of the stack.
   scanning: { internal: true }
-  # Between the app (its model gateway too) and Code Studio's workspaces: not internal (a workspace clones, pushes and installs
-  # packages), and nothing else of the stack is on it.
-  workspaces: {}
 
 # The stack's data lives in folders of DATA_DIR on the host, one per volume (the installer asks where,
 # and makes them with their services' owners); compose names them as volumes, so backups and
@@ -801,13 +765,8 @@ volumes:
   # The audit log's anchors: its newest entry and hash each day, where changing the database does not reach.
   audit:
     driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/audit" }
-  code-arena-signature:
-    driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/code-arena-signature" }
   sandbox:
     driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/sandbox" }
-  # Code Studio's workspaces: each a clone, its engine's home and what the person has not pushed yet.
-  workspaces:
-    driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/workspaces" }
   blender:
     driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/blender" }
   lean:

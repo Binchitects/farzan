@@ -20,7 +20,6 @@ import { AutoReviews } from './auto-reviews'
 import { askCode, mergeRequestsQuery, reviewBatchesQuery, reviewsQuery, startReview, verdictLabel, type ReviewBrief } from './api'
 import { BusinessMapSection } from './business'
 import { repositoriesOf } from './severity'
-import { Workspaces } from './studio'
 import { codeIntelName } from '@/lib/brand'
 
 /** A review's state in a word or two, with its verdict once done. */
@@ -30,11 +29,11 @@ export function ReviewState({ r }: { r: Pick<ReviewBrief, 'status' | 'step' | 'v
   return <Badge variant={r.verdict === 'changes' ? 'warning' : r.verdict === 'looks_good' ? 'success' : 'default'}>{verdictLabel[r.verdict ?? 'comments']}</Badge>
 }
 
-type Tab = 'workspaces' | 'review' | 'ask'
+type Tab = 'review' | 'ask'
 
 /**
- * Code, in three parts each its permission's (Admin → Access): Workspaces (code.studio), Review (review.run starts
- * them: a merge request, a branch, a whole repository or several; code.read lists merge requests) and Ask and explore
+ * Code, in two parts each its permission's (Admin → Access): Review (review.run starts them: a merge request, a branch,
+ * a whole repository or several; code.read lists merge requests) and Ask and explore
  * (code.read: questions, code-intel's tools across repositories, business maps). Fix it and Security review are a button away.
  */
 export function CodePage() {
@@ -42,7 +41,6 @@ export function CodePage() {
   const may = (permission: string) => mayUse(me.data, permission)
   const [params, setParams] = useSearchParams()
   const tabs: { value: Tab; label: string; shown: boolean }[] = [
-    { value: 'workspaces', label: 'Workspaces', shown: may('code.studio') },
     { value: 'review', label: 'Review', shown: may('review.run') || may('code.read') },
     { value: 'ask', label: 'Ask and explore', shown: may('code.read') },
   ]
@@ -54,7 +52,7 @@ export function CodePage() {
     <>
       <PageHeader
         title="Code"
-        description={`Code in an IDE like VS Code, on the server or your own machine; review a change, a whole repository or several with the model; and ask ${codeIntelName} about your code across repositories. Reviews read with your own access and write nothing; workspaces and Fix it push and open merge requests as you, with your own token.`}
+        description={`Review a change, a whole repository or several with the model, and ask ${codeIntelName} about your code across repositories. Reviews read with your own access and write nothing; Fix it pushes and opens merge requests as you, with your own token.`}
         actions={
           <>
             <Button variant="outline" asChild>
@@ -82,7 +80,6 @@ export function CodePage() {
             ))}
           </TabsList>
         )}
-        <TabsContent value="workspaces">{may('code.studio') && <Workspaces />}</TabsContent>
         <TabsContent value="review">
           <ReviewTab mayRun={may('review.run')} mayRead={may('code.read')} mayAuto={may('review.run') && may('review.policy')} />
         </TabsContent>

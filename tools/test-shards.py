@@ -5,7 +5,7 @@ longest shard's time instead of the sum. Separate processes, so nothing a test h
 
     tools/test-shards.py tests/Llm.Tests                     # 3 shards, Release
     tools/test-shards.py tests/Llm.Tests --shards 4 --coverage --out TestResults/shards
-    tools/test-shards.py tests/CodeArena.Tests --times TestResults/baseline/codearena
+    tools/test-shards.py tests/CodeIntel.Tests --shards 2
 
 The times come from a run's TRX files (--times DIR, default the project's tests/<name>/test-times.json, written by
 --save-times after a run); a class with no time counts as the average. Exit status: the number of shards that failed.

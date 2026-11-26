@@ -195,30 +195,6 @@ export const newRuleSecret = (id: string) => api<{ secret: string }>(`/api/code/
 
 export const checkRule = (id: string) => api<{ said: string[] }>(`/api/code/rules/${id}/check`, { body: {} })
 
-export interface Workspace {
-  id: string
-  kind: 'server' | 'machine'
-  name: string
-  project: string | null
-  branch: string | null
-  /** A server's: running, asleep or failed; a machine's: connected or offline. */
-  state: 'running' | 'asleep' | 'failed' | 'connected' | 'offline'
-  error: string | null
-  createdAt: string
-  usedAt: string
-}
-
-export const workspacesQuery = {
-  queryKey: ['studio', 'workspaces'] as const,
-  queryFn: ({ signal }: { signal: AbortSignal }) => api<{ server: boolean; workspaces: Workspace[] }>('/api/studio/workspaces', { signal }),
-  // A machine connects and disconnects on its own: read again now and then while there is one.
-  refetchInterval: (q: { state: { data?: { workspaces: Workspace[] } } }) => (q.state.data?.workspaces.some((w) => w.kind === 'machine') ? 10_000 : false),
-}
-
-export const createWorkspace = (body: { project: string; branch?: string }) => api<Workspace>('/api/studio/workspaces', { body })
-export const startWorkspace = (id: string) => api<Workspace>(`/api/studio/workspaces/${id}/start`, { body: {} })
-export const stopWorkspace = (id: string) => api<Workspace>(`/api/studio/workspaces/${id}/stop`, { body: {} })
-export const deleteWorkspace = (id: string) => api(`/api/studio/workspaces/${id}`, { method: 'DELETE' })
 
 /** Where an item of the business map was read: code (path:line), a document, an issue, a merge request or a wiki page. */
 export interface BusinessSource {

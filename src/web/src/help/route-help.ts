@@ -45,7 +45,6 @@ export const routeHelp: Record<string, TopicId> = {
   '/security': 'security',
   '/security/scans/:id': 'security-review',
   '/security/batches/:id': 'security-batch',
-  '/code/w/:id': 'workspace',
   '/code/business/:id': 'business',
   '/code/fixes': 'fixes',
   '/code/fixes/:id': 'fix',

@@ -41,45 +41,17 @@ Testcontainers can reach the databases it starts:
 tools/dn build LlmService.slnx -c Release
 tools/dn test tests/Llm.Tests -c Release       # needs Docker (Testcontainers)
 tools/dn test tests/CodeIntel.Tests -c Release
-tools/dn test tests/CodeArena.Tests -c Release
-```
-
-A Code workspace end to end runs against a workspaces image built from
-the checkout, in throwaway containers of its own (the workspaces service with
-compose's security options, and a code host that is GitLab's API, git over
-HTTP and the agent's model): clone, a dev server in a terminal opened through
-its forwarded address, the agent's command in the sandbox, a commit pushed,
-sleep and wake.
-
-```bash
-docker build -f deploy/services/workspaces/Dockerfile -t ws-e2e .
-tools/dn test tests/Llm.Tests -c Release --filter RealWorkspace -e STUDIO_E2E_IMAGE=ws-e2e
-```
-
-The same in a browser: `src/web/ci/workspaces-stack.sh up` starts a stack of
-its own (containers and a network named `wse2e-*`, beside any other) with the
-app, the web and Traefik built from the checkout, the workspaces service and
-the code host; `e2e/workspaces.spec.ts` then makes a workspace in Code,
-waits for its IDE on the clone, runs a dev server in its terminal, finds it in
-the Ports panel and opens its forwarded address in a tab of its own, then puts
-the workspace to sleep. CI's `workspaces` job runs both.
-
-```bash
-docker build -t llm-app:ci -f src/Llm.Api/Dockerfile . && docker build -t llm-web:ci -f src/web/Dockerfile .
-E2E_PASSWORD=pick-one E2E_PORT=18443 src/web/ci/workspaces-stack.sh up
-cd src/web && E2E_WORKSPACES=1 E2E_PASSWORD=pick-one E2E_BASE_URL=https://llm.localhost:18443 npx playwright test e2e/workspaces.spec.ts --project desktop
-src/web/ci/workspaces-stack.sh down
 ```
 
 Code Arena uses the base class library only (no packages). Its standalone
 files, one per system, need .NET's runtime packs: `./arenactl code-arena`
 builds them into `dist/code-arena/` and packs them for a release
-([code-arena.md](code-arena.md#building-it-admins)), after building the page of
+([code-arena.md](code-arena.md)), after building the page of
 its IDE from `src/web` (`vite.code-arena.config.ts`, into
 `src/CodeArena/web`, which the program embeds): the packs from nuget.org, or
 `--offline` from `tools/offline-nuget/`. The page's code is `src/web/src/code-arena/`:
 the chat's components, Monaco and xterm.js around Code Arena's API
-([its calls](code-arena.md#the-pages-calls)); its tests run with the web's
+([its calls](code-arena.md)); its tests run with the web's
 (`npx vitest run src/code-arena`). The terminals' tests start a real `/bin/sh`
 on a pseudo-terminal, so run Code Arena's tests on Linux or macOS.
 
@@ -198,10 +170,7 @@ runtime image carries the receipt at `/usr/share/code-intel/build-verified`.
 ### What a change is in
 
 A change runs once every image that holds it is built again and its service
-started again. That is often more than one: Code Arena is in the app's image
-(the app serves its builds) and in Code's workspaces (each workspace's
-engine), and its page is in the app's and the web's. `tools/images-for.py`
-reads the Dockerfiles and names them:
+started again. `tools/images-for.py` reads the Dockerfiles and names them:
 
 ```bash
 images=$(python3 tools/images-for.py origin/main)    # what changed since origin/main, committed or not
@@ -209,9 +178,6 @@ images=$(python3 tools/images-for.py origin/main)    # what changed since origin
 ```
 
 (None named, `docker compose build` would build them all: hence the check.)
-
-Starting `workspaces` again stops the engines of the workspaces running there;
-each runs the new engine once it is started again.
 
 ## Releasing
 

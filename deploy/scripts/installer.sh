@@ -96,7 +96,7 @@
 #   --cpu-only           no NVIDIA GPU: the features that need one are off unless --with names them
 #   --with A,B  --without A,B   features on and off (install, upgrade and repair; installer.sh features)
 #   --no-cert            no certificate of the deployment's own: by default install, upgrade and repair make
-#                        one (scripts/make-cert.sh: a CA of its own, which also signs Code Arena's builds)
+#                        one (scripts/make-cert.sh: a CA of its own)
 #                        unless --acme-email (Let's Encrypt) or one is there already; Traefik's own then
 #   --hosts              the stack's names in /etc/hosts (scripts/setup-hosts.sh; needs root)
 #   --skip-requirements  go on when a requirement is not met (install and upgrade)
@@ -142,7 +142,7 @@ GPU_SERVICES="llamacpp imagegen videogen gpu-exporter power-limits"
 # The uid the app's image runs as on Docker: it writes MODELS_DIR (ARENA_APP_UID for the tests, which run as theirs).
 APP_UID="${ARENA_APP_UID:-1000}"
 # The services' users, for the volumes they write: repair puts a wrong owner right.
-VOLUME_OWNERS="engine:1000:1000 directory:1000:1000 audit:1000:1000 sandbox:1000:1000 workspaces:0:0 blender:1000:1000 lean:1000:1000 audio:1000:1000 code-intel:10001:10001 loki:10001:10001 prometheus:65534:65534 alertmanager:65534:65534"
+VOLUME_OWNERS="engine:1000:1000 directory:1000:1000 audit:1000:1000 sandbox:1000:1000 blender:1000:1000 lean:1000:1000 audio:1000:1000 code-intel:10001:10001 loki:10001:10001 prometheus:65534:65534 alertmanager:65534:65534"
 # .env and this script decide these, not the caller's shell.
 unset COMPOSE_FILE COMPOSE_PROFILES COMPOSE_PROJECT_NAME COMPOSE_ENV_FILES
 export PODMAN_COMPOSE_WARNING_LOGS=false
@@ -425,7 +425,7 @@ dc() {
   (cd "$DEPLOY" && env COMPOSE_PROJECT_NAME="$PROJECT" COMPOSE_PROFILES="$(env_get COMPOSE_PROFILES)" ${cf:+COMPOSE_FILE="$cf"} "$ENGINE" compose "$@")
 }
 # The stack's certificate: one of a CA of the deployment's own (scripts/make-cert.sh), unless Let's Encrypt
-# makes it (ACME_EMAIL), one is there already, or --no-cert. The CA also signs Code Arena's builds (sign_builds).
+# makes it (ACME_EMAIL), one is there already, or --no-cert.
 ensure_cert() {   # ensure_cert plan|do
   [[ $NO_CERT -eq 1 ]] && return 0
   # One there already (its certificate, its key, or Traefik told of another) is the host's: never made over it.
@@ -437,19 +437,6 @@ ensure_cert() {   # ensure_cert plan|do
     ok "certs/tls.crt for $domain and *.$domain, from certs/ca.crt: trust that CA on the machines and tools that use the stack"
   else
     bad "scripts/make-cert.sh failed: Traefik serves its own certificate until it is run again (./arenactl repair in a checkout, or $DIR/deploy/scripts/installer.sh repair --dir $DIR here)"
-  fi
-}
-# Code Arena's builds, as the app serves them, signed with a code-signing certificate of the stack's
-# CA, the Windows builds with Authenticode too (scripts/sign-code-arena.sh, on the host: the key goes
-# only to a container of the app's image with no network). Never fatal: an unsigned build still
-# installs by its SHA-256.
-sign_builds() {
-  [[ -f "$DEPLOY/certs/ca.key" || -f "$DEPLOY/signing/code-signing.crt" ]] || return 0
-  local cf said; cf="$(compose_files)"
-  if said="$(cd "$DEPLOY" && env ENGINE="$ENGINE" COMPOSE_PROJECT_NAME="$PROJECT" COMPOSE_PROFILES="$(env_get COMPOSE_PROFILES)" ${cf:+COMPOSE_FILE="$cf"} sh scripts/sign-code-arena.sh 2>&1)"; then
-    ok "${said##*$'\n'}"
-  else
-    note "Code Arena's builds are not signed: ${said##*$'\n'}"
   fi
 }
 # Down, once more if the first fails (rootless Podman's network teardown sometimes does).
@@ -528,8 +515,6 @@ make_data_dirs() {   # make_data_dirs plan|do: DATA_DIR and a folder in it for e
     [[ -d "$DATA_DIR/$v" ]] && continue
     if [[ $1 == plan ]]; then would "make $DATA_DIR/$v"; continue; fi
     (umask 077; mkdir -p "$DATA_DIR/$v") || die "cannot make $DATA_DIR/$v"
-    # The app (uid 1000) reads the signature sign-code-arena.sh writes there as root.
-    [[ $v == code-arena-signature ]] && chmod 755 "$DATA_DIR/$v"
     UNDO_DATA_MADE+=("$v")
     made=$((made + 1))
   done
@@ -1276,7 +1261,7 @@ check_requirements() {   # check_requirements fresh|upgrade
     else req_bad "disk for the images: $(human $((${free:-0} * 1024))) free in $root, $(human $((need * 1024))) needed"; fi
   fi
   if [[ -n "$BUNDLE" ]]; then
-    need=$(( ( $(du -sk "$BUNDLE/models" "$BUNDLE/packs" "$BUNDLE/code-arena" "$BUNDLE/docs" 2>/dev/null | awk '{ s += $1 } END { print s + 0 }') ) * 11 / 10 + 1024 * 1024 ))
+    need=$(( ( $(du -sk "$BUNDLE/models" "$BUNDLE/packs" "$BUNDLE/docs" 2>/dev/null | awk '{ s += $1 } END { print s + 0 }') ) * 11 / 10 + 1024 * 1024 ))
     free="$(free_kb "$(existing_parent "$DIR")")"
     if [[ -n "$free" && $free -ge $need ]]; then ok "disk for $DIR: $(human $((free * 1024))) free, $(human $((need * 1024))) needed"
     else req_bad "disk for $DIR: $(human $((${free:-0} * 1024))) free, $(human $((need * 1024))) needed"; fi
@@ -1317,7 +1302,7 @@ check_requirements() {   # check_requirements fresh|upgrade
   # The host's settings the services need.
   v="$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || echo 0)"
   if [[ $v -ge 524288 ]]; then ok "inotify watches: $v"
-  else note "inotify watches: $v (Code Arena's file watching and the log agent want 524288)"; req_fix "raise fs.inotify.max_user_watches to 524288" "fix_sysctl fs.inotify.max_user_watches 524288"; fi
+  else note "inotify watches: $v (the log agent wants 524288)"; req_fix "raise fs.inotify.max_user_watches to 524288" "fix_sysctl fs.inotify.max_user_watches 524288"; fi
   v="$(cat /proc/sys/fs/inotify/max_user_instances 2>/dev/null || echo 0)"
   [[ $v -ge 512 ]] || { note "inotify instances: $v (the containers together want 512)"; req_fix "raise fs.inotify.max_user_instances to 512" "fix_sysctl fs.inotify.max_user_instances 512"; }
   if command -v timedatectl >/dev/null; then
@@ -1744,11 +1729,11 @@ expected_sums() {
     | while IFS= read -r line; do is_user_path "${line:66}" || printf '%s\n' "$line"; done
 }
 
-# Beside deploy/: the docs, the licences, Code Arena's packages, the knowledge packs, VERSION. Only
+# Beside deploy/: the docs, the licences, the knowledge packs, VERSION. Only
 # where nothing of someone else's is: a path there already is replaced only when this installer
 # wrote it ($STATE/extras lists them), and a git checkout keeps its own. packs/ is made when
 # missing (compose mounts it); a pack is added to it, never taken out.
-EXTRAS="docs code-arena packs LICENSE.md LICENSING.md VERSION"
+EXTRAS="docs packs LICENSE.md LICENSING.md VERSION"
 extra_ours() { [[ ! -e "$1" ]] || grep -qxF "$1" "$STATE/extras" 2>/dev/null; }
 replaceable() {   # replaceable NAME: this installer may write DIR/NAME
   extra_ours "$DIR/$1" && return 0
@@ -1770,7 +1755,7 @@ write_extras() {   # write_extras plan|do
     [[ $1 == plan ]] && continue
     case "$f" in
       packs) for p in "$BUNDLE"/packs/*; do [[ -f "$p" ]] || continue; ln -f "$p" "$DIR/packs/" 2>/dev/null || cp -p "$p" "$DIR/packs/" || break; done ;;
-      docs|code-arena) rm -rf "$DIR/$f.installer-new" && cp -a "$BUNDLE/$f" "$DIR/$f.installer-new" && rm -rf "$DIR/$f" && mv "$DIR/$f.installer-new" "$DIR/$f" ;;
+      docs) rm -rf "$DIR/$f.installer-new" && cp -a "$BUNDLE/$f" "$DIR/$f.installer-new" && rm -rf "$DIR/$f" && mv "$DIR/$f.installer-new" "$DIR/$f" ;;
       *) cp -p "$BUNDLE/$f" "$DIR/$f" ;;
     esac || die "writing $DIR/$f failed (disk full?)"
     [[ $f == packs ]] || grep -qxF "$DIR/$f" "$STATE/extras" 2>/dev/null || (umask 077; echo "$DIR/$f" >> "$STATE/extras")
@@ -1788,7 +1773,7 @@ example_keys() { sed -n -E 's/^#?[[:space:]]*([A-Z][A-Z0-9_]*)=([^[:space:]]*).*
 example_set_keys() { sed -n -E 's/^([A-Z][A-Z0-9_]*)=(.*)$/\1\t\2/p' "$1"; }
 # Keys compose cannot start without (${KEY:?...}).
 # The secrets the installer makes: an upgrade that adds one of these keys makes it too.
-GEN_SECRETS="DB_PASSWORD APP_KEY ENGINE_KEY CODE_INTEL_KEY WORKSPACES_KEY"
+GEN_SECRETS="DB_PASSWORD APP_KEY ENGINE_KEY CODE_INTEL_KEY"
 required_keys() { grep -ohE '\$\{[A-Z][A-Z0-9_]*:\?' "${1:-$DEPLOY}"/docker-compose.yml 2>/dev/null | sed -E 's/\$\{([A-Z0-9_]+):\?/\1/' | sort -u; }
 compose_keys() { grep -ohE '\$\{[A-Z][A-Z0-9_]*' "${1:-$DEPLOY}"/*.yml 2>/dev/null | cut -c3- | sort -u; }
 # Adds to .env every key the release's .env.example sets that .env lacks (its default; a
@@ -2363,7 +2348,7 @@ cmd_config() {
     || { tail -n 20 "$STATE/up.log" | sed 's/^/    /'; die "$ENGINE compose up failed with them (above): .env keeps them; installer.sh config changes them back"; }
   ok "started"
   wait_healthy || die "the stack is not healthy with the new settings: installer.sh config changes them back, repair puts the rest right"
-  [[ " ${SET_ORDER[*]} " == *" DOMAIN "* ]] && note "the address changed: Code Arena's builds are signed again on the next repair (scripts/sign-code-arena.sh), and people sign in at https://$DOMAIN"
+  [[ " ${SET_ORDER[*]} " == *" DOMAIN "* ]] && note "the address changed: people sign in at https://$DOMAIN"
   [[ " ${SET_ORDER[*]} " == *" BACKUP_TIME "* ]] && note "the daily backup's time: scripts/backup.sh --install-timer sets it"
   return 0
 }
@@ -2716,7 +2701,7 @@ cmd_install() {
     make_data_dirs plan
     place_models plan
     fill_audio plan
-    [[ $NO_CERT -eq 0 && -z "$ACME_ARG" && ! -e "$DEPLOY/certs/tls.crt" && ! -e "$DEPLOY/certs/tls.key" ]] && would "make a certificate for $NEW_DOMAIN from a CA of its own (scripts/make-cert.sh), which signs Code Arena's builds too; --no-cert leaves Traefik's own"
+    [[ $NO_CERT -eq 0 && -z "$ACME_ARG" && ! -e "$DEPLOY/certs/tls.crt" && ! -e "$DEPLOY/certs/tls.key" ]] && would "make a certificate for $NEW_DOMAIN from a CA of its own (scripts/make-cert.sh); --no-cert leaves Traefik's own"
     [[ $HOSTS -eq 1 ]] && would "add the names to /etc/hosts (scripts/setup-hosts.sh)"
     would "start it ($ENGINE compose up -d --pull never), wait until every service is healthy and check the versions"
     return 0
@@ -2762,7 +2747,6 @@ cmd_install() {
   wait_healthy || die "the stack is not healthy; repair (or install again) after the cause is fixed"
   check_versions "$BVERSION" || die "the stack does not run $BVERSION as it should; see above"
   UNDO_ARMED=0
-  sign_builds
   link_cli
   schedule_backups
   record_state
@@ -3520,7 +3504,6 @@ cmd_upgrade() {
     step "LiteLLM's database"
     drop_litellm_db do "$FROM"
     ensure_cert do
-    sign_builds
     link_cli
   }
   if ( upgrade_steps ); then :; else failed=1; fi
@@ -3791,7 +3774,6 @@ cmd_repair() {
     # The last upgrade came from before 8.0 and its backup holds LiteLLM's database: dropped once the app has its data.
     LITELLM_DROP_WAIT=0 drop_litellm_db do "$(state_get previous)"
     ensure_cert do
-    sign_builds
     link_cli
     [[ -n "$BUNDLE" && -n "$(state_get version)" ]] && record_images
     remove_off_images do

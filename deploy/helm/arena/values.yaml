@@ -14,8 +14,8 @@ gitlab:
   # code-intel reads this GitLab with a read-only token (secrets.gitlabToken).
   url: ""
   verifyTls: true
-  # GitLab's CA when it is the company's own, or GitLab's self-signed certificate (PEM): the app, code-intel and the
-  # workspaces trust it besides the public CAs. Settings -> code-intel (GitLab) -> GitLab's CA can add one too.
+  # GitLab's CA when it is the company's own, or GitLab's self-signed certificate (PEM): the app and code-intel
+  # trust it besides the public CAs. Settings -> code-intel (GitLab) -> GitLab's CA can add one too.
   caCert: ""
   # Password mode with an LDAP account: "" tries GitLab's own sign-in, then each LDAP one; a provider (ldapmain) only it; off never.
   ldap: ""
@@ -33,7 +33,7 @@ codeHosts:
 
 # Secrets: left empty, each is made once (randAlphaNum) and kept across upgrades (looked up in the
 # release's Secret). For GitOps tools that cannot look up, set them here or name an existingSecret
-# with the keys ADMIN_PASSWORD, DB_PASSWORD, APP_KEY, ENGINE_KEY, CODE_INTEL_KEY, WORKSPACES_KEY,
+# with the keys ADMIN_PASSWORD, DB_PASSWORD, APP_KEY, ENGINE_KEY, CODE_INTEL_KEY,
 # and optionally HF_TOKEN, GITLAB_TOKEN, GITLAB_USERNAME, GITLAB_PASSWORD.
 # APP_KEY never changes after the first start: the app's key ring depends on it.
 secrets:
@@ -43,7 +43,6 @@ secrets:
   appKey: ""
   engineKey: ""
   codeIntelKey: ""
-  workspacesKey: ""
   hfToken: ""
   gitlabToken: ""
   gitlabUsername: ""
@@ -61,7 +60,6 @@ images:
   laya: { repository: arena-laya, tag: "" }
   scanners: { repository: arena-scanners, tag: "" }
   studio: { repository: arena-studio, tag: "" }
-  workspaces: { repository: arena-workspaces, tag: "" }
   postgres: { repository: pgvector/pgvector, tag: 0.8.7-pg16-bookworm }
   llamacpp: { repository: ghcr.io/ggml-org/llama.cpp, tag: server-cuda }
   # A build that is known to work: master-cuda moves under its flags.
@@ -263,18 +261,6 @@ sandbox:
   jobMemoryMb: 3072
   resources: { limits: { cpu: "2", memory: 7Gi } }
 
-# Code Studio's workspaces: Code Arena's own engine per workspace, each as its own user (services/workspaces). Off
-# unless turned on. Its pod reaches the app (its model gateway too) and the internet (the code host, package registries), not
-# the cluster's other services.
-workspaces:
-  enabled: false
-  slots: 32
-  # The agent's commands in bubblewrap, as compose has them: the pod in a user namespace of its own (hostUsers: false),
-  # an unmasked /proc, no seccomp or AppArmor confinement (bubblewrap makes namespaces without a capability). Needs
-  # Kubernetes 1.33 or later with user namespaces on its nodes; off, the commands run unsandboxed and Code Arena says so.
-  sandbox: false
-  resources: { requests: { cpu: "1", memory: 2Gi }, limits: { cpu: "4", memory: 16Gi } }
-
 # The chat's 3D models: Blender headless, as the sandbox is (no network, a read-only root), with more room.
 blender:
   enabled: false
@@ -336,8 +322,6 @@ persistence:
   # The audit log's daily anchors, apart from the database.
   audit: { size: 1Gi }
   sandbox: { size: 10Gi }
-  # Code Studio's workspaces: their clones, their engines' homes, what was not pushed yet.
-  workspaces: { size: 100Gi }
   # Strata's prepared packs, presets and tuning (strata.enabled): made from the library's files, kept across restarts.
   strataData: { size: 50Gi }
   blender: { size: 10Gi }

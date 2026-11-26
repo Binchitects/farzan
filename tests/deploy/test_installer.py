@@ -104,7 +104,6 @@ class Release:
         s.write("LICENSING.md", "licensing\n", base=self.repo)
         s.write("docs/deployment.md", "# Deploying\n", base=self.repo)
         s.write("docs/plan.md", "# Plans\n", base=self.repo)
-        s.write("dist/code-arena-9.9.9-linux-x64.tar.gz", "code arena\n", base=self.repo)
         # Packs: the newest of each name goes in (an older week's and a file that is no pack stay out).
         for name, version in (("python.kpack", "1.0"), ("python-2026.11.12.kpack", "2026.11.12")):
             (self.repo / "packs").mkdir(exist_ok=True)
@@ -203,7 +202,7 @@ class BundleTests(unittest.TestCase):
     def test_The_bundle_holds_the_release_and_nothing_of_the_host(self):
         b = self.r.unpack()
         manifest = (b / "MANIFEST").read_text()
-        for line in ("format: arena-offline 1", "version: 9.9.9", "upgrades-from: 5.2.0", "engine: docker", "packs: 1", "code-arena: 1",
+        for line in ("format: arena-offline 1", "version: 9.9.9", "upgrades-from: 5.2.0", "engine: docker", "packs: 1",
                      "embedding: missing"):
             self.assertIn(line + "\n", manifest)
         self.assertRegex(manifest, r"commit: [0-9a-f]{7}")
@@ -224,7 +223,7 @@ class BundleTests(unittest.TestCase):
             self.assertNotIn(left, deploy)
         self.assertTrue((b / "docs" / "deployment.md").is_file())
         self.assertFalse((b / "docs" / "plan.md").exists())
-        self.assertTrue((b / "code-arena" / "code-arena-9.9.9-linux-x64.tar.gz").is_file())
+        self.assertFalse((b / "code-arena").exists())
         self.assertEqual(["python-2026.11.12.kpack"], sorted(p.name for p in (b / "packs").iterdir()))
         known = (b / "known" / "5.2.0.sha256").read_text()
         self.assertIn("  config/dropped.yml\n", known)
@@ -372,8 +371,7 @@ class SourceBundleTests(unittest.TestCase):
         manifest = (self.b / "MANIFEST").read_text()
         self.assertIn("images-in: engine\n", manifest)
         self.assertIn(f"source: {self.r.repo}\n", manifest)
-        # Nothing of a .run: no speech models, no Code Arena packages (the app's image serves them).
-        self.assertFalse((self.b / "code-arena").exists())
+        # Nothing of a .run: no speech models.
         self.assertFalse(list((self.b / "audio").glob("*")))
         r = subprocess.run(["bash", str(self.b / "installer.sh"), "verify"], env=self.r.env(), capture_output=True, text=True, timeout=120)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
@@ -715,7 +713,7 @@ class InstallerTests(unittest.TestCase):
         # With a network an admin may download speech models later: the speech server is not kept offline.
         self.assertNotIn("HF_HUB_OFFLINE", override)
         self.assertTrue((deploy / "certs" / "tls.crt").is_file())
-        for f in ("docs/deployment.md", "LICENSE.md", "VERSION", "code-arena/code-arena-9.9.9-linux-x64.tar.gz", "packs"):
+        for f in ("docs/deployment.md", "LICENSE.md", "VERSION", "packs"):
             self.assertTrue((self.dir / f).exists(), f)
         state = (self.dir / ".arena-install" / "state").read_text()
         self.assertIn("version=9.9.9\n", state)
@@ -1405,16 +1403,15 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("kept docs LICENSE.md in", r.stdout)
         self.assertEqual([p.name for p in (self.dir / "docs").iterdir()], ["mine.md"])
         self.assertEqual((self.dir / "LICENSE.md").read_text(), "my licence\n")
-        # What it could write, it did: VERSION (it held a version), the other licence, Code Arena's packages.
+        # What it could write, it did: VERSION (it held a version), the other licence.
         self.assertEqual((self.dir / "VERSION").read_text().strip(), "9.9.9")
         self.assertTrue((self.dir / "LICENSING.md").is_file())
-        self.assertTrue((self.dir / "code-arena").is_dir())
         # Purge takes deploy/ and what it wrote beside it, and nothing else.
         (self.dir / "packs" / "mine.kpack").write_text("a pack\n")
         r = self.r.run("remove", "--dir", str(self.dir), "--yes", "--purge", "--confirm", "PURGE")
         self.assertEqual(r.returncode, 0, self.output(r))
         self.assertFalse((self.dir / "deploy").exists())
-        for gone in ("VERSION", "LICENSING.md", "code-arena"):
+        for gone in ("VERSION", "LICENSING.md"):
             self.assertFalse((self.dir / gone).exists(), gone)
         self.assertEqual((self.dir / "docs" / "mine.md").read_text(), "my notes\n")
         self.assertEqual((self.dir / "LICENSE.md").read_text(), "my licence\n")
@@ -1526,10 +1523,10 @@ class InstallerTests(unittest.TestCase):
         self.install()
         env = self.dir / "deploy" / ".env"
         # As an upgrade from 6.7 left it: there, and empty.
-        env.write_text(re.sub(r"(?m)^WORKSPACES_KEY=.*\n", "", env.read_text()) + "WORKSPACES_KEY=\n")
+        env.write_text(re.sub(r"(?m)^CODE_INTEL_KEY=.*\n", "", env.read_text()) + "CODE_INTEL_KEY=\n")
         r = self.install()
-        self.assertIn(".env: WORKSPACES_KEY was empty: a new secret, generated", r.stdout)
-        self.assertRegex(env.read_text(), r"(?m)^WORKSPACES_KEY=[0-9a-f]{64}$")
+        self.assertIn(".env: CODE_INTEL_KEY was empty: a new secret, generated", r.stdout)
+        self.assertRegex(env.read_text(), r"(?m)^CODE_INTEL_KEY=[0-9a-f]{64}$")
 
     def test_A_relative_models_folder_is_one_of_deploy_not_a_named_volume(self):
         self.install("--models-dir", "library")

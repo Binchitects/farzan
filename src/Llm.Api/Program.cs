@@ -9,12 +9,6 @@ if (args is ["healthcheck"])
 {
     return await HealthProbe.RunAsync();
 }
-// scripts/sign-code-arena.sh: the Windows builds Authenticode-signed, in a container of this image with no network.
-if (args is ["sign-code-arena", .. var signFolder] && signFolder.Length <= 1)
-{
-    return await Llm.Api.Downloads.CodeArenaSigner.RunAsync(Console.OpenStandardInput(), Console.OpenStandardOutput(), Console.Error,
-        signFolder is [var folder] ? folder : "/downloads/code-arena");
-}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,16 +79,9 @@ app.UseCsrfGuard();
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30) });
 app.UseAuthentication();
 // Code's forwarded ports (their own hosts under the domain): answered here, before anything of Arena's API.
-Llm.Api.Code.Studio.PortForwards.UsePortForwards(app);
 app.UseTwoFactorEnrolment();
 Llm.Api.Compliance.NoticeGate.UseNoticeGate(app);
 app.UseAuthorization();
-// Which Code Arena each person uses (its User-Agent): put down behind the request, and its person told when it is old.
-app.Use((http, next) =>
-{
-    http.RequestServices.GetRequiredService<Llm.Api.Downloads.CodeArenaClients>().Seen(http);
-    return next(http);
-});
 app.UseRateLimiter();
 // A feature that is off (deploy/features): its API answers 404.
 Llm.Api.FeatureEndpoints.UseFeatures(app);
