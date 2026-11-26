@@ -13,6 +13,17 @@ const row = (n: number, source: 'chat' | 'api') => ({
 })
 
 describe('prompt log', () => {
+  it('keeps its search in the address: a link opens the same one, by model, tool and run, and Clear goes back to all', async () => {
+    const calls = fakeApi(admin, { 'GET /api/admin/prompts': () => ({ json: { items: [], next: null } }) })
+    const { router } = renderApp('/admin/prompts?model=Qwen3-4B&tool=read_file&run=r1&source=api')
+    await waitFor(() => expect(calls.some((c) => c.path === '/api/admin/prompts?source=api&model=Qwen3-4B&tool=read_file&run=r1')).toBe(true))
+    expect(screen.getByLabelText('Model')).toHaveValue('Qwen3-4B')
+    expect(screen.getByText('Only the steps of one run.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Clear the filters' }))
+    await waitFor(() => expect(router.state.location.search).toBe(''))
+    await waitFor(() => expect(calls.at(-1)?.path).toBe('/api/admin/prompts?source=all'))
+  })
+
   it('opens a step whole, its tool call with its arguments and the result it got, and its run by thread', async () => {
     const step = (id: string, more: object) => ({
       source: 'api', id, at: '2026-11-26T10:00:00Z', model: 'Qwen3-4B', state: 'done', error: null, durationMs: 900, promptTokens: 2000, completionTokens: 40, chat: 'r1',

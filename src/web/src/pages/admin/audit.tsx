@@ -11,7 +11,9 @@ import { DataTable, SortHeader, type ColumnDef } from '@/components/ui/data-tabl
 import { api } from '@/lib/api'
 import { ago, when } from '@/lib/format'
 import { allTime, reportPresets } from '@/lib/time'
+import { useFilters } from '@/lib/use-filters'
 import { useTimeWindow } from '@/lib/use-time-window'
+import { Input } from '@/components/ui/input'
 import { toCsv } from './audit-csv'
 import { codeIntelName } from '@/lib/brand'
 
@@ -68,14 +70,21 @@ const columns: ColumnDef<AuditEvent>[] = [
 
 export function AuditPage() {
   const [filter, setFilter] = useState<'all' | 'failed' | 'sign-in' | 'people' | 'settings' | 'code-intel' | 'operations'>('all')
+  // Words and an action searched by the server (through every event, not only those loaded), kept in the address.
+  const search = useFilters(['q', 'action'] as const)
+  const [words, setWords] = useState(search.values.q)
+  const [action, setAction] = useState(search.values.action)
   // What happened in a window, in the address; every event until one is chosen.
   const time = useTimeWindow({ from: allTime.from, to: 'now' })
   const events = useInfiniteQuery({
-    queryKey: ['admin', 'audit', time.key],
+    queryKey: ['admin', 'audit', time.key, search.values.q, search.values.action, filter === 'failed'],
     initialPageParam: null as number | null,
     queryFn: ({ pageParam, signal }) => {
       const p = time.query()
       p.set('take', String(PAGE))
+      if (search.values.q) p.set('q', search.values.q)
+      if (search.values.action) p.set('action', search.values.action)
+      if (filter === 'failed') p.set('success', 'false')
       if (pageParam) p.set('before', String(pageParam))
       return api<AuditEvent[]>(`/api/admin/audit?${p}`, { signal })
     },
@@ -117,6 +126,20 @@ export function AuditPage() {
           getRowId={(e) => String(e.id)}
           initialSorting={[{ id: 'at', desc: true }]}
           toolbar={
+            <>
+            <form
+              className="flex flex-wrap items-center gap-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                search.set({ q: words.trim(), action: action.trim() })
+              }}
+            >
+              <Input aria-label="Words" placeholder="Words: a person, a key, a setting…" value={words} onChange={(e) => setWords(e.target.value)} className="h-8 w-56" />
+              <Input aria-label="Action" placeholder="Action, or its start: prompts." value={action} onChange={(e) => setAction(e.target.value)} className="h-8 w-48 font-mono text-xs" />
+              <Button type="submit" size="sm" variant="outline">
+                Search
+              </Button>
+            </form>
             <Segmented
               label="Show"
               value={filter}
@@ -131,6 +154,7 @@ export function AuditPage() {
                 { value: 'operations', label: 'Restarts' },
               ]}
             />
+            </>
           }
         />
       )}

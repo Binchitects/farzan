@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/api'
 import { formatValue, when } from '@/lib/format'
 import { allTime, reportPresets } from '@/lib/time'
+import { useFilters } from '@/lib/use-filters'
 import { useTimeWindow } from '@/lib/use-time-window'
 import { cn } from '@/lib/utils'
 import { Markdown } from '@/pages/chat/markdown'
@@ -80,8 +81,11 @@ const states: Record<State, { label: string; icon: ReactNode; variant: 'default'
  * all of it on Show all. While any shown is waiting or running, the page looks again every few seconds.
  */
 export function PromptLogPage() {
-  const [form, setForm] = useState({ q: '', person: '' })
-  const [search, setSearch] = useState({ q: '', person: '', source: 'all' as Source, state: 'all' as State | 'all', tag: '' })
+  // What is searched, in the address: a link opens the same search, a reload keeps it.
+  const filters = useFilters(['q', 'person', 'source', 'state', 'tag', 'model', 'tool', 'run'] as const, { source: 'all', state: 'all' })
+  const search = { ...filters.values, source: filters.values.source as Source, state: filters.values.state as State | 'all' }
+  const setSearch = (next: Partial<typeof search>) => filters.set(next)
+  const [form, setForm] = useState({ q: search.q, person: search.person, model: search.model, tool: search.tool })
   const [view, setView] = useState('log')
   const known = useQuery(tagsQuery)
   // When it was asked, in the address; any time until a window is chosen.
@@ -96,6 +100,9 @@ export function PromptLogPage() {
       if (search.q) p.set('q', search.q)
       if (search.person) p.set('person', search.person)
       if (search.tag) p.set('tag', search.tag)
+      if (search.model) p.set('model', search.model)
+      if (search.tool) p.set('tool', search.tool)
+      if (search.run) p.set('run', search.run)
       if (pageParam) p.set('before', pageParam)
       return api<{ items: Logged[]; next: string | null }>(`/api/admin/prompts?${p}`, { signal })
     },
@@ -104,7 +111,7 @@ export function PromptLogPage() {
   })
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    setSearch({ ...search, q: form.q.trim(), person: form.person.trim() })
+    setSearch({ q: form.q.trim(), person: form.person.trim(), model: form.model.trim(), tool: form.tool.trim() })
   }
   const items = log.data?.pages.flatMap((p) => p.items) ?? []
   return (
@@ -129,8 +136,14 @@ export function PromptLogPage() {
         <Field label="Person" className="w-48">
           <Input value={form.person} onChange={(e) => setForm({ ...form, person: e.target.value })} placeholder="user name or email" />
         </Field>
+        <Field label="Model" className="w-44">
+          <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} placeholder="its name" />
+        </Field>
+        <Field label="Tool called" className="w-40">
+          <Input value={form.tool} onChange={(e) => setForm({ ...form, tool: e.target.value })} placeholder="read_file" />
+        </Field>
         <Field label="State" className="w-40">
-          <Select value={search.state} onValueChange={(state) => setSearch({ ...search, state: state as State | 'all' })}>
+          <Select value={search.state} onValueChange={(state) => setSearch({ state: state as State | 'all' })}>
             <SelectTrigger aria-label="State">
               <SelectValue />
             </SelectTrigger>
@@ -145,7 +158,7 @@ export function PromptLogPage() {
           </Select>
         </Field>
         <Field label="Tag" className="w-40">
-          <Select value={search.tag || 'any'} onValueChange={(tag) => setSearch({ ...search, tag: tag === 'any' ? '' : tag })}>
+          <Select value={search.tag || 'any'} onValueChange={(tag) => setSearch({ tag: tag === 'any' ? '' : tag })}>
             <SelectTrigger aria-label="Tag">
               <SelectValue />
             </SelectTrigger>
@@ -164,7 +177,7 @@ export function PromptLogPage() {
         <Segmented
           label="Where"
           value={search.source}
-          onChange={(source) => setSearch({ ...search, source })}
+          onChange={(source) => setSearch({ source })}
           options={[
             { value: 'all', label: 'All' },
             { value: 'chat', label: 'Chat' },
@@ -173,7 +186,27 @@ export function PromptLogPage() {
         />
         <TimeWindow value={time.range} onChange={time.set} presets={[allTime, ...reportPresets]} />
         <Button type="submit">Search</Button>
+        {filters.active > 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              filters.clear()
+              setForm({ q: '', person: '', model: '', tool: '' })
+            }}
+          >
+            Clear the filters
+          </Button>
+        )}
       </form>
+      {search.run && (
+        <p className="mb-3 text-sm text-muted-foreground">
+          Only the steps of one run.{' '}
+          <button type="button" className="underline" onClick={() => setSearch({ run: '' })}>
+            All of them
+          </button>
+        </p>
+      )}
       {log.error && <QueryError error={log.error} retry={() => log.refetch()} />}
       {log.isPending && <Skeleton className="h-40" />}
       {log.data && items.length === 0 && <p className="text-sm text-muted-foreground">Nothing found.</p>}
