@@ -64,7 +64,7 @@ images:
   scanners: { repository: arena-scanners, tag: "" }
   studio: { repository: arena-studio, tag: "" }
   postgres: { repository: pgvector/pgvector, tag: 0.8.7-pg16-bookworm }
-  llamacpp: { repository: ghcr.io/ggml-org/llama.cpp, tag: server-cuda }
+  llamacpp: { repository: ghcr.io/ggml-org/llama.cpp, tag: server-cuda-b12767 }
   # A build that is known to work: master-cuda moves under its flags.
   sdcpp: { repository: ghcr.io/leejet/stable-diffusion.cpp, digest: "sha256:1aee2217d5e20ddfb19dfcbca21db3cbe1dcb0ae3b9bc4151773e503dca8aede" }
   audio: { repository: arena-audio, tag: "" }
@@ -87,6 +87,12 @@ images:
   lmdeploy: { repository: arena-lmdeploy, tag: "0.18.0" }
   # Strata (strata.enabled): its own image, from GitHub's registry.
   strata: { repository: ghcr.io/niko1221/strata, tag: 0.2.22-cuda13 }
+  # TokenSpeed (tokenspeed.enabled): its own image, from Docker Hub.
+  tokenspeed: { repository: lightseekorg/tokenspeed, tag: "0.1.1" }
+  # FreeToken (freetoken.enabled): arena-freetoken, built from deploy/services/freetoken.Dockerfile and pushed to your registry.
+  freetoken: { repository: arena-freetoken, tag: "" }
+  # Ollama (ollama.enabled): arena-ollama, built from deploy/services/ollama.Dockerfile and pushed to your registry.
+  ollama: { repository: arena-ollama, tag: "" }
   pullPolicy: IfNotPresent
   pullSecrets: []
 
@@ -209,6 +215,35 @@ strata:
     - { name: strata, gpus: 1, nodeSelector: {}, tolerations: [] }
   shmSize: 2Gi
   resources: { requests: { cpu: "8", memory: 64Gi } }
+
+# TokenSpeed (Admin -> Models, engine TokenSpeed): snapshots on NVIDIA GPUs, the same supervisor, one Deployment per instance.
+tokenspeed:
+  enabled: false
+  fake: false
+  instances:
+    - { name: tokenspeed, gpus: 1, nodeSelector: {}, tolerations: [] }
+  shmSize: 16Gi
+  resources: { requests: { cpu: "4", memory: 32Gi } }
+
+# FreeToken (Admin -> Models, engine FreeToken): MoE models on one GPU, the experts that do not fit it in RAM (ask for that
+# RAM here), its compiled kernels in arena-freetoken-cache.
+freetoken:
+  enabled: false
+  fake: false
+  instances:
+    - { name: freetoken, gpus: 1, nodeSelector: {}, tolerations: [] }
+  shmSize: 8Gi
+  resources: { requests: { cpu: "8", memory: 64Gi } }
+
+# Ollama (Admin -> Models, engine Ollama): GGUF files of the library, the layers that do not fit the GPUs in RAM, its own
+# copies of the files in arena-ollama-data.
+ollama:
+  enabled: false
+  fake: false
+  instances:
+    - { name: ollama, gpus: 1, nodeSelector: {}, tolerations: [] }
+  shmSize: 1Gi
+  resources: { requests: { cpu: "4", memory: 32Gi } }
 
 # Embeddings for code-intel, on the CPU.
 embed:
@@ -335,6 +370,10 @@ persistence:
   sandbox: { size: 10Gi }
   # Strata's prepared packs, presets and tuning (strata.enabled): made from the library's files, kept across restarts.
   strataData: { size: 50Gi }
+  # FreeToken's kernels, compiled as they are first used (freetoken.enabled): kept across restarts.
+  freetokenCache: { size: 10Gi }
+  # Ollama's models, each its copy of a GGUF file of the library (ollama.enabled): as large as the files it runs.
+  ollamaData: { size: 200Gi }
   blender: { size: 10Gi }
   lean: { size: 1Gi }
 

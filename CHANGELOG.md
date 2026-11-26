@@ -34,6 +34,18 @@ Sections used:
 
 ### :sparkles: New features & Enhancements
 
+- **Three engines more**, each its own feature (off until asked for), run by the same supervisor as vLLM, with its
+  launcher, compose service, Helm Deployment and fake for tests:
+  - **FreeToken** 0.2.3 (Apache-2.0): MoE models on one GPU, GGUF files or snapshots, the experts that do not fit
+    there in RAM. arena-freetoken is built on SGLang's image with no resolve of its dependencies (about 0.4 GB from
+    PyPI); its kernels are compiled on its GPU on its first start and kept.
+  - **Ollama** 0.40.18 (MIT): a GGUF file of the library made Ollama's model, nothing pulled, behind a front that asks
+    the engine key (Ollama's own server asks none); its layers in RAM when the GPUs are short.
+  - **TokenSpeed** 0.1.1 (MIT): snapshots on NVIDIA GPUs, tensor parallel, for agents' long prompts.
+- llama.cpp pinned to its build b12767 (1.1.0-dev) in place of the floating `server-cuda` tag, for chat models and
+  the embedder (ROCm: `server-rocm-b12767`).
+- The vLLM and SGLang supervisor's readiness reads a `/health` that answers 200 while it loads (FreeToken's
+  `"status": "loading"`).
 - The `plugins` feature and service (on by default), its volume and its Helm Deployment (TCP with a key, a
   NetworkPolicy with no egress).
 - Admin → Plugins: on and off with the reason, the signer, what it may reach, its worker and logs, its own settings

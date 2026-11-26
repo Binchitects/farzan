@@ -19,7 +19,7 @@ services:
       Engine__Backend: rocm
   llamacpp:
     <<: *amd
-    image: ${LLAMACPP_ROCM_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-rocm}
+    image: ${LLAMACPP_ROCM_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-rocm-b12767}
   # vLLM's own ROCm image, not arena-vllm (its GGUF plugin is built for CUDA): snapshots only.
   vllm:
     <<: *amd

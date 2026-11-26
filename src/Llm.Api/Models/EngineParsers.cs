@@ -57,6 +57,9 @@ public static partial class EngineParsers
             "qwen3coder",
         ],
         [EngineKinds.Strata] = [],
+        [EngineKinds.TokenSpeed] = [],
+        [EngineKinds.FreeToken] = [],
+        [EngineKinds.Ollama] = [],
     };
 
     /// <summary>Each engine's reasoning parsers, as its image lists them (LMDeploy's legacy qwen-qwq, intern-s1 and deepseek-r1 are its default).</summary>
@@ -79,13 +82,17 @@ public static partial class EngineParsers
         ],
         [EngineKinds.Lmdeploy] = ["default", "deepseek-v3", "deepseek-v32", "deepseek-v3.2", "deepseek-v4"],
         [EngineKinds.Strata] = [],
+        [EngineKinds.TokenSpeed] = [],
+        [EngineKinds.FreeToken] = [],
+        [EngineKinds.Ollama] = [],
     };
 
     private static ParserFamily F(string id, string label, EngineParserPair vllm, EngineParserPair sglang, EngineParserPair lmdeploy) =>
         new(id, label, new Dictionary<string, EngineParserPair>(StringComparer.Ordinal)
         {
             [EngineKinds.Vllm] = vllm, [EngineKinds.Sglang] = sglang, [EngineKinds.Lmdeploy] = lmdeploy,
-            [EngineKinds.Strata] = new(null, null, BuiltIn: true),
+            [EngineKinds.Strata] = new(null, null, BuiltIn: true), [EngineKinds.TokenSpeed] = new(null, null, BuiltIn: true),
+            [EngineKinds.FreeToken] = new(null, null, BuiltIn: true), [EngineKinds.Ollama] = new(null, null, BuiltIn: true),
         });
 
     private static EngineParserPair P(string? tool, string? reasoning) => new(tool, reasoning);
@@ -129,8 +136,15 @@ public static partial class EngineParsers
         F("gemma4", "Gemma 4", P("gemma4", "gemma4"), P("gemma4", "gemma4"), P(null, null)),
     ];
 
-    /// <summary>The kinds whose parsers the app sets (Strata reads its own; llama.cpp reads calls by the model's template).</summary>
+    /// <summary>The kinds whose parsers the app sets (llama.cpp reads calls by the model's template; the <see cref="BuiltIn"/> kinds their own).</summary>
     public static bool Sets(string? kind) => kind is EngineKinds.Vllm or EngineKinds.Sglang or EngineKinds.Lmdeploy;
+
+    /// <summary>
+    /// The kinds that read tool calls and thinking themselves, with no parser named: Strata (its own, for the families it runs),
+    /// TokenSpeed (its gateway's defaults for the model's family, or the template's), FreeToken (by the model's family) and
+    /// Ollama (by the model's template).
+    /// </summary>
+    public static bool BuiltIn(string? kind) => kind is EngineKinds.Strata or EngineKinds.TokenSpeed or EngineKinds.FreeToken or EngineKinds.Ollama;
 
     /// <summary>
     /// A model's family, from its name and file (hf/ORG/REPO@REVISION, a GGUF file's name) and its config's architecture and model
@@ -248,7 +262,7 @@ public static partial class EngineParsers
 
     /// <summary>The automatic pair of a family on a kind of engine; empty for a family not known or a kind that sets none.</summary>
     public static EngineParserPair Automatic(string kind, ParserFamily? family) =>
-        kind == EngineKinds.Strata ? new(null, null, BuiltIn: true) : family?.Engines.GetValueOrDefault(kind) ?? new(null, null);
+        BuiltIn(kind) ? new(null, null, BuiltIn: true) : family?.Engines.GetValueOrDefault(kind) ?? new(null, null);
 
     /// <summary>The parsers a model is started with: its own choice ("none": none), else its family's on its engine.</summary>
     public static (string? Tool, string? Reasoning) For(LocalModel m, ParserFamily? family)
@@ -284,8 +298,8 @@ public static partial class EngineParsers
         {
             if (m.ToolParser is not null || m.ReasoningParser is not null)
             {
-                problems.Add(new("toolParser", m.EngineKind == EngineKinds.Strata
-                    ? "Strata has no parsers to choose: it reads tool calls and thinking itself."
+                problems.Add(new("toolParser", BuiltIn(m.EngineKind)
+                    ? $"{label} has no parsers to choose: it reads tool calls and thinking itself."
                     : $"{label} has no parsers to choose: it reads tool calls and thinking by the model's chat template.", true));
             }
             return problems;
@@ -323,7 +337,7 @@ public static partial class EngineParsers
                 : $"{label} has no tool-call parser for {family.Label}";
             var engine = m.EngineKind == EngineKinds.Sglang ? "answers its calls as text" : "refuses a request with tools";
             // Where its family's calls are read: the other engines with a parser for it, and llama.cpp (by the model's chat template).
-            var elsewhere = family?.Engines.Where(e => e.Key != m.EngineKind && (e.Value.Tool is not null || e.Value.BuiltIn) && e.Key != EngineKinds.Strata)
+            var elsewhere = family?.Engines.Where(e => e.Key != m.EngineKind && (e.Value.Tool is not null || e.Value.BuiltIn) && !BuiltIn(e.Key))
                 .Select(e => EngineKinds.Of(e.Key)!.Label).Append("llama.cpp (its GGUF file)").ToList() ?? [];
             problems.Add(new("toolParser", $"{why}: {label} {engine}, and the app has no text protocol of its own to read calls from an answer. "
                 + (family is null || m.ToolParser == None

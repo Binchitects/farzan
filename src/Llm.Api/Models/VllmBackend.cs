@@ -369,6 +369,21 @@ public sealed class VllmBackend(VllmEngineOptions instance, EngineOptions engine
         {
             // Its copy's number (NAME@i), as the chat sends to it.
             var copy = e.Name.LastIndexOf('@') is var at and >= 0 && int.TryParse(e.Name[(at + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out var i) && i < load.Length ? i : 0;
+            if (Kind == EngineKinds.FreeToken)
+            {
+                // FreeToken has no Prometheus metrics: its /v1/stats (with the key) says the requests it runs and its cache's pages.
+                if (await FreeTokenStatsAsync(e.Port, quick.Token, ct) is not { } stats)
+                {
+                    return null;
+                }
+                running += stats.Active;
+                load[copy] += stats.Active;
+                if (stats.Usage is { } kv)
+                {
+                    usage = Math.Max(usage ?? 0, kv);
+                }
+                continue;
+            }
             string text;
             try
             {
@@ -443,6 +458,49 @@ public sealed class VllmBackend(VllmEngineOptions instance, EngineOptions engine
         }
         var count = entries.Sum(e => Math.Max(1, e.Parallel));
         return new EngineCapacity(count, Enumerable.Range(0, Math.Min(running, count)).ToHashSet(), running, waiting, usage, queries > 0 ? hits / queries : null, load);
+    }
+
+    /// <summary>FreeToken's /v1/stats: the requests it runs, and the share of its cache's pages in use; null when it does not answer.</summary>
+    private async Task<(int Active, double? Usage)?> FreeTokenStatsAsync(int port, CancellationToken quick, CancellationToken ct)
+    {
+        try
+        {
+            using var ask = new HttpRequestMessage(HttpMethod.Get, new Uri($"http://{Host}:{port}/v1/stats"));
+            if (engine.ApiKey is { Length: > 0 } key)
+            {
+                ask.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", key);
+            }
+            using var res = await http.CreateClient(Client).SendAsync(ask, quick);
+            if (!res.IsSuccessStatusCode)
+            {
+                return null;
+            }
+            return FreeTokenStats(await res.Content.ReadAsStringAsync(quick));
+        }
+        catch (Exception ex) when (ex is HttpRequestException || (ex is OperationCanceledException && !ct.IsCancellationRequested))
+        {
+            return null;
+        }
+    }
+
+    /// <summary>FreeToken's /v1/stats read: requests.active, and kv.used_pages over kv.total_pages; null for an answer that is not its JSON.</summary>
+    public static (int Active, double? Usage)? FreeTokenStats(string json)
+    {
+        try
+        {
+            if (System.Text.Json.Nodes.JsonNode.Parse(json) is not System.Text.Json.Nodes.JsonObject o)
+            {
+                return null;
+            }
+            var active = o["requests"]?["active"]?.GetValue<int>() ?? 0;
+            double? usage = o["kv"] is System.Text.Json.Nodes.JsonObject kv && kv["total_pages"]?.GetValue<double>() is > 0 and var total
+                ? (kv["used_pages"]?.GetValue<double>() ?? 0) / total : null;
+            return (active, usage);
+        }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or InvalidOperationException or FormatException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

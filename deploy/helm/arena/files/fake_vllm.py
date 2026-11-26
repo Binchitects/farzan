@@ -39,6 +39,14 @@ prompt_tokens_total).
 
 As Strata, it is vLLM itself: Strata writes vLLM's metric names (its fake `strata` command, beside this, starts it).
 
+As FreeToken (--freetoken, which its fake `ft` command passes): --model, --max-seq-len-override, --max-running-requests and
+the key from FREETOKEN_API_KEY (asked on every route but /health); no /metrics, its load in GET /v1/stats (requests.active,
+kv.used_pages and total_pages); tool calls read with no parser named, as FreeToken reads them by the model's family.
+
+As Ollama (--ollama, which its fake `ollama` command passes for `ollama serve`, on OLLAMA_HOST): no key at all (its launcher's
+front asks it), GET /api/version, POST /api/create (the model's name and its GGUF file, which must be there), POST
+/api/generate (loads the model created), and /v1/* for that model only; tool calls read by its template, with no parser.
+
 Tools and thinking as each engine answers them: a request with tools (and tool_choice not "none") gets a call of its first
 tool (tool_calls, finish_reason "tool_calls") only with the engine's tool-call parser (vLLM: --enable-auto-tool-choice and
 --tool-call-parser; SGLang, LMDeploy: --tool-call-parser); without it vLLM and LMDeploy refuse it with their own message
@@ -77,6 +85,9 @@ def parse(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--tensor-parallel-size", "--tp-size", type=int, default=1)
     p.add_argument("--sglang", action="store_true")
     p.add_argument("--lmdeploy", action="store_true")
+    p.add_argument("--freetoken", action="store_true")
+    p.add_argument("--ollama", action="store_true")
+    p.add_argument("--max-seq-len-override", type=int, default=None)
     p.add_argument("--model-name", default=None)
     p.add_argument("--server-name", default=None)
     p.add_argument("--server-port", type=int, default=None)
@@ -84,7 +95,7 @@ def parse(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--max-batch-size", type=int, default=None)
     p.add_argument("--tp", type=int, default=None)
     p.add_argument("--api-keys", nargs="+", default=None)
-    p.add_argument("--model-path", default=None)
+    p.add_argument("--model-path", "--model", dest="model_path", default=None)
     p.add_argument("--context-length", type=int, default=None)
     p.add_argument("--max-running-requests", type=int, default=None)
     p.add_argument("--enable-memory-saver", action="store_true")
@@ -115,6 +126,14 @@ def parse(argv: list[str]) -> argparse.Namespace:
         args.max_num_seqs = args.max_batch_size or args.max_num_seqs
         args.tensor_parallel_size = args.tp or args.tensor_parallel_size
         args.api_key = (args.api_keys or [None])[0]
+    if args.freetoken:
+        args.model = args.model_path or args.model
+        args.max_model_len = args.max_seq_len_override or args.max_model_len
+        args.max_num_seqs = args.max_running_requests or args.max_num_seqs
+    if args.ollama:
+        host, _, port = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434").rpartition(":")
+        args.host, args.port = host or "127.0.0.1", int(port)
+        args.model = "none"
     return args
 
 
@@ -139,7 +158,11 @@ class State:
         self.sleeping = False
         self.draining = False
         # SGLang's launcher hands it the key as --api-key, inside its process (never on the command line ps shows).
-        self.key = args.api_key if args.sglang or args.lmdeploy else os.environ.get("VLLM_API_KEY") or args.api_key
+        self.key = (args.api_key if args.sglang or args.lmdeploy else os.environ.get("FREETOKEN_API_KEY") if args.freetoken
+                    else None if args.ollama else os.environ.get("VLLM_API_KEY") or args.api_key)
+        # Ollama's model, once created and loaded.
+        self.created = None
+        self.loaded = False
         self.started = time.time()
 
 
@@ -235,7 +258,7 @@ def handler(s: State):
             self.send(code, json.dumps({"error": {"message": message, "type": "fake_vllm", "code": code}}))
 
         def authorized(self) -> bool:
-            if not s.key or not self.path.startswith("/v1"):
+            if not s.key or not (self.path.startswith("/v1") or (s.args.freetoken and urlparse(self.path).path != "/health")):
                 return True
             return self.headers.get("Authorization", "") == f"Bearer {s.key}"
 
@@ -258,7 +281,14 @@ def handler(s: State):
                 return self.error(401, "Unauthorized")
             if path == "/health":
                 return self.send(503 if s.draining else 200, "")
-            if path == "/metrics":
+            if s.args.ollama and path == "/api/version":
+                return self.send(200, json.dumps({"version": "0.40.18"}))
+            if s.args.freetoken and path == "/v1/stats":
+                with s.lock:
+                    return self.send(200, json.dumps({"model": {"id": s.name, "ctx": s.args.max_model_len},
+                                                      "requests": {"active": s.running + s.extra_running, "completed": s.requests},
+                                                      "kv": {"used_pages": int(s.kv_usage * 1000), "total_pages": 1000, "page_size": 1}}))
+            if path == "/metrics" and not (s.args.freetoken or s.args.ollama):
                 with s.lock:
                     return self.send(200, metrics(s), "text/plain; version=0.0.4")
             if path == "/v1/models":
@@ -273,6 +303,19 @@ def handler(s: State):
             path = url.path
             if not self.authorized():
                 return self.error(401, "Unauthorized")
+            if s.args.ollama and path == "/api/create":
+                b = self.body()
+                source = b.get("from") or ""
+                if not b.get("model") or not os.path.isfile(source):
+                    return self.error(400, f"no GGUF file at {source}")
+                s.created, s.name = b["model"], b["model"]
+                return self.send(200, json.dumps({"status": "success"}))
+            if s.args.ollama and path == "/api/generate":
+                b = self.body()
+                if b.get("model") != s.created:
+                    return self.error(404, f"model '{b.get('model')}' not found")
+                s.loaded = True
+                return self.send(200, json.dumps({"model": s.created, "response": "", "done": True, "done_reason": "load"}))
             if path == ("/release_memory_occupation" if s.args.sglang else "/sleep"):
                 if s.args.sglang and not isinstance(self.body_json(), dict):
                     return self.error(422, "Field required: body")
@@ -305,12 +348,14 @@ def handler(s: State):
                 return self.error(503, "The server is shutting down.")
             if s.sleeping:
                 return self.error(503, "The model is sleeping: wake it up first (/wake_up).")
-            if b.get("model") not in (s.name, None):
+            if s.args.ollama and not s.loaded:
+                return self.error(404, "no model is loaded")
+            if b.get("model") not in (s.name, None) and not (s.args.ollama and b.get("model") == f"{s.name}:latest"):
                 return self.error(404, f"The model `{b.get('model')}` does not exist.")
             prompt = json.dumps(b.get("messages") if chat else b.get("prompt"))
             tools = b.get("tools") if chat and b.get("tool_choice") != "none" else None
             # Read as calls only with the engine's parser; vLLM wants its switch beside it.
-            parsed = bool(s.args.tool_call_parser) and (s.args.enable_auto_tool_choice or s.args.sglang or s.args.lmdeploy)
+            parsed = (bool(s.args.tool_call_parser) and (s.args.enable_auto_tool_choice or s.args.sglang or s.args.lmdeploy)) or s.args.freetoken or s.args.ollama
             if tools and not parsed and not s.args.sglang:
                 return self.error(400, "Please launch the api_server with --tool-call-parser if you want to use tools." if s.args.lmdeploy
                                   else '"auto" tool choice requires --enable-auto-tool-choice and --tool-call-parser to be set')
@@ -392,7 +437,7 @@ def handler(s: State):
 def main(argv: list[str]) -> int:
     args = parse(argv)
     state = State(args)
-    who = "SGLang" if args.sglang else "LMDeploy" if args.lmdeploy else "vLLM"
+    who = "SGLang" if args.sglang else "LMDeploy" if args.lmdeploy else "FreeToken" if args.freetoken else "Ollama" if args.ollama else "vLLM"
     gguf = args.model.lower().endswith(".gguf")
     what = f"GGUF {args.model}, its tokenizer from {args.tokenizer or 'its header'}," if gguf else args.model
     print(f"INFO fake {who}: loading {what} as {state.name} (tp {args.tensor_parallel_size}, "

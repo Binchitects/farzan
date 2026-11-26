@@ -258,7 +258,8 @@ public static class ModelAdvisor
     /// vLLM's share of each GPU, quantisation, speculative decoding by EAGLE, or a CPU tier; vLLM and SGLang have none of
     /// llama.cpp's placement by layers, experts in RAM, prompt step, YaRN, extra preset lines or projector file, and SGLang
     /// none of LMCache's tiers. LMDeploy and Strata have no speculative decoding, tiers beyond the GPU or sleep
-    /// the app sets, and read the quantisation their checkpoint or file has; Strata answers 1 to 8 at once.
+    /// the app sets, and read the quantisation their checkpoint or file has; Strata answers 1 to 8 at once. TokenSpeed,
+    /// FreeToken and Ollama have none of those either, and FreeToken runs a model on one GPU.
     /// </summary>
     public static IReadOnlyList<ModelProblem> KindProblems(LocalModel m)
     {
@@ -308,6 +309,10 @@ public static class ModelAdvisor
                 No((m.KvCpuGb is > 0 || m.KvTier is not null || m.KvDiskGb is > 0) && kind.KvTiers.Count == 0, "kvCpuGb", "tiers for its token cache beyond the GPU");
                 No(m.Sleep && !kind.Sleep, "sleep", "sleep the app can ask for (it unloads instead)");
                 No(m.Quantization is not null, "quantization", "quantisation to choose (it reads what its checkpoint or file has)");
+                if (kind.Kind == EngineKinds.FreeToken && Hardware.ParseDevices(m.Devices) is { Count: > 1 })
+                {
+                    problems.Add(new("devices", "FreeToken runs a model on one GPU (the experts that do not fit there in RAM): choose one.", true));
+                }
                 if (kind.Kind == EngineKinds.Strata && m.Parallel is < 1 or > 8)
                 {
                     problems.Add(new("parallel", "Strata answers 1 to 8 at once (its batch).", true));

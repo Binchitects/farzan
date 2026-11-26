@@ -62,7 +62,7 @@ public static class VllmAdvisor
     public static readonly int[] TpSizes = [1, 2, 4, 8, 16];
 
     /// <summary>
-    /// The GGUF architectures (general.architecture) each engine reads, as its image has it: vLLM through transformers (5.17 in
+    /// The GGUF architectures (general.architecture) each engine reads, as its image has it (Ollama, not here, reads what llama.cpp does): vLLM through transformers (5.17 in
     /// vLLM 0.31.0, where these were tried; vLLM 0.34.0's 5.22 maps each of them still, and more not tried here) and
     /// vllm-gguf-plugin 0.0.5 (services/vllm.Dockerfile), SGLang (0.5.21, and 0.5.23 now) through its own loader. Tried on the library's files
     /// (llama, qwen2 and qwen3 on both; llama with llama.cpp's rotary layout, which services/vllm-gguf-rope.py and SGLang's
@@ -76,6 +76,13 @@ public static class VllmAdvisor
         // Strata 0.2.11's families: Qwen3.8-Flash-Next (qwen4exp) and Qwen3.6-35B-A3B (qwen35moe), with their packs made from the file.
         [EngineKinds.Strata] = ["qwen4exp", "qwen35moe"],
         [EngineKinds.Lmdeploy] = [],
+        // FreeToken 0.2.3's (docs/models.md there): the Qwen, Llama, Gemma 4, GLM, DeepSeek-V4, MiniMax and gpt-oss families.
+        [EngineKinds.FreeToken] =
+        [
+            "deepseek4", "flint", "gemma4", "glm4moe", "glm5-next", "gpt-oss", "llama", "minimax-m2", "minimax-m3", "muse-glimmer", "qwen2", "qwen3",
+            "qwen35", "qwen35moe", "qwen3moe", "qwen3vl", "qwen3vlmoe", "qwen4exp", "ricursive",
+        ],
+        [EngineKinds.TokenSpeed] = [],
     };
 
     private static string G(long b) => (b / (double)(1L << 30)).ToString("0.0", CultureInfo.InvariantCulture) + " GiB";
@@ -382,7 +389,9 @@ public static class VllmAdvisor
 
     private static ModelAdvice AdviseWeights(LocalModel m, VllmProfile p, Hardware? hw, IReadOnlyDictionary<int, long>? others, IReadOnlyDictionary<int, long>? placed)
     {
-        if (m.EngineKind == EngineKinds.Strata && hw is not null && p.GgufParts > 0)
+        // Strata keeps a GGUF file's experts that do not fit in RAM, FreeToken those of any MoE model it runs, Ollama a file's layers.
+        if (hw is not null && ((m.EngineKind == EngineKinds.Strata && p.GgufParts > 0) || (m.EngineKind == EngineKinds.FreeToken && p.Experts is > 0)
+            || (m.EngineKind == EngineKinds.Ollama && p.GgufParts > 0)))
         {
             return Spilled(m, p, hw, others, placed);
         }
@@ -415,14 +424,20 @@ public static class VllmAdvisor
     }
 
     /// <summary>
-    /// Strata's advice: what of its weights its GPUs hold at its share (beside its overhead and a whole context for each person
-    /// at once) stays there, and the rest of its experts in RAM, read as each token needs them: slower than all on the GPUs,
-    /// refused only when RAM cannot hold the rest either.
+    /// Strata's, FreeToken's and Ollama's advice: what of its weights its GPUs hold at its share (beside its overhead and a whole context for
+    /// each person at once) stays there, and the rest of its experts (Ollama: layers) in RAM, read as each token needs them: slower than all on
+    /// the GPUs, refused only when RAM cannot hold the rest either.
     /// </summary>
     private static ModelAdvice Spilled(LocalModel m, VllmProfile p, Hardware hw, IReadOnlyDictionary<int, long>? others, IReadOnlyDictionary<int, long>? placed)
     {
-        var usable = GpuPlan.DevicesOf(hw).Where(d => EngineKinds.StrataCapabilities.Backends.Contains(d.Backend)).ToList();
+        var kind = EngineKinds.Of(m.EngineKind)!;
+        var usable = GpuPlan.DevicesOf(hw).Where(d => kind.Backends.Contains(d.Backend)).ToList();
         var on = Hardware.ParseDevices(m.Devices) is { Count: > 0 } ids ? usable.Where(d => ids.Contains(d.Index)).ToList() : usable;
+        // FreeToken runs a model on one GPU: the first of those it may have.
+        if (m.EngineKind == EngineKinds.FreeToken)
+        {
+            on = [.. on.Take(1)];
+        }
         var utilization = m.GpuMemoryUtilization ?? DefaultUtilization;
         var context = Math.Clamp(m.Context, Math.Min(4096, p.TrainedContext), p.TrainedContext);
         var held = on.Sum(d => Math.Min((long)(d.Total * utilization), d.Total - d.Reserved - Hardware.FitMargin - (others?.GetValueOrDefault(d.Index) ?? 0)))
@@ -433,10 +448,11 @@ public static class VllmAdvisor
         }
         var advice = AdviseFit(m, p with { WeightBytes = held }, hw, others, placed);
         var rest = p.WeightBytes - held;
+        var what = m.EngineKind == EngineKinds.Ollama ? "layers" : "experts";
         var problems = advice.Problems.ToList();
         problems.Add(rest > hw.RamForModels
-            ? new("memory", $"Its weights ({G(p.WeightBytes)}) are more than its GPUs hold, and the {G(rest)} of experts Strata would keep in RAM are more than the {G(hw.RamForModels)} there for models.", true)
-            : new("memory", $"Its weights ({G(p.WeightBytes)}) are more than its GPUs hold: Strata keeps {G(held)} on them and {G(rest)} of experts in RAM, read as each token needs them (slower than all on the GPUs).", false));
+            ? new("memory", $"Its weights ({G(p.WeightBytes)}) are more than its GPUs hold, and the {G(rest)} of {what} {kind.Label} would keep in RAM are more than the {G(hw.RamForModels)} there for models.", true)
+            : new("memory", $"Its weights ({G(p.WeightBytes)}) are more than its GPUs hold: {kind.Label} keeps {G(held)} on them and {G(rest)} of {what} in RAM, run there or read as each token needs them (slower than all on the GPUs).", false));
         return advice with
         {
             Problems = problems,
@@ -466,8 +482,8 @@ public static class VllmAdvisor
             Approximate = p.Approximate, Thinking = true, Tools = true,
         };
         // Each request may hold the whole context (--max-model-len), its answer included: the answers at once share the cache, not the window.
-        // YaRN where its engine takes it (vLLM, SGLang, LMDeploy; not Strata) and the model can stretch.
-        var stretches = kind.Kind != EngineKinds.Strata && p.CanStretch;
+        // YaRN where its engine takes it from the app (vLLM, SGLang, LMDeploy; not Strata, TokenSpeed, FreeToken or Ollama) and the model can stretch.
+        var stretches = kind.Kind is EngineKinds.Vllm or EngineKinds.Sglang or EngineKinds.Lmdeploy && p.CanStretch;
         var limits = new ModelLimits(new Bounds(ctxMin, most), ModelAdvisor.OutputBounds(context),
             new Bounds(1, 1024), new Bounds(0, 0), null, new Bounds(1, 8), ModelAdvisor.VllmCacheTypes, [], p.MtpLayers > 0, stretches, [], []);
         if (m.Context < limits.Context.Min || m.Context > limits.Context.Max)
@@ -478,7 +494,7 @@ public static class VllmAdvisor
         }
         if (m.Yarn && !stretches)
         {
-            problems.Add(new("yarn", kind.Kind == EngineKinds.Strata ? "Strata cannot stretch a context with YaRN: choose at most the trained one."
+            problems.Add(new("yarn", kind.Kind is not (EngineKinds.Vllm or EngineKinds.Sglang or EngineKinds.Lmdeploy) ? $"{label} cannot stretch a context with YaRN here: choose at most the trained one."
                 : "This model's context cannot be stretched with YaRN (its config scales its positions already, or it has no rotary positions).", true));
         }
         if (m.MaxOutput is { } o && (o < limits.MaxOutput.Min || o > limits.MaxOutput.Max))
@@ -493,7 +509,7 @@ public static class VllmAdvisor
         }
         if (p.GgufParts == 0 && !kind.Formats.Contains("safetensors"))
         {
-            problems.Add(new("file", $"{label} runs GGUF files ({string.Join(", ", GgufArchitectures[kind.Kind])}), not a Hugging Face snapshot: choose the model's GGUF file, "
+            problems.Add(new("file", $"{label} runs GGUF files ({(GgufArchitectures.TryGetValue(kind.Kind, out var only) ? string.Join(", ", only) : "of what llama.cpp reads")}), not a Hugging Face snapshot: choose the model's GGUF file, "
                 + "or run the snapshot on vLLM or SGLang.", true));
         }
         if (p.GgufParts > 0 && !kind.Formats.Contains("gguf"))
@@ -503,8 +519,8 @@ public static class VllmAdvisor
         else if (p.GgufParts > 0)
         {
             // A GGUF file: quantised as it is, read by vLLM's GGUF plugin (with all its parts), by SGLang (one file only), or by Strata.
-            var archs = GgufArchitectures[kind.Kind];
-            if (!archs.Contains(p.Architecture))
+            // Ollama's own llama.cpp reads what llama.cpp reads: no list of its own to check.
+            if (GgufArchitectures.TryGetValue(kind.Kind, out var archs) && !archs.Contains(p.Architecture))
             {
                 problems.Add(new("file", $"{label} reads GGUF files of these architectures: {string.Join(", ", archs)}. This one is {p.Architecture ?? "not said in its header"}, "
                     + $"which would fail as it loads: run it on llama.cpp, or on {label} from its Hugging Face snapshot.", true));

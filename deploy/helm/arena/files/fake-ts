@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+"""`ts serve ARGS` for a stack without TokenSpeed: the fake server (fake_vllm.py, which answers as vLLM: TokenSpeed takes
+vLLM's names), with the arguments services/tokenspeed/serve.py runs it with (the key from TOKENSPEED_API_KEY)."""
+import os
+import sys
+
+if sys.argv[1:2] != ["serve"]:
+    print("fake ts: only `ts serve` is here", file=sys.stderr)
+    sys.exit(2)
+os.environ["VLLM_API_KEY"] = os.environ.pop("TOKENSPEED_API_KEY", "")
+fake = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fake_vllm.py")
+os.execv(sys.executable, [sys.executable, fake, "serve", *sys.argv[2:]])

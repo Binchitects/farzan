@@ -237,7 +237,7 @@ An access review lists every privileged role given to a person, a group or every
 
 ### IAM-08: The engines answer only with the engine key, which no command line shows
 
-Each engine the app runs (llama.cpp, vLLM, SGLang, LMDeploy, Strata) answers its OpenAI-compatible API on the stack's network only with the engine key (ENGINE_KEY), which the app and the gateway hold. The key reaches each engine's server by its environment and is handed over inside the launcher's process (or named to Strata by --api-key-env), never on a command line that anyone in the container can read; an entry of the desired state that puts one there is refused.
+Each engine the app runs (llama.cpp, vLLM, SGLang, LMDeploy, Strata, TokenSpeed, FreeToken, Ollama) answers its OpenAI-compatible API on the stack's network only with the engine key (ENGINE_KEY), which the app and the gateway hold; Ollama, whose own server asks no key, listens on its container's loopback only, behind its launcher's front that asks it. The key reaches each engine's server by its environment and is handed over inside the launcher's process (or named to Strata by --api-key-env), never on a command line that anyone in the container can read; an entry of the desired state that puts one there is refused.
 
 **Serves**
 
@@ -256,6 +256,8 @@ Each engine the app runs (llama.cpp, vLLM, SGLang, LMDeploy, Strata) answers its
 - `Llm.Tests/VllmBackendTests.The_real_supervisor_runs_the_fake_vllm_as_the_app_drives_it_in_a_container`
 - `deploy/test_engine_launchers.py::test_the_fake_lmdeploy_serves_with_the_key_through_the_real_launcher`
 - `deploy/test_engine_launchers.py::test_the_fake_strata_serves_through_the_real_launcher_and_a_term_stops_it`
+- `deploy/test_engine_launchers.py::test_the_fake_freetoken_serves_with_the_key_from_the_environment_through_the_real_launcher`
+- `deploy/test_engine_launchers.py::test_the_fake_ollama_serves_behind_the_front_that_asks_the_key`
 
 **The company's part** Keep ENGINE_KEY in .env (or the chart's secret) only, and rotate it with the installer.
 

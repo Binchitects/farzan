@@ -32,6 +32,13 @@ services:
   strata:
     <<: *gpu
     ulimits: !reset {}
+  tokenspeed:
+    <<: *gpu
+    ulimits: !reset {}
+  freetoken:
+    <<: *gpu
+    ulimits: !reset {}
+  ollama: *gpu
   imagegen: *gpu
   videogen: *gpu
   gpu-exporter: *gpu

@@ -590,4 +590,78 @@ public sealed class EngineKindTests(AppFixture app) : IDisposable
         await StatusAssert.Is(HttpStatusCode.BadRequest, spec);
         Assert.Contains("specDecode", await spec.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task A_tokenspeed_freetoken_or_ollama_model_runs_its_files_on_its_own_engine_with_its_arguments_and_at_the_gateway()
+    {
+        await using var f = NewApp();
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        List<string> Args(string engine, string name) => [.. System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(Config, engine, VllmBackend.PresetsFile)))!["models"]!
+            .AsArray().Single(m => m!["name"]!.GetValue<string>() == name)!["args"]!.AsArray().Select(a => a!.GetValue<string>())];
+        string After(List<string> args, string flag) => args[args.IndexOf(flag) + 1];
+
+        // TokenSpeed: a snapshot, tensor parallel, its own names; no parser named (its gateway's defaults for the family).
+        await StatusAssert.Is(HttpStatusCode.Created, await admin.PostAsync("/api/admin/models", new
+        {
+            name = "speedy", engineKind = "tokenspeed", file = "hf/acme/Flash@abc123", context = 32768, parallel = 8, kvType = "fp8", devices = "0",
+        }));
+        var ts = Args("tokenspeed", "speedy");
+        Assert.Equal(("/library/hf/acme/Flash@abc123", "1", "32768", "8", "fp8"), (ts[0], After(ts, "--tp"), After(ts, "--max-model-len"), After(ts, "--max-num-seqs"), After(ts, "--kv-cache-dtype")));
+        Assert.DoesNotContain("--tool-call-parser", ts);
+        Assert.Equal("http://tokenspeed:8001/v1", (await app.RoutesOfAsync(f)).Single(m => m.Name == "speedy").Params["api_base"]!.GetValue<string>());
+        await StatusAssert.Is(HttpStatusCode.BadRequest, await admin.PostAsync("/api/admin/models", new { name = "speedy2", engineKind = "tokenspeed", file = "tiny/Tiny-4B-Q4_K_M.gguf", context = 32768 }));
+
+        // FreeToken: a GGUF file (or a snapshot), on one GPU, its cache at 8 bits for fp8; nothing it has none of.
+        await StatusAssert.Is(HttpStatusCode.Created, await admin.PostAsync("/api/admin/models", new
+        {
+            name = "moe", engineKind = "freetoken", file = "tiny/Tiny-4B-Q4_K_M.gguf", context = 16384, parallel = 4, kvType = "fp8", devices = "0",
+        }));
+        var ft = Args("freetoken", "moe");
+        Assert.Equal(("/library/tiny/Tiny-4B-Q4_K_M.gguf", "16384", "4", "fp8_per_token_head"),
+            (ft[0], After(ft, "--max-seq-len-override"), After(ft, "--max-running-requests"), After(ft, "--kv-cache-dtype")));
+        Assert.DoesNotContain("--tool-call-parser", ft);
+        Assert.Equal("http://freetoken:8001/v1", (await app.RoutesOfAsync(f)).Single(m => m.Name == "moe").Params["api_base"]!.GetValue<string>());
+        var two = await admin.PostAsync("/api/admin/models", new { name = "moe2", engineKind = "freetoken", file = "tiny/Tiny-4B-Q4_K_M.gguf", context = 16384, devices = "0,1" });
+        await StatusAssert.Is(HttpStatusCode.BadRequest, two);
+        Assert.Contains("one GPU", await two.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        var parser = await admin.PostAsync("/api/admin/models", new { name = "moe3", engineKind = "freetoken", file = "tiny/Tiny-4B-Q4_K_M.gguf", context = 16384, toolParser = "hermes" });
+        await StatusAssert.Is(HttpStatusCode.BadRequest, parser);
+        Assert.Contains("reads tool calls and thinking itself", await parser.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+
+        // Ollama: a GGUF file made its model, its cache q8_0 for fp8; a snapshot is refused.
+        await StatusAssert.Is(HttpStatusCode.Created, await admin.PostAsync("/api/admin/models", new
+        {
+            name = "llama", engineKind = "ollama", file = "tiny/Tiny-4B-Q4_K_M.gguf", context = 8192, parallel = 2, kvType = "fp8",
+        }));
+        Assert.Equal(["/library/tiny/Tiny-4B-Q4_K_M.gguf", "--context", "8192", "--parallel", "2", "--kv", "q8_0"], Args("ollama", "llama"));
+        Assert.Equal("http://ollama:8001/v1", (await app.RoutesOfAsync(f)).Single(m => m.Name == "llama").Params["api_base"]!.GetValue<string>());
+        await StatusAssert.Is(HttpStatusCode.BadRequest, await admin.PostAsync("/api/admin/models", new { name = "llama2", engineKind = "ollama", file = "hf/acme/Flash@abc123", context = 8192 }));
+    }
+
+    [Fact]
+    public void Each_new_kind_says_what_it_can_do_and_is_one_server_a_model()
+    {
+        foreach (var kind in new[] { EngineKinds.TokenSpeed, EngineKinds.FreeToken, EngineKinds.Ollama })
+        {
+            Assert.True(EngineKinds.ServerPerModel(kind) && EngineKinds.Managed(kind) && EngineKinds.ServerKinds.Contains(kind));
+            Assert.True(EngineParsers.BuiltIn(kind) && !EngineParsers.Sets(kind));
+            Assert.True(EngineKinds.Of(kind) is { Sleep: false, Speculative: false, KvTiers.Count: 0 });
+        }
+        Assert.True(EngineKinds.TokenSpeedCapabilities is { TensorParallel: true, Replicas: true, SpillToRam: false, PrefixCache: true });
+        Assert.Equal(["safetensors"], EngineKinds.TokenSpeedCapabilities.Formats);
+        Assert.True(EngineKinds.FreeTokenCapabilities is { TensorParallel: false, Replicas: false, SpillToRam: true, PrefixCache: true });
+        Assert.True(EngineKinds.OllamaCapabilities is { TensorParallel: false, Replicas: false, SpillToRam: true });
+        Assert.Equal(["gguf"], EngineKinds.OllamaCapabilities.Formats);
+        // The stack's own engines: one of each kind of one server a model.
+        Assert.Equal(EngineKinds.ServerKinds, new EngineOptions().VllmEngines.Select(e => e.Kind));
+    }
+
+    [Fact]
+    public void FreeTokens_stats_are_its_load_and_an_answer_that_is_not_its_json_is_none()
+    {
+        Assert.Equal((3, 0.25), VllmBackend.FreeTokenStats("""{"requests":{"active":3,"completed":9},"kv":{"used_pages":250,"total_pages":1000,"page_size":1}}"""));
+        Assert.Equal((0, (double?)null), VllmBackend.FreeTokenStats("""{"requests":{"active":0}}"""));
+        Assert.Null(VllmBackend.FreeTokenStats("not json"));
+        Assert.Null(VllmBackend.FreeTokenStats("[1]"));
+    }
 }

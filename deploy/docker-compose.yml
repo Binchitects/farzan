@@ -193,7 +193,7 @@ services:
   llamacpp:
     <<: [*service, *gpu]
     profiles: [chat-models]
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b12767
     container_name: llamacpp
     entrypoint: [/bin/sh, /router.sh]
     environment:
@@ -364,11 +364,127 @@ services:
     healthcheck:
       disable: true
 
+  # TokenSpeed (Admin -> Models, engine TokenSpeed; github.com/lightseekorg/tokenspeed, MIT): snapshots on NVIDIA GPUs,
+  # tensor parallel, a prefix cache shared by every request. One `ts serve` per model the app wants, on its GPUs, run
+  # by the same supervisor (ENGINE_SERVER=tokenspeed; services/tokenspeed/serve.py names the key, metrics and model)
+  # in TokenSpeed's own image, with its Python. Off until asked for: COMPOSE_PROFILES=tokenspeed.
+  tokenspeed:
+    <<: [*service, *gpu]
+    image: ${TOKENSPEED_IMAGE:-lightseekorg/tokenspeed:0.1.1}
+    container_name: tokenspeed
+    profiles: [tokenspeed]
+    entrypoint: [/bin/sh, /vllm/supervisor.sh]
+    environment:
+      ENGINE_KEY: ${ENGINE_KEY}
+      ENGINE_SERVER: tokenspeed
+      CUDA_DEVICE_ORDER: PCI_BUS_ID
+      VLLM_PRESETS: /presets/tokenspeed
+      VLLM_STATUS: /status/tokenspeed
+      # The TokenSpeed to run (fake-gpu.yml: tools/fake-vllm's, as TokenSpeed).
+      VLLM_BIN: ${TOKENSPEED_BIN:-python3 /tokenspeed/serve.py}
+      TOKENSPEED_CLI: ts
+      HF_HUB_OFFLINE: "1"
+    volumes:
+      - ./services/vllm:/vllm:ro
+      - ./services/tokenspeed:/tokenspeed:ro
+      - ./services/gpu-probe.py:/gpu-probe.py:ro
+      - ../tools/fake-vllm:/fake-vllm:ro
+      - ${MODELS_DIR:-./models}:/library:ro
+      - engine:/presets:ro
+      - vllm-status:/status
+    ulimits: { memlock: -1 }
+    shm_size: ${TOKENSPEED_SHM:-16gb}
+    # Its image may check a server of its own; here the supervisor is the engine, as vLLM's is.
+    healthcheck:
+      disable: true
+
+  # FreeToken (Admin -> Models, engine FreeToken; github.com/FlashML-org/FreeToken, Apache-2.0): MoE models on one GPU
+  # as GGUF files or snapshots, the experts that do not fit there in RAM. One `ft serve` per model the app wants, on its
+  # GPU, run by the same supervisor (ENGINE_SERVER=freetoken; services/freetoken/serve.py) in arena-freetoken, built
+  # here on SGLang's image (services/freetoken.Dockerfile). Its kernels, compiled as they are first used, are kept in
+  # freetoken-cache. Off until asked for: COMPOSE_PROFILES=freetoken.
+  freetoken:
+    <<: [*service, *gpu]
+    image: arena-freetoken
+    build:
+      context: ./services
+      dockerfile: freetoken.Dockerfile
+      args:
+        BASE_IMAGE: ${SGLANG_IMAGE:-lmsysorg/sglang:v0.5.23-cu130-runtime}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-}
+    container_name: freetoken
+    profiles: [freetoken]
+    entrypoint: [/bin/sh, /vllm/supervisor.sh]
+    environment:
+      ENGINE_KEY: ${ENGINE_KEY}
+      ENGINE_SERVER: freetoken
+      CUDA_DEVICE_ORDER: PCI_BUS_ID
+      VLLM_PRESETS: /presets/freetoken
+      VLLM_STATUS: /status/freetoken
+      # The FreeToken to run (fake-gpu.yml: tools/fake-vllm's, as FreeToken).
+      VLLM_BIN: ${FREETOKEN_BIN:-python3 /freetoken/serve.py}
+      FREETOKEN_CLI: ft
+      HF_HUB_OFFLINE: "1"
+    volumes:
+      - ./services/vllm:/vllm:ro
+      - ./services/freetoken:/freetoken:ro
+      - ./services/gpu-probe.py:/gpu-probe.py:ro
+      - ../tools/fake-vllm:/fake-vllm:ro
+      - ${MODELS_DIR:-./models}:/library:ro
+      - engine:/presets:ro
+      - vllm-status:/status
+      - freetoken-cache:/cache
+    ulimits: { memlock: -1 }
+    shm_size: ${FREETOKEN_SHM:-8gb}
+    # SGLang's image checks a server of its own; here the supervisor is the engine, as SGLang's is.
+    healthcheck:
+      disable: true
+
+  # Ollama (Admin -> Models, engine Ollama; github.com/ollama/ollama, MIT): a GGUF file of the library made into its
+  # model (nothing pulled, nothing from ollama.com), the layers that do not fit its GPUs in RAM. One `ollama serve` per
+  # model the app wants, on its GPUs, behind a front that asks the engine key (Ollama's own server asks none), run by
+  # the same supervisor (ENGINE_SERVER=ollama; services/ollama/serve.py) in arena-ollama, Ollama's own files (from
+  # OLLAMA_IMAGE) on the python image (services/ollama.Dockerfile). Its copies of the files are kept in ollama-data. Off until asked for:
+  # COMPOSE_PROFILES=ollama.
+  ollama:
+    <<: [*service, *gpu]
+    image: arena-ollama
+    build:
+      context: ./services
+      dockerfile: ollama.Dockerfile
+      args:
+        OLLAMA_IMAGE: ${OLLAMA_IMAGE:-ollama/ollama:0.40.18}
+    container_name: ollama
+    profiles: [ollama]
+    entrypoint: [/bin/sh, /vllm/supervisor.sh]
+    environment:
+      ENGINE_KEY: ${ENGINE_KEY}
+      ENGINE_SERVER: ollama
+      CUDA_DEVICE_ORDER: PCI_BUS_ID
+      VLLM_PRESETS: /presets/ollama
+      VLLM_STATUS: /status/ollama
+      # The Ollama to run (fake-gpu.yml: tools/fake-vllm's, as Ollama).
+      VLLM_BIN: ${OLLAMA_BIN:-python3 /ollama/serve.py}
+      OLLAMA_CLI: ollama
+      OLLAMA_MODELS: /data/models
+      HF_HUB_OFFLINE: "1"
+    volumes:
+      - ./services/vllm:/vllm:ro
+      - ./services/ollama:/ollama:ro
+      - ./services/gpu-probe.py:/gpu-probe.py:ro
+      - ../tools/fake-vllm:/fake-vllm:ro
+      - ${MODELS_DIR:-./models}:/library:ro
+      - engine:/presets:ro
+      - vllm-status:/status
+      - ollama-data:/data
+    shm_size: ${OLLAMA_SHM:-1gb}
+    stop_grace_period: 2m
+
   # Embeddings for code-intel and the app's company knowledge, on the CPU. The app fetches the file into MODELS_DIR/embed.
   embed:
     <<: *service
     profiles: [knowledge]
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b12767
     container_name: embed
     volumes: ["${MODELS_DIR:-./models}:/models"]
     entrypoint: [/bin/sh, -c]
@@ -822,6 +938,12 @@ volumes:
   # Strata's prepared packs, presets and tuning, made from the library's files: kept, so a model starts again without preparing.
   strata-data:
     driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/strata-data" }
+  # FreeToken's kernels, compiled as they are first used on its GPU: kept, so a model starts again without compiling.
+  freetoken-cache:
+    driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/freetoken-cache" }
+  # Ollama's models, each its copy of a GGUF file of the library: kept, so a model starts again without copying.
+  ollama-data:
+    driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/ollama-data" }
   # What the picture and video servers say they do (services/sd-serve.sh), every 2 s: kept in memory, theirs to write.
   media-status:
     driver_opts: { type: tmpfs, device: tmpfs, o: "uid=65534,gid=65534,mode=0755,size=64m" }

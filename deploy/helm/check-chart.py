@@ -42,6 +42,12 @@ COPIES = {
     "files/fake-lmdeploy-entrypoint.py": "../tools/fake-vllm/lmdeploy-module/lmdeploy/cli/entrypoint.py",
     "files/strata-serve.py": "services/strata/serve.py",
     "files/fake-strata": "../tools/fake-vllm/strata",
+    "files/tokenspeed-serve.py": "services/tokenspeed/serve.py",
+    "files/fake-ts": "../tools/fake-vllm/ts",
+    "files/freetoken-serve.py": "services/freetoken/serve.py",
+    "files/fake-ft": "../tools/fake-vllm/ft",
+    "files/ollama-serve.py": "services/ollama/serve.py",
+    "files/fake-ollama": "../tools/fake-vllm/ollama",
 }
 for rule in sorted((DEPLOY / "config/prometheus/rules").glob("*.yml")):
     COPIES[f"files/prometheus/rules/{rule.name}"] = f"config/prometheus/rules/{rule.name}"

@@ -9,7 +9,8 @@ stops a process: the supervisor does, by what this writes.
         (of all of them). A model whose entry is not sound (a name that is not one, a port out of range, a key on its command
         line) is left out and said on stderr. Prints the names wanted, one a line.
 
-    vllm-helper.py health PORT        exit 0 when http://127.0.0.1:PORT/health answers 200
+    vllm-helper.py health PORT        exit 0 when http://127.0.0.1:PORT/health answers 200, and its JSON (FreeToken's) does not
+                                      say it is still loading or failed (status loading, starting or error)
     vllm-helper.py post PORT PATH     POST {} to the server (vLLM's /sleep?level=1 and /wake_up, SGLang's
                                       /release_memory_occupation and /resume_memory_occupation); exit 0 on 200
     vllm-helper.py sleeping PORT      exit 0 when /is_sleeping says it is
@@ -109,6 +110,16 @@ def request(port: str, path: str, method: str = "GET") -> tuple[int, bytes]:
         return 0, b""
 
 
+def ready(body: bytes) -> bool:
+    """A 200 from /health is ready unless its JSON says otherwise: FreeToken answers 200 with {"status": "loading"} while it
+    loads, and {"status": "error"} once it failed. vLLM's and SGLang's bodies are empty, or not that JSON."""
+    try:
+        said = json.loads(body or b"{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return True
+    return not (isinstance(said, dict) and str(said.get("status", "")).lower() in ("loading", "starting", "error"))
+
+
 def status(path: str, pairs: list[str]) -> int:
     log = None
     if "--log" in pairs:
@@ -141,7 +152,8 @@ def main(argv: list[str]) -> int:
     if len(argv) >= 3 and argv[0] == "plan":
         return plan(argv[1], argv[2])
     if len(argv) == 2 and argv[0] == "health":
-        return 0 if request(argv[1], "/health")[0] == 200 else 1
+        code, body = request(argv[1], "/health")
+        return 0 if code == 200 and ready(body) else 1
     if len(argv) == 3 and argv[0] == "post":
         return 0 if request(argv[1], argv[2], "POST")[0] == 200 else 1
     if len(argv) == 2 and argv[0] == "sleeping":

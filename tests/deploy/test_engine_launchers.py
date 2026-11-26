@@ -214,3 +214,132 @@ class LmdeployImageTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def wait_json(url: str, key: str | None = None, tries: int = 150) -> dict:
+    """The JSON at url once it answers 200 (with the key, if any)."""
+    import urllib.request
+    ask = urllib.request.Request(url, headers={"Authorization": f"Bearer {key}"} if key else {})
+    for _ in range(tries):
+        try:
+            with urllib.request.urlopen(ask, timeout=1) as r:
+                return json.loads(r.read() or b"{}")
+        except OSError:
+            time.sleep(0.1)
+    raise AssertionError(f"{url} never answered")
+
+
+def no_key_on_any_command_line(test: unittest.TestCase, key: str):
+    for pid in [p for p in os.listdir("/proc") if p.isdigit()]:
+        try:
+            test.assertNotIn(key, Path(f"/proc/{pid}/cmdline").read_bytes().decode(errors="replace"))
+        except OSError:
+            pass
+
+
+class FreeTokenLauncherTests(unittest.TestCase):
+    def setUp(self):
+        self.serve = load("freetoken_serve", SERVICES / "freetoken" / "serve.py")
+
+    def test_the_model_is_its_model_flag_its_one_gpu_is_given_and_the_key_and_gpu_are_never_arguments(self):
+        args = self.serve.serve_args(["/library/hf/a@b", "--max-seq-len-override", "32768", "--max-running-requests", "4", "--served-model-name", "moe",
+                                      "--host", "0.0.0.0", "--port", "8001"], "1")
+        self.assertEqual(["serve", "--model", "/library/hf/a@b", "--max-seq-len-override", "32768", "--max-running-requests", "4",
+                          "--served-model-name", "moe", "--host", "0.0.0.0", "--port", "8001", "--gpu", "1"], args)
+        self.assertNotIn("--gpu", self.serve.serve_args(["/library/x.gguf", "--served-model-name", "m", "--port", "8001"], None))
+        for wrong in (["--served-model-name", "m", "--port", "8001"], ["/library/x.gguf", "--port", "8001"],
+                      ["/library/x.gguf", "--served-model-name", "m", "--port", "8001", "--api-key", "k"]):
+            with self.assertRaises(ValueError):
+                self.serve.serve_args(wrong, None)
+        with self.assertRaises(ValueError):
+            self.serve.serve_args(["/library/x.gguf", "--served-model-name", "m", "--port", "8001"], "0,1")
+
+    def test_the_fake_freetoken_serves_with_the_key_from_the_environment_through_the_real_launcher(self):
+        port = 20000 + os.getpid() % 1000
+        model = Path(tempfile.mkdtemp()) / "moe-Q4_K_M.gguf"
+        model.write_bytes(b"GGUF")
+        env = dict(os.environ, VLLM_API_KEY="the-engine-key", FREETOKEN_CLI=str(FAKE / "ft"), CUDA_VISIBLE_DEVICES="0")
+        proc = subprocess.Popen([sys.executable, str(SERVICES / "freetoken" / "serve.py"), str(model), "--max-seq-len-override", "8192",
+                                 "--served-model-name", "moe", "--host", "127.0.0.1", "--port", str(port)], env=env,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        try:
+            import urllib.error
+            import urllib.request
+            wait_json(f"http://127.0.0.1:{port}/health")
+            # The key on every route but /health, its stats among them.
+            with self.assertRaises(urllib.error.HTTPError) as refused:
+                urllib.request.urlopen(f"http://127.0.0.1:{port}/v1/stats", timeout=2)
+            self.assertEqual(401, refused.exception.code)
+            refused.exception.close()
+            stats = wait_json(f"http://127.0.0.1:{port}/v1/stats", "the-engine-key")
+            self.assertEqual(0, stats["requests"]["active"])
+            self.assertEqual("moe", wait_json(f"http://127.0.0.1:{port}/v1/models", "the-engine-key")["data"][0]["id"])
+            no_key_on_any_command_line(self, "the-engine-key")
+        finally:
+            proc.terminate()
+            proc.wait(10)
+            proc.stdout.close()
+
+
+class OllamaLauncherTests(unittest.TestCase):
+    def setUp(self):
+        self.serve = load("ollama_serve", SERVICES / "ollama" / "serve.py")
+        self.dir = Path(tempfile.mkdtemp())
+
+    def test_a_gguf_file_is_made_its_model_with_its_context_and_ollama_pulls_nothing(self):
+        p = self.serve.plan(["/library/Qwen3-8B-Q4_K_M.gguf", "--context", "16384", "--parallel", "4", "--kv", "q8_0", "--served-model-name", "qwen",
+                             "--host", "0.0.0.0", "--port", "8003"])
+        self.assertEqual(("qwen", "0.0.0.0", 8003), (p["name"], p["host"], p["port"]))
+        self.assertEqual("FROM /library/Qwen3-8B-Q4_K_M.gguf\nPARAMETER num_ctx 16384\n", p["modelfile"])
+        self.assertEqual(("4", "16384", "q8_0", "-1", "1", "1"), tuple(p["env"][k] for k in (
+            "OLLAMA_NUM_PARALLEL", "OLLAMA_CONTEXT_LENGTH", "OLLAMA_KV_CACHE_TYPE", "OLLAMA_KEEP_ALIVE", "OLLAMA_MAX_LOADED_MODELS", "OLLAMA_NO_CLOUD")))
+        for wrong in (["/library/hf/a@b", "--served-model-name", "m", "--port", "8003"], ["/library/x.gguf", "--port", "8003"],
+                      ["/library/x.gguf", "--served-model-name", "m", "--port", "8003", "--kv", "fp8"]):
+            with self.assertRaises(ValueError):
+                self.serve.plan(wrong)
+
+    def test_the_fake_ollama_serves_behind_the_front_that_asks_the_key(self):
+        model = self.dir / "small-Q4_K_M.gguf"
+        model.write_bytes(b"GGUF")
+        port = 21000 + os.getpid() % 1000
+        env = dict(os.environ, VLLM_API_KEY="the-engine-key", OLLAMA_CLI=str(FAKE / "ollama"), OLLAMA_MODELS=str(self.dir / "models"))
+        proc = subprocess.Popen([sys.executable, str(SERVICES / "ollama" / "serve.py"), str(model), "--context", "4096", "--served-model-name", "small",
+                                 "--host", "127.0.0.1", "--port", str(port)], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        try:
+            import urllib.error
+            import urllib.request
+            wait_json(f"http://127.0.0.1:{port}/health")
+            # The front: the key on everything but /health and /metrics; Ollama's own API too.
+            for path in ("/v1/models", "/api/tags", "/api/version"):
+                with self.assertRaises(urllib.error.HTTPError) as refused:
+                    urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=2)
+                self.assertEqual(401, refused.exception.code)
+                refused.exception.close()
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/metrics", timeout=2) as r:
+                self.assertIn('vllm:num_requests_running{model_name="small"} 0', r.read().decode())
+            ask = urllib.request.Request(f"http://127.0.0.1:{port}/v1/chat/completions", method="POST",
+                                         headers={"Authorization": "Bearer the-engine-key", "Content-Type": "application/json"},
+                                         data=json.dumps({"model": "small", "messages": [{"role": "user", "content": "hi"}]}).encode())
+            with urllib.request.urlopen(ask, timeout=5) as r:
+                self.assertEqual("assistant", json.load(r)["choices"][0]["message"]["role"])
+            # Streamed through the front as Ollama streams it.
+            ask = urllib.request.Request(f"http://127.0.0.1:{port}/v1/chat/completions", method="POST",
+                                         headers={"Authorization": "Bearer the-engine-key", "Content-Type": "application/json"},
+                                         data=json.dumps({"model": "small", "stream": True, "messages": [{"role": "user", "content": "hi"}]}).encode())
+            with urllib.request.urlopen(ask, timeout=5) as r:
+                self.assertIn("data: [DONE]", r.read().decode())
+            no_key_on_any_command_line(self, "the-engine-key")
+        finally:
+            proc.terminate()
+            proc.wait(20)
+            out = proc.stdout.read()
+            proc.stdout.close()
+        self.assertEqual(0, proc.returncode, out)
+
+    def test_a_file_that_is_not_there_is_never_loaded(self):
+        port = 22000 + os.getpid() % 1000
+        env = dict(os.environ, VLLM_API_KEY="k", OLLAMA_CLI=str(FAKE / "ollama"), OLLAMA_MODELS=str(self.dir / "models"))
+        done = subprocess.run([sys.executable, str(SERVICES / "ollama" / "serve.py"), str(self.dir / "missing.gguf"), "--served-model-name", "m",
+                               "--host", "127.0.0.1", "--port", str(port)], env=env, capture_output=True, text=True, timeout=60)
+        self.assertEqual(1, done.returncode, done.stdout + done.stderr)
+        self.assertIn("ollama create m failed", done.stderr)

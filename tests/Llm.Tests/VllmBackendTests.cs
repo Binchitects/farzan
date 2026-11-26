@@ -395,8 +395,8 @@ public sealed class VllmBackendTests : IDisposable
     public void This_stacks_engines_are_one_of_each_kind_and_a_model_goes_to_the_first_of_its_kind_or_the_one_it_names()
     {
         var o = new EngineOptions();
-        Assert.Equal([("vllm", EngineKinds.Vllm), ("sglang", EngineKinds.Sglang), ("lmdeploy", EngineKinds.Lmdeploy), ("strata", EngineKinds.Strata)],
-            o.VllmEngines.Select(e => (e.Name, e.Kind)));
+        Assert.Equal([("vllm", EngineKinds.Vllm), ("sglang", EngineKinds.Sglang), ("lmdeploy", EngineKinds.Lmdeploy), ("strata", EngineKinds.Strata),
+            ("tokenspeed", EngineKinds.TokenSpeed), ("freetoken", EngineKinds.FreeToken), ("ollama", EngineKinds.Ollama)], o.VllmEngines.Select(e => (e.Name, e.Kind)));
         o.Vllm = [new VllmEngineOptions { Name = "vllm" }, new VllmEngineOptions { Name = "sglang-a", Kind = EngineKinds.Sglang }, new VllmEngineOptions { Name = "sglang-b", Kind = EngineKinds.Sglang }];
         var all = new VllmBackends(Microsoft.Extensions.Options.Options.Create(o), new OneClient(new Answer("")), TimeProvider.System);
         Assert.Equal("sglang-a", all.For(null, EngineKinds.Sglang)!.Name);

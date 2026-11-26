@@ -5,6 +5,12 @@
 {{- if .Values.strata.enabled }}
 {{- $claims = append $claims (list "arena-strata-data" $p.strataData.size) }}
 {{- end }}
+{{- if .Values.freetoken.enabled }}
+{{- $claims = append $claims (list "arena-freetoken-cache" $p.freetokenCache.size) }}
+{{- end }}
+{{- if .Values.ollama.enabled }}
+{{- $claims = append $claims (list "arena-ollama-data" $p.ollamaData.size) }}
+{{- end }}
 {{- if not $p.models.existingClaim }}
 {{- $claims = prepend $claims (list "arena-models" $p.models.size) }}
 {{- end }}
