@@ -50,6 +50,16 @@ has its test, Accounting narrows to one person, group, project or model, and
 - **The data export** has each API request of the prompt log whole (what it
   sent, the tools' results among it, and the answer's thinking, words and
   tool calls) and its pictures.
+- **Every image Arena builds is published on GitHub Packages.**
+  `./arenactl publish --release` pushes them by service to
+  `ghcr.io/binchitects/farzan/SERVICE:VERSION`, and `:latest` for a final
+  release. The images are the offline bundle's own. Their digests are
+  attached to the GitHub release and listed in its notes, so a host with
+  access to the registry can pull a release instead of copying the bundle.
+  Each image keeps the digest it has in the bundle. arenactl sends the
+  images itself, in 4 MiB chunks, one after another: a chunk the network
+  breaks is sent again, a layer already there is skipped, and a run that
+  stops goes on from where it was.
 - **Coverage per test**: `tools/coverage-per-test.sh` (dotnet-coverage, one
   session, a snapshot after each test) and `tools/coverage-redundant.py`: of
   1,752 tests, 1,007 run every line the suite runs.
@@ -68,6 +78,10 @@ has its test, Accounting narrows to one person, group, project or model, and
 
 ### :boom: Breaking changes & Deprecations
 
+- **`ghcr.io/binchitects/code-intel` and `ghcr.io/binchitects/argus` are
+  gone.** Farzan Graph is `ghcr.io/binchitects/farzan/code-intel` now, with
+  the other images. `release.yml` is removed: CI publishes nothing, so a tag
+  no longer builds an image of its own beside the release's.
 - **Code workspaces' tables are dropped** on the upgrade (`studio_workspaces`,
   `studio_ports`, and API keys' `workspace_id`); a workspace's key stays its
   person's. The `workspaces` folder under DATA_DIR is left as it is.
