@@ -1717,6 +1717,10 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.Property(p => p.Groups).HasDefaultValueSql("'{}'::uuid[]");
             e.Property(p => p.Source).HasMaxLength(16).HasDefaultValue(Skill.Typed);
             e.Property(p => p.Version).HasDefaultValue(1);
+            e.Property(p => p.ScanHash).HasMaxLength(64);
+            e.Property(p => p.ScanRecommendation).HasMaxLength(20);
+            e.Ignore(p => p.Blocked);
+            e.HasOne<AppUser>().WithMany().HasForeignKey(p => p.ScanAllowedById).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(p => p.UserId);
             // Each built-in one once, whichever replica writes them.
             e.HasIndex(p => p.Name).IsUnique().HasFilter("\"BuiltIn\"").HasDatabaseName("IX_skills_Name_BuiltIn");

@@ -72,6 +72,67 @@ Sections used:
 - vLLM's PyPI build (`vllm-build.yml`, for a host that cannot pull vLLM's image) pinned to 0.34.0, the vLLM, PyTorch
   and GGUF plugin arena-vllm already runs.
 
+## v8.2.5 (2026-11-26)
+
+Skills are checked by NVIDIA's SkillSpector, and the admin assistant looks and
+moves as the chat does.
+
+### :rocket: Epics and highlights
+
+- **Skills checked by SkillSpector** (the scanners feature). Each skill is
+  checked as it is made, imported, learned or changed, and again when what it
+  says changes: its SKILL.md and files, static checks only, nothing leaving
+  the stack. Its card shows **Checked: safe**, **use with care** or
+  **unsafe**, its risk out of 100 and what was found. An imported skill
+  SkillSpector says not to install is refused, with why (Settings → Chat →
+  **Refuse skills found unsafe**); one found unsafe otherwise is not offered
+  to the model nor used until an admin presses **Allow** (audited; **Hold
+  again** undoes it, a change asks again).
+- **The admin assistant as the chat.** Its thinking as it thinks, folded to
+  how long it took; each step a tool card, running then what came back; its
+  words as they are written; the chat's waiting line, question bubble and
+  composer. Its button floats in its corner however far the page scrolls.
+
+### :sparkles: New features & Enhancements
+
+- **run_code's tool search** lists every function when none matches (a model
+  searching by its task's topic found nothing and never found its tools).
+
+### :arrow_up: Deps updates
+
+- **SkillSpector 2.13.7** (Apache-2.0) in the scanners image, with its
+  dependencies: the image grows from about 700 MB to 1.1 GB.
+
+### :boom: Breaking changes & Deprecations
+
+- **The app reaches the scanners** (compose's scanning network, the chart's
+  NetworkPolicy), for SkillSpector; they still reach nothing.
+
+## v8.2.4 (2026-11-26)
+
+The chat's tools are easier to call from code, an answer that ends without a
+word after its tools is asked again, and the browser tests pass on the live
+stack.
+
+### :bug: Bugs fixed
+
+- **A program run with run_code** called the chat's tools by keyword only:
+  `arena.web.web_search("asyncio")` failed, and models write it so (on live a
+  search took four tries). A tool takes its required arguments by position
+  too, in order, and `arena.tools.web` is the group as `arena.web` is. A
+  run_code's row says which tools it called ("called Web search, Fetch page").
+- **An answer could end with its thinking alone** after its tools' results,
+  the person given nothing. Such a round is asked once more, without
+  thinking, to answer from what came back.
+- **arenactl publish** stopped when its `--work-dir` was not there yet: it
+  makes it.
+- **The gateway's flush** (tests, and a replica stopping) gave up after 5
+  seconds of polling, so a slow batch could still be unsaved when it returned:
+  it waits for every line booked to be saved, counted.
+- **The browser tests** read a tool as used from its row or a program's call
+  of it, turn on the tools they need for their chat, and find the Logs page's
+  Containers button and the lab's drawn molecule by their names as they are.
+
 ## v8.2.3 (2026-11-26)
 
 The dashboards' exports answer in under 2 s on a million requests, every model

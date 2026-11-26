@@ -33,6 +33,23 @@ const live = process.env.E2E_CHAT === '1'
 // So this file's tests run in order (a failure still leaves the rest to run).
 test.describe.configure({ mode: 'default' })
 
+/**
+ * A tool the answer used, by its title: its own row, or a run_code program's call of it (the model may call the chat's
+ * tools from code: "Run code · called Web search, Fetch page").
+ */
+const used = (scope: Locator, title: string | RegExp) => scope.locator('.tool-name, .tool-called', { hasText: title }).first()
+
+/** Turns these tools on for the chat on screen (the composer's Tools menu), whatever Admin → Tools has on by default. */
+async function toolsOn(page: Page, ...names: RegExp[]) {
+  await page.getByRole('button', { name: /^Tools: \d+ of \d+ on$/ }).click()
+  for (const name of names) {
+    const toggle = page.getByRole('switch', { name })
+    if ((await toggle.getAttribute('aria-checked')) !== 'true') await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-checked', 'true')
+  }
+  await page.keyboard.press('Escape')
+}
+
 async function ask(page: Page, text: string) {
   await page.getByRole('textbox', { name: 'Message' }).fill(text)
   await page.getByRole('textbox', { name: 'Message' }).press('Enter')
@@ -872,9 +889,11 @@ test.describe('tools', () => {
     test.setTimeout(300_000)
     await page.goto('/chat')
     await thinking(page, 'No thinking')
+    // On for this chat: Admin -> Tools may leave it off by default.
+    await toolsOn(page, /Calculator/)
     await ask(page, 'Use the calculator tool: what is 123456789 * 987654321? Reply with the number only.')
     const answer = page.getByRole('region', { name: 'Answer' }).last()
-    await expect(answer.locator('.tool-name', { hasText: 'Calculate' })).toBeVisible({ timeout: 120_000 })
+    await expect(used(answer, 'Calculate')).toBeVisible({ timeout: 120_000 })
     await expect(answer).toContainText(/121,?932,?631,?112,?635,?269/, { timeout: 120_000 })
     await done(page)
 
@@ -1022,7 +1041,7 @@ test.describe('tools', () => {
       await page.keyboard.press('Escape')
       await ask(page, 'Use web_search to find the Python documentation for asyncio.gather, open that page with fetch_page, and tell me in one sentence what return_exceptions=True does. Give the page address.')
       const answer = page.getByRole('region', { name: 'Answer' }).last()
-      await expect(answer.locator('.tool-name', { hasText: 'Fetch page' }).first()).toBeVisible({ timeout: 180_000 })
+      await expect(used(answer, 'Fetch page')).toBeVisible({ timeout: 180_000 })
       await done(page)
       await expect(answer).toContainText('docs.python.org')
       await expect(answer).toContainText(/exception/i)
@@ -1048,10 +1067,10 @@ test.describe('tools', () => {
       await ask(page, 'Do a deep research: what do asyncio.gather and asyncio.TaskGroup each do in Python, and when should I use which? Use only docs.python.org pages.')
       const answer = page.getByRole('region', { name: 'Answer' }).last()
       await answer.getByRole('button', { name: 'Allow', exact: true }).click({ timeout: 300_000 })
-      await expect(answer.locator('.tool-name', { hasText: 'Sub-agents' }).first()).toBeVisible({ timeout: 300_000 })
+      await expect(used(answer, 'Sub-agents')).toBeVisible({ timeout: 300_000 })
       const agents = answer.getByRole('list', { name: 'Sub-agents' })
       await expect(agents.getByRole('listitem').nth(1)).toBeVisible()
-      await expect(agents.locator('.tool-name', { hasText: /Web search|Fetch page/ }).first()).toBeVisible({ timeout: 300_000 })
+      await expect(used(agents, /Web search|Fetch page/)).toBeVisible({ timeout: 300_000 })
       await page.getByRole('button', { name: 'Stop' }).click()
       await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeVisible({ timeout: 60_000 })
       expect((await page.request.delete(`/api/chat/conversations/${page.url().split('/').pop()}`, { headers: { 'X-Requested-With': 'e2e' } })).status()).toBe(204)
@@ -1072,7 +1091,7 @@ test.describe('tools', () => {
     await expect(page.getByText('budget.xlsx', { exact: true })).toBeVisible()
     await ask(page, 'Use run_python with pandas to read budget.xlsx, print the total of the Budget column, and save a bar chart of Budget by Team as chart.png. Then tell me the total.')
     const answer = page.getByRole('region', { name: 'Answer' }).last()
-    await expect(answer.locator('.tool-name', { hasText: 'Run python' }).first()).toBeVisible({ timeout: 120_000 })
+    await expect(used(answer, /Run python|Run code/)).toBeVisible({ timeout: 120_000 })
     await expect(answer.getByRole('list', { name: 'Pictures' }).getByRole('img')).toBeVisible({ timeout: 180_000 })
     await done(page)
     await expect(answer).toContainText(/5,?500/)

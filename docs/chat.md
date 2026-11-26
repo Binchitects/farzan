@@ -2065,6 +2065,16 @@ model reads it to choose it), its **instructions** and its **parameters**.
   a skill of yours with its name, which wins over it.
 - **Lessons from your marks.** An answer you marked bad, with its reason, is
   read as a lesson: what to do differently, kept as a memory.
+- **Checked by SkillSpector.** Where the scanners feature is installed, each
+  skill is checked by NVIDIA's SkillSpector as it is made, imported, learned
+  or changed (its SKILL.md and files, static checks only: nothing leaves the
+  stack): its card shows **Checked: safe**, **use with care** or **unsafe**,
+  its risk out of 100 and what it found. An imported skill it says not to
+  install is refused, with why (Settings → Chat → **Refuse skills found
+  unsafe**). One found unsafe otherwise is not offered to the model nor used
+  by its name until an admin (who may manage the company's skills) presses
+  **Allow** on its card; **Hold again** undoes it, a change asks again, and
+  both are in the audit log.
 - **Code Arena** keeps what a session worked out with `skill_save` (the
   project's, in `.arena/skills/`, or yours, here), and after a long turn it
   is reminded to. A skill you make in its IDE "for you" (**New Skill**, or

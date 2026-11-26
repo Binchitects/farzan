@@ -36,6 +36,7 @@ namespace Llm.Tests;
 ///   [length N]  stops at its longest, as an engine does at max_tokens or its n-predict: N tokens written, finish_reason length
 ///   [cut K]     a long answer: cut at its longest (finish_reason length) K times, each part "partI ", then "the end."
 ///   [cut stuck] cut at its longest, then (asked to go on) adds nothing and is cut again
+///   [silent after tools]  with [call …]: after the tool's result it thinks and ends without a word; asked again, "Answered after all."
 /// A model with a window of its own (<see cref="Windows"/>) refuses a prompt (3 characters a token) and its max_tokens together
 /// longer than it, as vLLM does, and its summaries are as long as asked (max_tokens), up to half what they read, as a small model writes them.
 /// Its /v1/images/generations answers with a small PNG.
@@ -564,6 +565,15 @@ public sealed class FakeModel : HttpMessageHandler
                 Delta(new JsonObject { ["tool_calls"] = new JsonArray(new JsonObject { ["index"] = 0, ["function"] = new JsonObject { ["arguments"] = $"\"{symbol}\"}}" } }) }),
                 Finish("tool_calls"),
             ];
+        }
+        else if (toolAnswered && messages.Any(m => m!["role"]!.GetValue<string>() == "user" && m["content"]?.ToString().Contains("[silent after tools]", StringComparison.Ordinal) == true))
+        {
+            // Thinks, then ends without a word, as a model may after its tools' results.
+            chunks = [Delta(new JsonObject { ["reasoning_content"] = "The results are in." }), Finish("stop")];
+        }
+        else if (lastUser.StartsWith("(You ended without a word", StringComparison.Ordinal))
+        {
+            chunks = [Delta(new JsonObject { ["content"] = "Answered after all." }), Finish("stop")];
         }
         else if (toolAnswered)
         {

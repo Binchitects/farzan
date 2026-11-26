@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text;
@@ -231,18 +232,40 @@ public static class AdminAssistant
             var request = new JsonObject
             {
                 ["model"] = verdict.Model ?? model, ["messages"] = messages.DeepClone(), ["tools"] = tools.DeepClone(), ["stream"] = true, ["max_tokens"] = 2000,
-                ["user"] = me.Email, ["chat_template_kwargs"] = new JsonObject { ["enable_thinking"] = false },
+                ["user"] = me.Email,
                 ["metadata"] = new JsonObject { ["tags"] = new JsonArray("admin-assistant") },
             };
             var said = new StringBuilder();
             var calls = new SortedDictionary<int, (string? Id, string? Name, StringBuilder Args)>();
+            // Its thinking and its words go to the page as they come, as the chat's do; the answer rules read the round whole after.
+            var thought = Stopwatch.StartNew();
+            var thinking = false;
+            async Task Thought()
+            {
+                if (thinking)
+                {
+                    thinking = false;
+                    await SendAsync(http.Response, new { type = "thought", ms = (int)thought.ElapsedMilliseconds }, ct);
+                }
+            }
             try
             {
                 await foreach (var e in gateway.StreamAsync(request, me.Email!, ct))
                 {
-                    if (e is ContentDelta c)
+                    if (e is ReasoningDelta r && r.Text.Length > 0)
                     {
+                        if (!thinking && said.Length == 0)
+                        {
+                            thinking = true;
+                            thought.Restart();
+                        }
+                        await SendAsync(http.Response, new { type = "thinking", text = r.Text }, ct);
+                    }
+                    else if (e is ContentDelta c)
+                    {
+                        await Thought();
                         said.Append(c.Text);
+                        await SendAsync(http.Response, new { type = "delta", text = c.Text }, ct);
                     }
                     else if (e is ToolCallDelta d)
                     {
@@ -250,6 +273,7 @@ public static class AdminAssistant
                         calls[d.Index] = (d.Id ?? call.Id, d.Name ?? call.Name, call.Args.Append(d.Arguments));
                     }
                 }
+                await Thought();
             }
             catch (ChatGatewayException ex)
             {
@@ -261,10 +285,16 @@ public static class AdminAssistant
                 var answer = await safeguards.RunAsync(new Safeguards.RuleRun("answer", said.ToString()) { User = me, Model = model }, ct);
                 if (answer.Blocked)
                 {
+                    // Its words, shown as they came, are taken back.
+                    await SendAsync(http.Response, new { type = "replace", text = "" }, ct);
                     await SendAsync(http.Response, new { type = "error", message = answer.Reason ?? "The answer was withheld by a rule." }, ct);
                     return;
                 }
-                await SendAsync(http.Response, new { type = "text", text = answer.Text }, ct);
+                if (answer.Text != said.ToString())
+                {
+                    await SendAsync(http.Response, new { type = "replace", text = answer.Text }, ct);
+                }
+                await SendAsync(http.Response, new { type = "round" }, ct);
             }
             if (calls.Count == 0)
             {
@@ -282,14 +312,15 @@ public static class AdminAssistant
             messages.Add(assistant);
             foreach (var (index, call) in calls)
             {
-                var result = await CallAsync(call.Name, call.Args.ToString(), http, me, routes, pipeline, changes, ct);
+                var id = call.Id ?? $"call_{round}_{index}";
+                var result = await CallAsync(id, call.Name, call.Args.ToString(), http, me, routes, pipeline, changes, ct);
                 messages.Add(new JsonObject { ["role"] = "tool", ["tool_call_id"] = call.Id ?? $"call_{round}_{index}", ["content"] = result });
             }
         }
         await SendAsync(http.Response, new { type = "done" }, ct);
     }
 
-    private static async Task<string> CallAsync(string? name, string arguments, HttpContext http, AppUser me, List<Route> routes, AppPipeline pipeline,
+    private static async Task<string> CallAsync(string id, string? name, string arguments, HttpContext http, AppUser me, List<Route> routes, AppPipeline pipeline,
         AssistantChanges changes, CancellationToken ct)
     {
         JsonObject args;
@@ -307,16 +338,28 @@ public static class AdminAssistant
         switch (name)
         {
             case "find_api":
-                await SendAsync(http.Response, new { type = "step", tool = name, words = Schema.Str(args, "words") }, ct);
-                return Find(routes, Schema.Str(args, "words"));
+            {
+                // Each step as the chat's tool calls are: running, then done with what it found.
+                var words = Schema.Str(args, "words");
+                await SendAsync(http.Response, new { type = "step", id, tool = name, words, arguments, state = "running" }, ct);
+                var found = Find(routes, words);
+                await SendAsync(http.Response, new { type = "step", id, tool = name, words, arguments, state = "done", result = found.Length > 4000 ? found[..4000] : found }, ct);
+                return found;
+            }
             case "read":
             {
                 if (Refused() is { } why)
                 {
                     return why;
                 }
+                await SendAsync(http.Response, new { type = "step", id, tool = name, path, arguments, state = "running" }, ct);
+                var watch = Stopwatch.StartNew();
                 var answer = await pipeline.SendAsync(http, "GET", path, null, ct);
-                await SendAsync(http.Response, new { type = "step", tool = name, path, status = answer.Status }, ct);
+                await SendAsync(http.Response, new
+                {
+                    type = "step", id, tool = name, path, arguments, state = answer.Status < 400 ? "done" : "failed", status = answer.Status, ms = (int)watch.ElapsedMilliseconds,
+                    result = answer.Body.Length > 4000 ? answer.Body[..4000] : answer.Body,
+                }, ct);
                 var text = answer.Body.Length > MostRead ? answer.Body[..MostRead] + $"… ({answer.Body.Length - MostRead:N0} more characters: read less, with a filter or a page)" : answer.Body;
                 return $"HTTP {answer.Status}{(answer.Cut ? " (cut)" : "")}\n{text}";
             }

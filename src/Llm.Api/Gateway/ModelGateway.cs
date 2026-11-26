@@ -38,15 +38,33 @@ public sealed partial class ModelGateway(IServiceScopeFactory scopes, IHttpClien
     private (List<Deployment> Routes, DateTimeOffset At)? _table;
     private readonly SemaphoreSlim _building = new(1, 1);
     private readonly ConcurrentDictionary<string, int> _busy = new(StringComparer.Ordinal);
-    private readonly Channel<GatewayRequest> _ledger = Channel.CreateBounded<GatewayRequest>(new BoundedChannelOptions(10_000) { FullMode = BoundedChannelFullMode.DropOldest });
+    private readonly LedgerQueue _queue = new();
+
+    private Channel<GatewayRequest> _ledger => _queue.Channel;
+
+    /// <summary>
+    /// The ledger's lines on their way: the channel the writer reads, and how many are booked and not saved yet (in it, or
+    /// in a batch being saved), a line the full channel drops taken off: what FlushAsync waits for.
+    /// </summary>
+    private sealed class LedgerQueue
+    {
+        public long Unsaved;
+        public readonly Channel<GatewayRequest> Channel;
+
+        public LedgerQueue() => Channel = System.Threading.Channels.Channel.CreateBounded<GatewayRequest>(
+            new BoundedChannelOptions(10_000) { FullMode = BoundedChannelFullMode.DropOldest }, _ => Interlocked.Decrement(ref Unsaved));
+    }
     private Task? _writer;
-    private volatile bool _writing; // a batch read from the channel and not saved yet
 
     /// <summary>A line for the ledger, counted for the metrics as it goes.</summary>
     private void Write(GatewayRequest row)
     {
         metrics.Booked(row);
-        _ledger.Writer.TryWrite(row);
+        Interlocked.Increment(ref _queue.Unsaved);
+        if (!_ledger.Writer.TryWrite(row))
+        {
+            Interlocked.Decrement(ref _queue.Unsaved);
+        }
     }
 
     /// <summary>The gateway's metrics as Prometheus reads them.</summary>
@@ -672,7 +690,6 @@ public sealed partial class ModelGateway(IServiceScopeFactory scopes, IHttpClien
         var batch = new List<GatewayRequest>();
         while (await _ledger.Reader.WaitToReadAsync())
         {
-            _writing = true;
             batch.Clear();
             while (batch.Count < 200 && _ledger.Reader.TryRead(out var row))
             {
@@ -702,7 +719,7 @@ public sealed partial class ModelGateway(IServiceScopeFactory scopes, IHttpClien
             }
             finally
             {
-                _writing = false;
+                Interlocked.Add(ref _queue.Unsaved, -batch.Count);
             }
         }
     }
@@ -710,9 +727,12 @@ public sealed partial class ModelGateway(IServiceScopeFactory scopes, IHttpClien
     /// <summary>Every line booked so far is in the ledger (tests, and a replica stopping).</summary>
     public async Task FlushAsync(CancellationToken ct)
     {
-        for (var i = 0; i < 200 && (_writing || _ledger.Reader.Count > 0); i++)
+        // Until every line booked before now is saved (or given up on): counted, not guessed from the channel, which is
+        // empty while a batch it gave is still being saved. A minute at most, should the database not answer.
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+        while (Interlocked.Read(ref _queue.Unsaved) > 0 && waited.Elapsed < TimeSpan.FromMinutes(1))
         {
-            await Task.Delay(25, ct);
+            await Task.Delay(10, ct);
         }
     }
 

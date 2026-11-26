@@ -332,7 +332,7 @@ public static partial class CodeArenaSync
     /// safeguards, the choices for a name they have): with preview, only what the import would do.
     /// </summary>
     private static async Task<IResult> ImportSkillsAsync(SkillsImported body, HttpContext http, McpPeople people, AccessService access, AppDbContext db,
-        Safeguards.Safeguards safeguards, Identity.Audit audit)
+        Safeguards.Safeguards safeguards, Identity.Audit audit, SkillScans scans, Microsoft.Extensions.Options.IOptionsMonitor<SkillScanOptions> scanning)
     {
         var (me, refusal) = await CallerAsync(http, people);
         if (me is null)
@@ -356,7 +356,7 @@ public static partial class CodeArenaSync
         }
         return body.Preview
             ? Results.Ok(await SkillEndpoints.PreviewAsync(me, folders, [], access, db, safeguards, ct))
-            : Results.Ok(await SkillEndpoints.ImportAsync(me, folders, body.Choices ?? [], access, db, safeguards, audit, ct));
+            : Results.Ok(await SkillEndpoints.ImportAsync(me, folders, body.Choices ?? [], access, db, safeguards, audit, scans, scanning, ct));
     }
 
     /// <summary>A skill Code Arena makes or changes: its slash name, when to use it, its instructions, title and parameters.</summary>

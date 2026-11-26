@@ -107,7 +107,7 @@ public static partial class SkillEndpoints
     }
 
     private static async Task<IResult> ImportFilesAsync(HttpRequest request, ClaimsPrincipal p, UserManager<AppUser> users, AccessService access, AppDbContext db,
-        Safeguards.Safeguards safeguards, Audit audit, CancellationToken ct)
+        Safeguards.Safeguards safeguards, Audit audit, SkillScans scans, Microsoft.Extensions.Options.IOptionsMonitor<SkillScanOptions> scanning, CancellationToken ct)
     {
         var (uploads, choices, problem) = await UploadsAsync(request, ct);
         if (problem is not null)
@@ -126,7 +126,7 @@ public static partial class SkillEndpoints
         try
         {
             var (folders, _) = SkillTransfer.Read(uploads!);
-            return Results.Ok(await ImportAsync((await users.GetUserAsync(p))!, folders, chosen, access, db, safeguards, audit, ct));
+            return Results.Ok(await ImportAsync((await users.GetUserAsync(p))!, folders, chosen, access, db, safeguards, audit, scans, scanning, ct));
         }
         catch (SkillTransfer.TransferException e)
         {
@@ -223,7 +223,7 @@ public static partial class SkillEndpoints
     /// another name (rename), or left (skip, and any it cannot be). A clash not chosen for is left, never overwritten.
     /// </summary>
     internal static async Task<object> ImportAsync(AppUser me, IReadOnlyList<SkillFolder> folders, IReadOnlyList<SkillImportChoice> choices, AccessService access, AppDbContext db,
-        Safeguards.Safeguards safeguards, Audit audit, CancellationToken ct)
+        Safeguards.Safeguards safeguards, Audit audit, SkillScans scans, Microsoft.Extensions.Options.IOptionsMonitor<SkillScanOptions> scanning, CancellationToken ct)
     {
         var looked = await LookAsync(me, folders, access, db, safeguards, ct);
         var imported = new List<object>();
@@ -246,6 +246,18 @@ public static partial class SkillEndpoints
             }
             var name = action == "rename" ? choice?.Name?.Trim().TrimStart('/').ToLowerInvariant() ?? x.Suggested : x.Skill.Name;
             var request = new SkillRequest(name, x.Skill.Title, x.Skill.Description, x.Skill.Instructions, [.. x.Skill.Parameters], Files: new(x.Skill.Files));
+            // Checked by SkillSpector before it is kept: one it says not to install is refused (Skills:RefuseUnsafe).
+            var candidate = new Skill
+            {
+                Name = name, Title = x.Skill.Title, Description = x.Skill.Description, Instructions = x.Skill.Instructions,
+                Parameters = JsonSerializer.Serialize(x.Skill.Parameters, JsonSerializerOptions.Web), Files = JsonSerializer.Serialize(x.Skill.Files),
+            };
+            var scan = await scans.ScanAsync(candidate, ct);
+            if (scan is { Recommendation: Skill.UnsafeScan } && scanning.CurrentValue.RefuseUnsafe)
+            {
+                Skip($"SkillSpector found it unsafe ({scan.Score}/100): {SkillScanWords.FirstIssue(scan.Report)}");
+                continue;
+            }
             IResult? refused;
             Skill? done;
             if (action == "replace")
@@ -276,7 +288,12 @@ public static partial class SkillEndpoints
                 Skip(Said(refused));
                 continue;
             }
-            imported.Add(new { folder = x.Skill.Folder, done!.Id, done.Name, replaced = action == "replace" });
+            if (scan is not null && await db.Skills.SingleOrDefaultAsync(s => s.Id == done!.Id, ct) is { } kept)
+            {
+                scans.Keep(kept, scan);
+                await db.SaveChangesAsync(ct);
+            }
+            imported.Add(new { folder = x.Skill.Folder, done!.Id, done.Name, replaced = action == "replace", scan = scan?.Recommendation });
             names.Add("/" + done.Name);
         }
         if (names.Count > 0)

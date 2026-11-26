@@ -377,7 +377,7 @@ spec:
       ports: [{ port: 8000 }]
 ---
 {{- end }}
-{{- /* The security scanners: opengrep with Arena's rules, Bandit, gitleaks and Trivy's configuration checks, on a commit code-intel sends. Only code-intel reaches them, and they reach nothing. */}}
+{{- /* The security scanners: opengrep with Arena's rules, Bandit, gitleaks and Trivy's configuration checks, on a commit code-intel sends; SkillSpector on a skill the app sends. Only code-intel and the app reach them, and they reach nothing. */}}
 {{- if .Values.scanners.enabled }}
 apiVersion: apps/v1
 kind: Deployment
@@ -422,7 +422,7 @@ spec:
   selector: {{- include "arena.selector" (dict "root" $ "name" "scanners") | nindent 4 }}
   ports: [{ name: http, port: 7800, targetPort: http }]
 ---
-# code-intel's pods in, nothing out: as compose's internal network.
+# code-intel's pods and the app's in (security reviews, and SkillSpector on skills), nothing out: as compose's internal network.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -436,6 +436,8 @@ spec:
     - from:
         - podSelector:
             matchLabels: {{- include "arena.selector" (dict "root" $ "name" "code-intel") | nindent 14 }}
+        - podSelector:
+            matchLabels: {{- include "arena.selector" (dict "root" $ "name" "app") | nindent 14 }}
       ports: [{ port: 7800 }]
 ---
 {{- end }}

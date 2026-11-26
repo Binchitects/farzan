@@ -66,9 +66,14 @@ print(len(arena.tools.list()))
         self.assertEqual(0, r.returncode, r.stderr)
         lines = r.stdout.splitlines()
         self.assertEqual("['arena.code_intel.find_symbol: Find where a symbol is defined.']", lines[0])
-        self.assertEqual("(*, name, repo=None)", lines[1])
+        self.assertEqual("(name, repo=None)", lines[1])
         self.assertEqual("Find where a symbol is defined.", lines[2])
         self.assertEqual("2", lines[3])
+
+    def test_A_search_that_matches_nothing_lists_every_function(self):
+        r, _ = run("import arena\nprint(len(arena.tools.search('asyncio gather TaskGroup')))", lambda n, a: {"ok": True, "result": ""})
+        self.assertEqual(0, r.returncode, r.stderr)
+        self.assertEqual("2", r.stdout.strip())
 
     def test_A_call_goes_to_the_chat_and_its_JSON_comes_back_parsed_and_a_refusal_raises_its_words(self):
         def answer(name, args):
@@ -91,6 +96,26 @@ except arena.ToolError as e:
         self.assertEqual(0, r.returncode, r.stderr)
         self.assertEqual(["src/decode.c", "refused: The person's rules refuse this search.", "needs: find_symbol needs name."], r.stdout.splitlines())
         self.assertEqual([{"name": "find_symbol", "args": {"name": "DecodeFrame"}}, {"name": "web_search", "args": {"query": "secret"}}], relay.asked)
+
+    def test_A_tool_takes_its_arguments_by_position_too_and_a_group_is_found_under_tools(self):
+        r, relay = run("""
+import arena
+arena.web.web_search("asyncio gather")
+arena.code_intel.find_symbol("DecodeFrame", "codec")
+arena.tools.web.web_search(query="via tools")
+for bad in (lambda: arena.code_intel.find_symbol("a", "b", "c"), lambda: arena.code_intel.find_symbol("a", name="b"), lambda: arena.tools.nothing):
+    try:
+        bad()
+    except (arena.ToolError, AttributeError) as e:
+        print(type(e).__name__, e)
+""", lambda n, a: {"ok": True, "result": "[]"})
+        self.assertEqual(0, r.returncode, r.stderr)
+        self.assertEqual([{"name": "web_search", "args": {"query": "asyncio gather"}}, {"name": "find_symbol", "args": {"name": "DecodeFrame", "repo": "codec"}},
+                          {"name": "web_search", "args": {"query": "via tools"}}], relay.asked)
+        out = r.stdout.splitlines()
+        self.assertIn("ToolError find_symbol takes at most 2 arguments by position (name, repo).", out)
+        self.assertIn("ToolError find_symbol was given name twice.", out)
+        self.assertTrue(any(o.startswith("AttributeError arena has no group 'nothing'") for o in out), out)
 
     def test_Outside_run_code_a_call_says_why_it_cannot(self):
         r = subprocess.run([sys.executable, "-I", "-c", f"import sys; sys.path.insert(0, {str(PACKAGE)!r})\nimport arena\ntry:\n    arena.call('x')\nexcept arena.ToolError as e:\n    print(e)"],

@@ -118,6 +118,8 @@ public static class InstallSettings
         ["PluginRuntime:Root"] = "The plugin-runtime volume as the app mounts it (its socket is run/host.sock)",
         ["PluginRuntime:Tcp"] = "The plugin runtime's address on Kubernetes, where it is reached over TCP",
         ["PluginRuntime:Key"] = "The app's key at the plugin runtime on Kubernetes, from the chart's arena-plugins Secret",
+        ["Skills:ScanEvery"] = "How often the app looks for skills made or changed since SkillSpector last checked them; each is checked as it changes, so only tests shorten it",
+        ["Skills:ScannerUrl"] = "The scanners on the stack's network (the scanners feature); empty when the feature is off",
         ["Stack:PrometheusUrl"] = "Prometheus on the stack's network",
         ["Storage:BackupDir"] = "The backups volume as the app mounts it (BACKUP_DIR is the installation's)",
         ["Storage:DockerDir"] = "Where Docker's own disk is mounted into the app",

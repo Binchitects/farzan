@@ -68,7 +68,7 @@ test('the lab balances a reaction checked atom by atom, and draws a molecule', a
     await expect(reaction).toContainText('4 Fe + 3 O2 → 2 Fe2O3')
     const molecule = page.getByRole('region', { name: 'Molecule' }).first()
     await expect(molecule).toContainText('C2H6O', { timeout: 120_000 })
-    await expect(molecule.getByRole('img', { name: 'C2H6O drawn' })).toBeVisible()
+    await expect(molecule.getByRole('img', { name: /C2H6O,? drawn/ })).toBeVisible()
     await expect(page.getByRole('list', { name: 'Notebook' })).toHaveAttribute('aria-busy', 'false', { timeout: 120_000 })
     await expectAccessible(page, info, 'lab-chemistry')
     await screenshot(page, info, `lab-chemistry${isMobile ? '-phone' : ''}`)
