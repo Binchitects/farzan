@@ -4240,6 +4240,11 @@ cmd_maintenance() {
       step "the maintenance page"
       maint_write_page "$MESSAGE_ARG" "$since"
       dc --profile maintenance up -d --no-build --pull never --no-deps maintenance >> "$LOG" 2>&1 || die "the maintenance page's container did not start (its log: $LOG)"
+      # Healthy before it is the only answer: its health check runs every 15 seconds.
+      for _ in $(seq 1 $(( ${MAINTENANCE_WAIT_S:-60} / 2 + 1 ))); do
+        [[ "$(E inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{end}}' maintenance 2>/dev/null)" =~ ^(healthy|)$ ]] && break
+        sleep 2
+      done
       maint_write_route
       if maint_until_page; then ok "every address answers with it (503)"; else note "Traefik did not answer with the page within a minute: status says what runs ($LOG)"; fi
       state_set maintenance on maintenance-since "$since" maintenance-message "$MESSAGE_ARG" maintenance-stopped "${stop_list[*]}"
