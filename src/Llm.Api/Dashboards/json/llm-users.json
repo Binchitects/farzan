@@ -19,7 +19,26 @@
     "to": "now"
   },
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "model",
+        "label": "Model",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "gateway-db"
+        },
+        "query": "select distinct model from requests where $__timeFilter(started_at) and model is not null order by 1",
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "value": "$__all"
+        },
+        "sort": 1,
+        "refresh": 2,
+        "allValue": ".*"
+      }
+    ]
   },
   "panels": [
     {
@@ -56,7 +75,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(*) AS \"Requests\" from requests WHERE $__timeFilter(started_at) AND status <> 'refused'"
+          "rawSql": "SELECT count(*) AS \"Requests\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused'"
         }
       ],
       "fieldConfig": {
@@ -113,7 +132,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(sum(greatest(prompt_tokens - cached_tokens, 0)),0) AS \"In\", COALESCE(sum(cached_tokens),0) AS \"Cached\", COALESCE(sum(completion_tokens),0) AS \"Out\" from requests WHERE $__timeFilter(started_at)"
+          "rawSql": "SELECT COALESCE(sum(greatest(prompt_tokens - cached_tokens, 0)),0) AS \"In\", COALESCE(sum(cached_tokens),0) AS \"Cached\", COALESCE(sum(completion_tokens),0) AS \"Out\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model)"
         }
       ],
       "fieldConfig": {
@@ -170,7 +189,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms),0) AS \"p50\" from requests WHERE $__timeFilter(started_at) AND status <> 'refused' AND surface <> 'media'"
+          "rawSql": "SELECT COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms),0) AS \"p50\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' AND surface <> 'media'"
         }
       ],
       "fieldConfig": {
@@ -227,7 +246,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms),0) AS \"p95\" from requests WHERE $__timeFilter(started_at) AND status <> 'refused' AND surface <> 'media'"
+          "rawSql": "SELECT COALESCE(percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms),0) AS \"p95\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' AND surface <> 'media'"
         }
       ],
       "fieldConfig": {
@@ -284,7 +303,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache\" from requests WHERE $__timeFilter(started_at)"
+          "rawSql": "SELECT COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model)"
         }
       ],
       "fieldConfig": {
@@ -342,7 +361,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(*) FILTER (WHERE status IN ('failed', 'stopped')) AS \"Failures\" from requests WHERE $__timeFilter(started_at) AND status <> 'refused'"
+          "rawSql": "SELECT count(*) FILTER (WHERE status IN ('failed', 'stopped')) AS \"Failures\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused'"
         }
       ],
       "fieldConfig": {
@@ -404,7 +423,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, count(*) AS \"requests\" from requests WHERE $__timeFilter(started_at) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, count(*) AS \"requests\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -459,7 +478,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), (COALESCE(sum(greatest(coalesce(prompt_tokens,0) - cached_tokens,0)),0)) / ($__interval_ms / 1000.0) AS \"input, cache miss\", (COALESCE(sum(cached_tokens),0)) / ($__interval_ms / 1000.0) AS \"input, cache hit\", (COALESCE(sum(completion_tokens),0)) / ($__interval_ms / 1000.0) AS \"output\" from requests WHERE $__timeFilter(started_at) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), (COALESCE(sum(greatest(coalesce(prompt_tokens,0) - cached_tokens,0)),0)) / ($__interval_ms / 1000.0) AS \"input, cache miss\", (COALESCE(sum(cached_tokens),0)) / ($__interval_ms / 1000.0) AS \"input, cache hit\", (COALESCE(sum(completion_tokens),0)) / ($__interval_ms / 1000.0) AS \"output\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -514,7 +533,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms) AS \"p50\", percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms) AS \"p95\" from requests WHERE $__timeFilter(started_at) AND status <> 'refused' AND surface <> 'media' GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms) AS \"p50\", percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms) AS \"p95\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' AND surface <> 'media' GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -569,7 +588,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_token_at - started_at))*1000) AS \"p50 TTFT\", percentile_cont(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_token_at - started_at))*1000) AS \"p95 TTFT\" from requests WHERE $__timeFilter(started_at) AND first_token_at IS NOT NULL GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_token_at - started_at))*1000) AS \"p50 TTFT\", percentile_cont(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_token_at - started_at))*1000) AS \"p95 TTFT\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND first_token_at IS NOT NULL GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -776,7 +795,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) * (1 + ((sum(rate(llamacpp:spec_decode_num_accepted_tokens_total[5m])) / sum(rate(llamacpp:spec_decode_num_drafts_total[5m]))) > 0 or vector(0))) or vector(0)) + (sum(rate(vllm:generation_tokens_total[1m])) or vector(0)) + (sum(rate(sglang:generation_tokens_total[1m])) or vector(0))",
+          "expr": "(sum(rate((llamacpp:n_busy_slots_per_decode{model=~\"$model\"} * llamacpp:n_decode_total{model=~\"$model\"})[1m:15s])) * (1 + ((sum(rate(llamacpp:spec_decode_num_accepted_tokens_total{model=~\"$model\"}[5m])) / sum(rate(llamacpp:spec_decode_num_drafts_total{model=~\"$model\"}[5m]))) > 0 or vector(0))) or vector(0)) + (sum(rate(vllm:generation_tokens_total{model=~\"$model\"}[1m])) or vector(0)) + (sum(rate(sglang:generation_tokens_total{model=~\"$model\"}[1m])) or vector(0))",
           "legendFormat": "",
           "refId": "A",
           "instant": true,
@@ -841,7 +860,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) * (1 + ((sum(rate(llamacpp:spec_decode_num_accepted_tokens_total[5m])) / sum(rate(llamacpp:spec_decode_num_drafts_total[5m]))) > 0 or vector(0))) or vector(0)) + (sum(rate(vllm:generation_tokens_total[1m])) or vector(0)) + (sum(rate(sglang:generation_tokens_total[1m])) or vector(0))",
+          "expr": "(sum(rate((llamacpp:n_busy_slots_per_decode{model=~\"$model\"} * llamacpp:n_decode_total{model=~\"$model\"})[1m:15s])) * (1 + ((sum(rate(llamacpp:spec_decode_num_accepted_tokens_total{model=~\"$model\"}[5m])) / sum(rate(llamacpp:spec_decode_num_drafts_total{model=~\"$model\"}[5m]))) > 0 or vector(0))) or vector(0)) + (sum(rate(vllm:generation_tokens_total{model=~\"$model\"}[1m])) or vector(0)) + (sum(rate(sglang:generation_tokens_total{model=~\"$model\"}[1m])) or vector(0))",
           "legendFormat": "the stack (live)",
           "refId": "A",
           "instant": false,
@@ -853,7 +872,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(rate(llamacpp:tokens_predicted_total[5m])) or vector(0)) + (sum(rate(vllm:generation_tokens_total[5m])) or vector(0)) + (sum(rate(sglang:generation_tokens_total[5m])) or vector(0))",
+          "expr": "(sum(rate(llamacpp:tokens_predicted_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(vllm:generation_tokens_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(sglang:generation_tokens_total{model=~\"$model\"}[5m])) or vector(0))",
           "legendFormat": "the stack (5 min)",
           "refId": "B",
           "instant": false,
@@ -865,7 +884,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "((sum(rate(llamacpp:tokens_predicted_total[5m])) or vector(0)) + (sum(rate(vllm:request_generation_tokens_sum[5m])) or vector(0)) + (sum(rate(sglang:inter_token_latency_seconds_count[5m])) or vector(0))) / ((sum(rate(llamacpp:tokens_predicted_seconds_total[5m])) or vector(0)) + (sum(rate(vllm:request_decode_time_seconds_sum[5m])) or vector(0)) + (sum(rate(sglang:inter_token_latency_seconds_sum[5m])) or vector(0))) >= 0",
+          "expr": "((sum(rate(llamacpp:tokens_predicted_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(vllm:request_generation_tokens_sum{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(sglang:inter_token_latency_seconds_count{model=~\"$model\"}[5m])) or vector(0))) / ((sum(rate(llamacpp:tokens_predicted_seconds_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(vllm:request_decode_time_seconds_sum{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(sglang:inter_token_latency_seconds_sum{model=~\"$model\"}[5m])) or vector(0))) >= 0",
           "legendFormat": "a request, decode (5 min)",
           "refId": "C",
           "instant": false,
@@ -877,7 +896,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "((sum(rate(llamacpp:prompt_tokens_total[5m])) or vector(0)) + (sum(rate(vllm:request_prompt_tokens_sum[5m])) or vector(0))) / ((sum(rate(llamacpp:prompt_seconds_total[5m])) or vector(0)) + (sum(rate(vllm:request_prefill_time_seconds_sum[5m])) or vector(0))) >= 0",
+          "expr": "((sum(rate(llamacpp:prompt_tokens_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(vllm:request_prompt_tokens_sum{model=~\"$model\"}[5m])) or vector(0))) / ((sum(rate(llamacpp:prompt_seconds_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(vllm:request_prefill_time_seconds_sum{model=~\"$model\"}[5m])) or vector(0))) >= 0",
           "legendFormat": "a request, prefill (5 min)",
           "refId": "D",
           "instant": false,
@@ -943,7 +962,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(llamacpp:requests_processing) or vector(0)) + (sum(vllm:num_requests_running) or vector(0)) + (sum(sglang:num_running_reqs{tp_rank=\"0\",priority=\"\"}) or vector(0))",
+          "expr": "(sum(llamacpp:requests_processing{model=~\"$model\"}) or vector(0)) + (sum(vllm:num_requests_running{model=~\"$model\"}) or vector(0)) + (sum(sglang:num_running_reqs{tp_rank=\"0\",priority=\"\",model=~\"$model\"}) or vector(0))",
           "legendFormat": "active",
           "refId": "A",
           "instant": false,
@@ -955,7 +974,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(llamacpp:requests_deferred) or vector(0)) + (sum(vllm:num_requests_waiting) or vector(0)) + (sum(sglang:num_queue_reqs{tp_rank=\"0\",priority=\"\"}) or vector(0))",
+          "expr": "(sum(llamacpp:requests_deferred{model=~\"$model\"}) or vector(0)) + (sum(vllm:num_requests_waiting{model=~\"$model\"}) or vector(0)) + (sum(sglang:num_queue_reqs{tp_rank=\"0\",priority=\"\",model=~\"$model\"}) or vector(0))",
           "legendFormat": "queued",
           "refId": "B",
           "instant": false,
@@ -1034,7 +1053,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select count(distinct coalesce(s.person, '(unattributed)')) as v from requests s where $__timeFilter(s.started_at) and s.status <> 'refused'"
+          "rawSql": "select count(distinct coalesce(s.person, '(unattributed)')) as v from requests s where $__timeFilter(s.started_at) AND $__filter(s.model, model) and s.status <> 'refused'"
         }
       ],
       "fieldConfig": {
@@ -1091,7 +1110,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select count(*) as v from requests s where $__timeFilter(s.started_at) and s.status <> 'refused'"
+          "rawSql": "select count(*) as v from requests s where $__timeFilter(s.started_at) AND $__filter(s.model, model) and s.status <> 'refused'"
         }
       ],
       "fieldConfig": {
@@ -1148,7 +1167,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select coalesce(sum(greatest(s.prompt_tokens - s.cached_tokens, 0)),0) as \"In\", coalesce(sum(s.cached_tokens),0) as \"Cached\", coalesce(sum(s.completion_tokens),0) as \"Out\" from requests s where $__timeFilter(s.started_at)"
+          "rawSql": "select coalesce(sum(greatest(s.prompt_tokens - s.cached_tokens, 0)),0) as \"In\", coalesce(sum(s.cached_tokens),0) as \"Cached\", coalesce(sum(s.completion_tokens),0) as \"Out\" from requests s where $__timeFilter(s.started_at) AND $__filter(s.model, model)"
         }
       ],
       "fieldConfig": {
@@ -1205,7 +1224,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select round(coalesce(sum(s.cost),0)::numeric,4) as v from requests s where $__timeFilter(s.started_at)"
+          "rawSql": "select round(coalesce(sum(s.cost),0)::numeric,4) as v from requests s where $__timeFilter(s.started_at) AND $__filter(s.model, model)"
         }
       ],
       "fieldConfig": {
@@ -1263,7 +1282,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select coalesce(s.person, '(unattributed)') as \"Person\", count(*) as \"Requests\", coalesce(sum(greatest(s.prompt_tokens - s.cached_tokens, 0)),0) as \"In\", coalesce(sum(s.cached_tokens),0) as \"Cached\", coalesce(sum(s.completion_tokens),0) as \"Out\", coalesce(sum(s.total_tokens),0) as \"Tokens\", round(coalesce(sum(s.cost),0)::numeric,4) as \"Spend\", count(distinct coalesce(s.key_alias, s.surface)) as \"Keys used\", string_agg(distinct case s.surface when 'chat' then 'Chat' when 'app' then 'Arena itself' when 'studio' then 'Code' when 'media' then 'Pictures, video, sound' else 'API / agent' end, ', ') as \"Surfaces\" from requests s where $__timeFilter(s.started_at) and s.status <> 'refused' group by 1 order by 6 desc nulls last"
+          "rawSql": "select coalesce(s.person, '(unattributed)') as \"Person\", count(*) as \"Requests\", coalesce(sum(greatest(s.prompt_tokens - s.cached_tokens, 0)),0) as \"In\", coalesce(sum(s.cached_tokens),0) as \"Cached\", coalesce(sum(s.completion_tokens),0) as \"Out\", coalesce(sum(s.total_tokens),0) as \"Tokens\", round(coalesce(sum(s.cost),0)::numeric,4) as \"Spend\", count(distinct coalesce(s.key_alias, s.surface)) as \"Keys used\", string_agg(distinct case s.surface when 'chat' then 'Chat' when 'app' then 'Arena itself' when 'studio' then 'Code' when 'media' then 'Pictures, video, sound' else 'API / agent' end, ', ') as \"Surfaces\" from requests s where $__timeFilter(s.started_at) AND $__filter(s.model, model) and s.status <> 'refused' group by 1 order by 6 desc nulls last"
         }
       ],
       "fieldConfig": {
@@ -1301,7 +1320,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "select $__timeGroupAlias(s.started_at, 1d), coalesce(s.person, '(unattributed)') as metric, coalesce(sum(s.total_tokens),0) as tokens from requests s where $__timeFilter(s.started_at) group by 1,2 order by 1"
+          "rawSql": "select $__timeGroupAlias(s.started_at, 1d), coalesce(s.person, '(unattributed)') as metric, coalesce(sum(s.total_tokens),0) as tokens from requests s where $__timeFilter(s.started_at) AND $__filter(s.model, model) group by 1,2 order by 1"
         }
       ],
       "fieldConfig": {
@@ -1355,7 +1374,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select coalesce(s.person, '(unattributed)') as \"Person\", count(*) as \"Requests\", sum(greatest(coalesce(s.prompt_tokens,0) - s.cached_tokens, 0)) as \"Input, cache miss\", sum(s.cached_tokens) as \"Input, cache hit\", round(100.0*sum(s.cached_tokens)/nullif(sum(coalesce(s.prompt_tokens,0)),0),1) as \"Cache hit %\", sum(coalesce(s.completion_tokens,0)) as \"Output\", round((sum(s.completion_tokens - 1) filter (where s.first_token_at is not null and s.ended_at > s.first_token_at and s.completion_tokens > 1) / nullif(sum(extract(epoch from (s.ended_at - s.first_token_at))) filter (where s.first_token_at is not null and s.ended_at > s.first_token_at and s.completion_tokens > 1), 0))::numeric, 1) as \"Output tokens a second\", round(sum(s.cost)::numeric,4) as \"Cost\" from requests s where $__timeFilter(s.started_at) and s.status <> 'refused' group by 1 order by \"Cost\" desc nulls last",
+          "rawSql": "select coalesce(s.person, '(unattributed)') as \"Person\", count(*) as \"Requests\", sum(greatest(coalesce(s.prompt_tokens,0) - s.cached_tokens, 0)) as \"Input, cache miss\", sum(s.cached_tokens) as \"Input, cache hit\", round(100.0*sum(s.cached_tokens)/nullif(sum(coalesce(s.prompt_tokens,0)),0),1) as \"Cache hit %\", sum(coalesce(s.completion_tokens,0)) as \"Output\", round((sum(s.completion_tokens - 1) filter (where s.first_token_at is not null and s.ended_at > s.first_token_at and s.completion_tokens > 1) / nullif(sum(extract(epoch from (s.ended_at - s.first_token_at))) filter (where s.first_token_at is not null and s.ended_at > s.first_token_at and s.completion_tokens > 1), 0))::numeric, 1) as \"Output tokens a second\", round(sum(s.cost)::numeric,4) as \"Cost\" from requests s where $__timeFilter(s.started_at) AND $__filter(s.model, model) and s.status <> 'refused' group by 1 order by \"Cost\" desc nulls last",
           "refId": "A"
         }
       ],
@@ -1403,7 +1422,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT model AS \"Model\", count(*) AS \"Requests\", COALESCE(sum(prompt_tokens),0) AS \"Prompt tokens\", COALESCE(sum(completion_tokens),0) AS \"Completion tokens\", COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache hit %\", round(COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms),0)::numeric,0) AS \"p50 ms\", round(COALESCE(sum(cost),0)::numeric,4) AS \"Spend\" from requests WHERE $__timeFilter(started_at) AND status <> 'refused' GROUP BY 1 ORDER BY 2 DESC"
+          "rawSql": "SELECT model AS \"Model\", count(*) AS \"Requests\", COALESCE(sum(prompt_tokens),0) AS \"Prompt tokens\", COALESCE(sum(completion_tokens),0) AS \"Completion tokens\", COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache hit %\", round(COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms),0)::numeric,0) AS \"p50 ms\", round(COALESCE(sum(cost),0)::numeric,4) AS \"Spend\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1 ORDER BY 2 DESC"
         }
       ],
       "fieldConfig": {
@@ -1441,7 +1460,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select coalesce(s.person, '(unattributed)') as \"Person\", coalesce(s.key_alias, s.surface) as \"Key\", case s.refusal when 'rpm' then 'requests a minute' when 'tpm' then 'tokens a minute' when 'parallel' then 'requests at once' when 'budget' then 'a budget' when 'credit' then 'credit' when 'key' then 'unknown key' when 'blocked' then 'key blocked' when 'expired' then 'key expired' when 'disabled' then 'account disabled' when 'api_off' then 'API access off' when 'model' then 'model not allowed' when 'safeguards' then 'safeguards' when 'room' then 'no room on the model' when 'busy' then 'busy' when 'too_long' then 'too long' else 'other' end as \"Why\", count(*) as \"Refused\", max(s.started_at) as \"Last\" from requests s where $__timeFilter(s.started_at) and s.status = 'refused' group by 1,2,3 order by 4 desc, 5 desc"
+          "rawSql": "select coalesce(s.person, '(unattributed)') as \"Person\", coalesce(s.key_alias, s.surface) as \"Key\", case s.refusal when 'rpm' then 'requests a minute' when 'tpm' then 'tokens a minute' when 'parallel' then 'requests at once' when 'budget' then 'a budget' when 'credit' then 'credit' when 'key' then 'unknown key' when 'blocked' then 'key blocked' when 'expired' then 'key expired' when 'disabled' then 'account disabled' when 'api_off' then 'API access off' when 'model' then 'model not allowed' when 'safeguards' then 'safeguards' when 'room' then 'no room on the model' when 'busy' then 'busy' when 'too_long' then 'too long' else 'other' end as \"Why\", count(*) as \"Refused\", max(s.started_at) as \"Last\" from requests s where $__timeFilter(s.started_at) AND $__filter(s.model, model) and s.status = 'refused' group by 1,2,3 order by 4 desc, 5 desc"
         }
       ],
       "fieldConfig": {

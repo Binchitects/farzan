@@ -311,12 +311,16 @@ public sealed partial class DashboardFileTests(Promtool promtool) : IClassFixtur
         Assert.Equal("temp GPU 1 · A100-SXM4-80GB", Interpolation.Legend("temp {{gpu}}", new Dictionary<string, string> { ["gpu"] = "GPU 1 · A100-SXM4-80GB" }, "x"));
     }
 
-    /// <summary>A panel's query, by its dashboard, its title and its legend, as Prometheus is sent it (a 1-minute rate interval).</summary>
-    private static string Query(string uid, string title, string legend = "")
+    /// <summary>
+    /// A panel's query, by its dashboard, its title and its legend, as Prometheus is sent it (a 1-minute rate interval): its
+    /// variables as the page opens it (All), or <paramref name="chosen"/>.
+    /// </summary>
+    private static string Query(string uid, string title, string legend = "", Dictionary<string, string[]>? chosen = null)
     {
-        var (_, _, t) = PromTargets().Single(x => x.Dashboard.Uid == uid && x.Panel.Title == title && (x.Target.LegendFormat ?? "") == legend);
+        var (d, _, t) = PromTargets().Single(x => x.Dashboard.Uid == uid && x.Panel.Title == title && (x.Target.LegendFormat ?? "") == legend);
         var from = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
-        return Interpolation.Expand(t.Expr!, from, from.AddHours(1), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15), new Dictionary<string, VariableValue>(), loki: false);
+        var vars = (d.Variables ?? []).ToDictionary(v => v.Name, v => new VariableValue(v, chosen?.GetValueOrDefault(v.Name) ?? ["$__all"], []), StringComparer.Ordinal);
+        return Interpolation.Expand(t.Expr!, from, from.AddHours(1), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15), vars, loki: false);
     }
 
     [Fact]
@@ -329,7 +333,8 @@ public sealed partial class DashboardFileTests(Promtool promtool) : IClassFixtur
         // weighed by their tokens (600 tokens over 8 seconds of decoding a second). The old figures were 100 (the steps)
         // and, in LLM Overview, 150 (vLLM alone: "or" kept the first engine and dropped the others).
         // To the hundredth: a rate is a float, 599.9999999999999 for 600.
-        string Q(string uid, string title, string legend = "") => JsonSerializer.Serialize($"round({Query(uid, title, legend)}, 0.01)");
+        string Q(string uid, string title, string legend = "", string? model = null) =>
+            JsonSerializer.Serialize($"round({Query(uid, title, legend, model is null ? null : new() { ["model"] = [model] })}, 0.01)");
         var test = $$"""
             evaluation_interval: 15s
             tests:
@@ -411,6 +416,13 @@ public sealed partial class DashboardFileTests(Promtool promtool) : IClassFixtur
                   - expr: {{Q("stack-performance", "Making now (tokens a second)")}}
                     eval_time: 8m
                     exp_samples: [{ labels: '{}', value: 600 }]
+                  # One model chosen: its own capacity and tokens, not the stack's.
+                  - expr: {{Q("stack-performance", "Capacity (tokens a second)", model: "qwen")}}
+                    eval_time: 8m
+                    exp_samples: [{ labels: '{}', value: 500 }]
+                  - expr: {{Q("stack-performance", "Making now (tokens a second)", model: "flash")}}
+                    eval_time: 8m
+                    exp_samples: [{ labels: '{}', value: 150 }]
                   # The tested ones make 400 + 150 of their 700.
                   - expr: {{Q("stack-performance", "Of capacity, now")}}
                     eval_time: 8m

@@ -19,7 +19,8 @@ public sealed partial class GatewayDatasource(IOptions<DashboardOptions> options
 
     private int _rolePrepared;
 
-    public async Task<TableResult> QueryAsync(string sql, CancellationToken ct)
+    /// <param name="parameters">Values the SQL names as @name (a variable's choice, from $__filter): bound, never written into the SQL.</param>
+    public async Task<TableResult> QueryAsync(string sql, CancellationToken ct, IReadOnlyDictionary<string, object>? parameters = null)
     {
         sql = sql.Trim().TrimEnd(';');
         if (SqlRows.HasSecondStatement(sql))
@@ -36,6 +37,10 @@ public sealed partial class GatewayDatasource(IOptions<DashboardOptions> options
             await setup.ExecuteNonQueryAsync(ct);
         }
         await using var cmd = new NpgsqlCommand(sql, conn, tx);
+        foreach (var (name, value) in parameters ?? new Dictionary<string, object>())
+        {
+            cmd.Parameters.AddWithValue(name, value);
+        }
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         var columns = Enumerable.Range(0, reader.FieldCount).Select(i => new Column(reader.GetName(i), SqlRows.TypeOf(reader.GetFieldType(i)))).ToList();
         var rows = new List<object?[]>();

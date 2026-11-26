@@ -19,7 +19,43 @@
     "to": "now"
   },
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "model",
+        "label": "Model",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "gateway-db"
+        },
+        "query": "select distinct model from requests where $__timeFilter(started_at) and model is not null order by 1",
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "value": "$__all"
+        },
+        "sort": 1,
+        "refresh": 2,
+        "allValue": ".*"
+      },
+      {
+        "name": "gpu",
+        "label": "GPU",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": "query_result_label(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index), gpu)",
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "value": "$__all"
+        },
+        "filterSeries": true,
+        "refresh": 2
+      }
+    ]
   },
   "panels": [
     {
@@ -772,7 +808,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (model, engine, on) (arena_model_memory_bytes)",
+          "expr": "sum by (model, engine, on) (arena_model_memory_bytes{model=~\"$model\"})",
           "instant": true,
           "format": "table"
         }
@@ -1712,7 +1748,7 @@
         },
         {
           "refId": "C",
-          "expr": "avg_over_time((max(vllm:kv_cache_usage_perc or llamacpp:kv_cache_usage_ratio) >= bool 0.9)[$__range:1m])",
+          "expr": "avg_over_time((max(vllm:kv_cache_usage_perc{model=~\"$model\"} or llamacpp:kv_cache_usage_ratio{model=~\"$model\"}) >= bool 0.9)[$__range:1m])",
           "legendFormat": "Context cache nearly full (90 % or more)"
         },
         {
@@ -1851,7 +1887,7 @@
         },
         {
           "refId": "C",
-          "expr": "avg_over_time((max(vllm:kv_cache_usage_perc or llamacpp:kv_cache_usage_ratio) >= bool 0.9)[$__rate_interval:1m])",
+          "expr": "avg_over_time((max(vllm:kv_cache_usage_perc{model=~\"$model\"} or llamacpp:kv_cache_usage_ratio{model=~\"$model\"}) >= bool 0.9)[$__rate_interval:1m])",
           "legendFormat": "Context cache nearly full (90 % or more)"
         },
         {
@@ -1912,7 +1948,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select to_char(started_at, 'Dy') as \"Day\", to_char(started_at, 'HH24') || ':00' as \"Hour\", count(*) as \"Requests\", coalesce(sum(total_tokens),0) as \"Tokens\", round(coalesce(sum(duration_ms),0) / 3600000.0, 2) as \"Answering, hours\", count(distinct person) as \"People\" from requests where $__timeFilter(started_at) and status <> 'refused' group by extract(isodow from started_at), 1, 2 order by 4 desc limit 12"
+          "rawSql": "select to_char(started_at, 'Dy') as \"Day\", to_char(started_at, 'HH24') || ':00' as \"Hour\", count(*) as \"Requests\", coalesce(sum(total_tokens),0) as \"Tokens\", round(coalesce(sum(duration_ms),0) / 3600000.0, 2) as \"Answering, hours\", count(distinct person) as \"People\" from requests where $__timeFilter(started_at) AND $__filter(model, model) and status <> 'refused' group by extract(isodow from started_at), 1, 2 order by 4 desc limit 12"
         }
       ],
       "fieldConfig": {
@@ -1950,7 +1986,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select to_char(started_at, 'HH24') || ':00' as \"Hour\", count(*) as \"Requests\", coalesce(sum(total_tokens),0) as \"Tokens\", round(coalesce(sum(duration_ms),0) / 3600000.0, 2) as \"Answering, hours\", round(coalesce(percentile_cont(0.95) within group (order by extract(epoch from (first_token_at - started_at))), 0)::numeric, 2) as \"p95 first token, s\", count(distinct person) as \"People\" from requests where $__timeFilter(started_at) and status <> 'refused' group by 1 order by 1"
+          "rawSql": "select to_char(started_at, 'HH24') || ':00' as \"Hour\", count(*) as \"Requests\", coalesce(sum(total_tokens),0) as \"Tokens\", round(coalesce(sum(duration_ms),0) / 3600000.0, 2) as \"Answering, hours\", round(coalesce(percentile_cont(0.95) within group (order by extract(epoch from (first_token_at - started_at))), 0)::numeric, 2) as \"p95 first token, s\", count(distinct person) as \"People\" from requests where $__timeFilter(started_at) AND $__filter(model, model) and status <> 'refused' group by 1 order by 1"
         }
       ],
       "fieldConfig": {
