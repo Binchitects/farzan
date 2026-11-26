@@ -165,6 +165,62 @@ public sealed class DashboardTests(AppFixture app)
     }
 
     [Fact]
+    public async Task A_model_chosen_from_the_ledgers_narrows_its_numbers_and_a_gpu_chosen_keeps_only_its_series()
+    {
+        var b = await Admin();
+        // Two models' requests in a window of their own.
+        var at = new DateTimeOffset(2023, 7, 15, 10, 0, 0, TimeSpan.Zero);
+        await app.SpendAsync("alpha-user@example.test", 0.01m, at, model: "alpha");
+        await app.SpendAsync("alpha-user@example.test", 0.01m, at.AddMinutes(1), model: "alpha");
+        await app.SpendAsync("beta-user@example.test", 0.01m, at.AddMinutes(2), model: "beta");
+        await app.MirrorAsync();
+        var (from, to) = (at.AddHours(-1), at.AddHours(1));
+        var options = (await b.JsonAsync(await b.GetAsync($"/api/dashboards/usage-by-user/variables?from={Uri.EscapeDataString(from.ToString("O"))}&to={Uri.EscapeDataString(to.ToString("O"))}")))
+            .EnumerateArray().Single(v => v.GetProperty("name").GetString() == "model").GetProperty("options").EnumerateArray().Select(o => o.GetString()!).ToList();
+        var said = await (await b.GetAsync($"/api/dashboards/usage-by-user/variables?from={Uri.EscapeDataString(from.ToString("O"))}&to={Uri.EscapeDataString(to.ToString("O"))}")).Content.ReadAsStringAsync();
+        Assert.True(options.SequenceEqual(["alpha", "beta"]), said);
+        var (_, k) = await Load(b, "usage-by-user");
+        async Task<double> RequestsAsync(params string[] model)
+        {
+            var res = await b.Http!.PostAsJsonAsync(new Uri($"/api/dashboards/usage-by-user/panels/{k["Requests"]}/query", UriKind.Relative),
+                new { from, to, vars = model.Length == 0 ? null : new Dictionary<string, string[]> { ["model"] = model } });
+            await StatusAssert.Is(HttpStatusCode.OK, res);
+            return Stat(JsonDocument.Parse(await res.Content.ReadAsStringAsync()).RootElement);
+        }
+        Assert.Equal(3, await RequestsAsync());
+        Assert.Equal(2, await RequestsAsync("alpha"));
+        Assert.Equal(1, await RequestsAsync("beta"));
+        Assert.Equal(3, await RequestsAsync("alpha", "beta"));
+        // A value the ledger does not offer is not taken as asked: All.
+        Assert.Equal(3, await RequestsAsync("x') or true --"));
+
+        // GPUs: the numbers nvidia-smi gives, offered; a panel's series of the others left out.
+        app.Observe.Answers["/api/v1/query"] = _ => """{"status":"success","data":{"resultType":"vector","result":[{"metric":{"instance":"h","uuid":"u0","gpu":"0"},"value":[1,"1"]},{"metric":{"instance":"h","uuid":"u1","gpu":"1"},"value":[1,"1"]}]}}""";
+        app.Observe.Answers["/api/v1/query_range"] = _ => """{"status":"success","data":{"resultType":"matrix","result":[{"metric":{"gpu":"0"},"values":[[1,"10"]]},{"metric":{"gpu":"1"},"values":[[1,"20"]]}]}}""";
+        try
+        {
+            var gpus = (await b.JsonAsync(await b.GetAsync("/api/dashboards/gpu-hardware/variables"))).EnumerateArray().Single(v => v.GetProperty("name").GetString() == "gpu")
+                .GetProperty("options").EnumerateArray().Select(o => o.GetString()!).ToList();
+            Assert.Equal(["0", "1"], gpus);
+            var (_, g) = await Load(b, "gpu-hardware");
+            async Task<int> SeriesAsync(params string[] gpu)
+            {
+                var res = await b.Http!.PostAsJsonAsync(new Uri($"/api/dashboards/gpu-hardware/panels/{g["Utilisation over time"]}/query", UriKind.Relative),
+                    new { from = at.AddHours(-1), to = at, vars = gpu.Length == 0 ? null : new Dictionary<string, string[]> { ["gpu"] = gpu } });
+                await StatusAssert.Is(HttpStatusCode.OK, res);
+                return JsonDocument.Parse(await res.Content.ReadAsStringAsync()).RootElement.GetProperty("results")[0].GetProperty("series").GetArrayLength();
+            }
+            Assert.Equal(2, await SeriesAsync());
+            Assert.Equal(1, await SeriesAsync("1"));
+        }
+        finally
+        {
+            app.Observe.Answers.TryRemove("/api/v1/query", out _);
+            app.Observe.Answers.TryRemove("/api/v1/query_range", out _);
+        }
+    }
+
+    [Fact]
     public async Task Usage_numbers_match_the_seeded_requests_and_ignore_those_outside_the_range()
     {
         var b = await Admin();

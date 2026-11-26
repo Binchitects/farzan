@@ -10,11 +10,23 @@ namespace Llm.Api.Dashboards;
 /// </summary>
 public static partial class SqlMacros
 {
-    [GeneratedRegex(@"\$__(timeFilter|timeGroupAlias|timeGroup|timeFrom|timeTo|unixEpochFilter)\s*\(")]
+    [GeneratedRegex(@"\$__(timeFilter|timeGroupAlias|timeGroup|timeFrom|timeTo|unixEpochFilter|filter)\s*\(")]
     private static partial Regex MacroStart();
 
-    public static string Expand(string sql, DateTimeOffset from, DateTimeOffset to, TimeSpan interval)
+    [GeneratedRegex(@"^[A-Za-z_]\w*$")]
+    private static partial Regex VariableName();
+
+    public static string Expand(string sql, DateTimeOffset from, DateTimeOffset to, TimeSpan interval) => Expand(sql, from, to, interval, null, out _);
+
+    /// <summary>
+    /// The macros, and the app's own $__filter(column, variable): the column among the variable's chosen values, bound as a
+    /// parameter (@v_variable, in <paramref name="parameters"/>), or TRUE for All or no such variable. A value is never
+    /// written into the SQL.
+    /// </summary>
+    public static string Expand(string sql, DateTimeOffset from, DateTimeOffset to, TimeSpan interval, IReadOnlyDictionary<string, VariableValue>? vars,
+        out Dictionary<string, object> parameters)
     {
+        parameters = [];
         // Plain variables first: $__interval can be an argument of a macro.
         sql = sql
             .Replace("$__interval_ms", ((long)interval.TotalMilliseconds).ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
@@ -37,12 +49,29 @@ public static partial class SqlMacros
                 "unixEpochFilter" => $"{Arg(args, 0)} >= {from.ToUnixTimeSeconds()} AND {Arg(args, 0)} <= {to.ToUnixTimeSeconds()}",
                 "timeGroup" => TimeGroup(args),
                 "timeGroupAlias" => TimeGroup(args) + " AS \"time\"",
+                "filter" => Filter(args, vars, parameters),
                 _ => throw new InvalidOperationException(m.Value),
             });
             pos = close + 1;
         }
         sb.Append(sql, pos, sql.Length - pos);
         return sb.ToString();
+    }
+
+    private static string Filter(List<string> args, IReadOnlyDictionary<string, VariableValue>? vars, Dictionary<string, object> parameters)
+    {
+        var column = Arg(args, 0);
+        var name = Arg(args, 1).Trim();
+        if (!VariableName().IsMatch(name))
+        {
+            throw new FormatException($"$__filter names a variable, not \"{name}\".");
+        }
+        if (vars?.GetValueOrDefault(name) is not { } v || v.Values.Contains("$__all") || v.Values.Count == 0)
+        {
+            return "TRUE";
+        }
+        parameters["v_" + name] = v.Values.ToArray();
+        return $"{column} = ANY(@v_{name})";
     }
 
     /// <summary>Grafana: floor(extract(epoch from col)/secs)*secs.</summary>

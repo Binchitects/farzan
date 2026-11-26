@@ -18,7 +18,25 @@
     "to": "now"
   },
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "gpu",
+        "label": "GPU",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": "query_result_label(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index), gpu)",
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "value": "$__all"
+        },
+        "filterSeries": true,
+        "refresh": 2
+      }
+    ]
   },
   "panels": [
     {

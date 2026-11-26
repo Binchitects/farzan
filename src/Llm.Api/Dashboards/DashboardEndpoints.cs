@@ -49,8 +49,8 @@ public static partial class DashboardEndpoints
                     }),
                 }));
         g.MapGet("/{uid}/variables", async (string uid, DateTimeOffset? from, DateTimeOffset? to, DashboardStore store, PromDatasource prom, LokiDatasource loki,
-            ClaimsPrincipal user, UserManager<Core.Identity.AppUser> users, AccessService access, CancellationToken ct) =>
-            store.Find(uid) is { } d && !await MayAsync(d, user, users, access) ? Results.Forbid() : await VariablesAsync(uid, from, to, store, prom, loki, ct));
+            GatewayDatasource ledger, ClaimsPrincipal user, UserManager<Core.Identity.AppUser> users, AccessService access, CancellationToken ct) =>
+            store.Find(uid) is { } d && !await MayAsync(d, user, users, access) ? Results.Forbid() : await VariablesAsync(uid, from, to, store, prom, loki, ledger, ct));
         g.MapGet("/{uid}/export", (string uid, DateTimeOffset from, DateTimeOffset to, string? format, HttpRequest request, DashboardStore store,
             GatewayDatasource ledger, PromDatasource prom, LokiDatasource loki, IOptions<DashboardOptions> options, TimeProvider clock, ClaimsPrincipal user,
             UserManager<Core.Identity.AppUser> users, AccessService access, Identity.Audit audit, CancellationToken ct) =>
@@ -148,7 +148,8 @@ public static partial class DashboardEndpoints
         return values;
     }
 
-    private static async Task<IResult> VariablesAsync(string uid, DateTimeOffset? from, DateTimeOffset? to, DashboardStore store, PromDatasource prom, LokiDatasource loki, CancellationToken ct)
+    private static async Task<IResult> VariablesAsync(string uid, DateTimeOffset? from, DateTimeOffset? to, DashboardStore store, PromDatasource prom, LokiDatasource loki,
+        GatewayDatasource ledger, CancellationToken ct)
     {
         if (store.Find(uid) is not { } d)
         {
@@ -162,9 +163,9 @@ public static partial class DashboardEndpoints
         {
             try
             {
-                list.Add(new { v.Name, options = await OptionsAsync(v, start, end, prom, loki, ct), error = (string?)null });
+                list.Add(new { v.Name, options = await OptionsAsync(v, start, end, prom, loki, ledger, ct), error = (string?)null });
             }
-            catch (Exception ex) when (ex is DatasourceException or HttpRequestException or TaskCanceledException)
+            catch (Exception ex) when (ex is DatasourceException or HttpRequestException or TaskCanceledException or Npgsql.NpgsqlException or FormatException)
             {
                 list.Add(new { v.Name, options = (IReadOnlyList<string>)[], error = (string?)ex.Message });
             }
@@ -172,8 +173,12 @@ public static partial class DashboardEndpoints
         return Results.Ok(list);
     }
 
-    /// <summary>What a variable offers: a label's values from Prometheus or Loki, or its fixed options.</summary>
-    private static async Task<IReadOnlyList<string>> OptionsAsync(Variable v, DateTimeOffset start, DateTimeOffset end, PromDatasource prom, LokiDatasource loki, CancellationToken ct)
+    /// <summary>
+    /// What a variable offers: a label's values from Prometheus or Loki (label_values, or query_result_label(expr, label): a
+    /// label of what a query gives now), the first column of a SQL query on the ledger, or its fixed options.
+    /// </summary>
+    private static async Task<IReadOnlyList<string>> OptionsAsync(Variable v, DateTimeOffset start, DateTimeOffset end, PromDatasource prom, LokiDatasource loki,
+        GatewayDatasource ledger, CancellationToken ct)
     {
         IReadOnlyList<string> values;
         if (v.Type == "custom")
@@ -185,6 +190,12 @@ public static partial class DashboardEndpoints
         {
             return [];
         }
+        else if (v.Datasource == GatewayDatasource.Uid)
+        {
+            var sql = SqlMacros.Expand(v.Query?.GetValue<string>() ?? "", start, end, TimeSpan.FromMinutes(1));
+            var table = await ledger.QueryAsync(sql, ct);
+            values = [.. table.Rows.Select(r => r.Length > 0 ? Convert.ToString(r[0], CultureInfo.InvariantCulture) : null).OfType<string>().Distinct(StringComparer.Ordinal)];
+        }
         else if (v.Datasource == LokiDatasource.Uid || v.Query is JsonObject)
         {
             var label = v.Query?["label"]?.GetValue<string>() ?? "";
@@ -192,12 +203,22 @@ public static partial class DashboardEndpoints
         }
         else
         {
-            var m = LabelValues().Match(v.Query?.GetValue<string>() ?? "");
-            if (!m.Success)
+            var text = v.Query?.GetValue<string>() ?? "";
+            if (QueryResultLabel().Match(text) is { Success: true } r)
             {
-                throw new DatasourceException("Only label_values(...) variables are supported.");
+                var label = r.Groups["label"].Value;
+                values = [.. (await prom.InstantAsync(r.Groups["expr"].Value, end, ct)).Select(s => s.Labels.GetValueOrDefault(label)).OfType<string>().Distinct(StringComparer.Ordinal)
+                    .OrderBy(x => double.TryParse(x, NumberStyles.Float, CultureInfo.InvariantCulture, out var n) ? n : double.MaxValue).ThenBy(x => x, StringComparer.Ordinal)];
             }
-            values = await prom.LabelValuesAsync(m.Groups["label"].Value, m.Groups["match"].Success ? m.Groups["match"].Value : null, start, end, ct);
+            else
+            {
+                var m = LabelValues().Match(text);
+                if (!m.Success)
+                {
+                    throw new DatasourceException("Only label_values(...) and query_result_label(expr, label) variables are supported.");
+                }
+                values = await prom.LabelValuesAsync(m.Groups["label"].Value, m.Groups["match"].Success ? m.Groups["match"].Value : null, start, end, ct);
+            }
         }
         if (v.Regex is { Length: > 2 } re && re.StartsWith('/'))
         {
@@ -209,6 +230,13 @@ public static partial class DashboardEndpoints
 
     [GeneratedRegex(@"^\s*label_values\(\s*(?:(?<match>.+?)\s*,\s*)?(?<label>[a-zA-Z_]\w*)\s*\)\s*$")]
     private static partial Regex LabelValues();
+
+    [GeneratedRegex(@"^\s*query_result_label\(\s*(?<expr>.+)\s*,\s*(?<label>[a-zA-Z_]\w*)\s*\)\s*$")]
+    private static partial Regex QueryResultLabel();
+
+    /// <summary>A series a variable that filters series lets through: no label of its name, or one of its chosen values.</summary>
+    private static bool Kept(RawSeries s, Dictionary<string, VariableValue> vars) =>
+        vars.Values.All(v => !v.Variable.FilterSeries || v.Values.Contains("$__all") || !s.Labels.TryGetValue(v.Variable.Name, out var value) || v.Values.Contains(value));
 
     private static async Task<IResult> QueryAsync(string uid, int key, PanelQuery q, DashboardStore store, GatewayDatasource ledger, PromDatasource prom, LokiDatasource loki,
         IOptions<DashboardOptions> options, TimeProvider clock, CancellationToken ct)
@@ -258,9 +286,9 @@ public static partial class DashboardEndpoints
             {
                 try
                 {
-                    offered = await OptionsAsync(v, q.From, q.To, prom, loki, ct);
+                    offered = await OptionsAsync(v, q.From, q.To, prom, loki, ledger, ct);
                 }
-                catch (Exception ex) when (ex is DatasourceException or HttpRequestException or TaskCanceledException)
+                catch (Exception ex) when (ex is DatasourceException or HttpRequestException or TaskCanceledException or Npgsql.NpgsqlException or FormatException)
                 {
                     offered = [];
                 }
@@ -282,7 +310,7 @@ public static partial class DashboardEndpoints
                 {
                     PromDatasource.Uid => await PromTargetAsync(t, panel, q, interval, vars, prom, o, ct),
                     LokiDatasource.Uid => await LokiTargetAsync(t, panel, q, interval, vars, loki, o, ct),
-                    _ => SqlTarget(t, await ledger.QueryAsync(SqlMacros.Expand(t.RawSql!, q.From, q.To, interval), ct)),
+                    _ => SqlTarget(t, await ledger.QueryAsync(SqlMacros.Expand(t.RawSql!, q.From, q.To, interval, vars, out var bound), ct, bound)),
                 });
             }
             catch (Exception ex) when (ex is Npgsql.NpgsqlException or FormatException or InvalidOperationException or DatasourceException or HttpRequestException)
@@ -313,7 +341,7 @@ public static partial class DashboardEndpoints
         // A live panel's value is the one now; its sparkline (graphMode area) keeps the last hour.
         if (t.Instant || (panel.Live && panel.Definition["options"]?["graphMode"]?.GetValue<string>() != "area"))
         {
-            var at = await prom.InstantAsync(expr, q.To, ct);
+            var at = (await prom.InstantAsync(expr, q.To, ct)).Where(s => Kept(s, vars)).ToList();
             return t.Format == "table"
                 ? new TargetResult(t.RefId, t.Format, InstantTable(at, t.RefId, panel.Targets.Count > 1), null, null)
                 : new TargetResult(t.RefId, t.Format, null, [.. at.Select(s => new Series(Interpolation.Legend(t.LegendFormat, s.Labels, expr), s.Points))], null);
@@ -322,7 +350,7 @@ public static partial class DashboardEndpoints
         var ms = (long)step.TotalMilliseconds;
         var start = DateTimeOffset.FromUnixTimeMilliseconds(q.From.ToUnixTimeMilliseconds() / ms * ms);
         var end = DateTimeOffset.FromUnixTimeMilliseconds(q.To.ToUnixTimeMilliseconds() / ms * ms);
-        var series = await prom.RangeAsync(expr, start, end, step, ct);
+        var series = (await prom.RangeAsync(expr, start, end, step, ct)).Where(s => Kept(s, vars)).ToList();
         return new TargetResult(t.RefId, t.Format, null, [.. series.Select(s => new Series(Interpolation.Legend(t.LegendFormat, s.Labels, expr), s.Points))], null);
     }
 

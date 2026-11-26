@@ -55,4 +55,26 @@ public sealed class SqlMacrosTests
     [InlineData("1w", 604800)]
     public void Intervals_parse(string text, double seconds) =>
         Assert.Equal(seconds, SqlMacros.ParseInterval(text).TotalSeconds);
+
+    private static Variable ModelVariable() => new("model", "Model", "query", "gateway-db", null, true, true, ".*", null, 1, null, [], 0);
+
+    [Fact]
+    public void A_variables_choice_is_bound_as_a_parameter_and_never_written_into_the_sql()
+    {
+        var vars = new Dictionary<string, VariableValue> { ["model"] = new(ModelVariable(), ["qwen", "x'); drop table requests; --"], []) };
+        var sql = SqlMacros.Expand("select count(*) from requests r where $__timeFilter(r.started_at) and $__filter(r.model, model)", From, To, TimeSpan.FromMinutes(1), vars, out var bound);
+        Assert.EndsWith("and r.model = ANY(@v_model)", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("drop table", sql, StringComparison.Ordinal);
+        Assert.Equal(["qwen", "x'); drop table requests; --"], (string[])bound["v_model"]);
+    }
+
+    [Fact]
+    public void All_or_no_such_variable_filters_nothing_and_a_variable_is_named_as_one()
+    {
+        var all = new Dictionary<string, VariableValue> { ["model"] = new(ModelVariable(), ["$__all"], ["qwen"]) };
+        Assert.Equal("where TRUE", SqlMacros.Expand("where $__filter(model, model)", From, To, TimeSpan.FromMinutes(1), all, out var none));
+        Assert.Empty(none);
+        Assert.Equal("where TRUE", SqlMacros.Expand("where $__filter(model, other)", From, To, TimeSpan.FromMinutes(1), all, out _));
+        Assert.Throws<FormatException>(() => SqlMacros.Expand("where $__filter(model, 1=1)", From, To, TimeSpan.FromMinutes(1), all, out _));
+    }
 }

@@ -20,7 +20,43 @@
     "to": "now"
   },
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "model",
+        "label": "Model",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "gateway-db"
+        },
+        "query": "select distinct model from requests where $__timeFilter(started_at) and model is not null order by 1",
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "value": "$__all"
+        },
+        "sort": 1,
+        "refresh": 2,
+        "allValue": ".*"
+      },
+      {
+        "name": "gpu",
+        "label": "GPU",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": "query_result_label(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index), gpu)",
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "value": "$__all"
+        },
+        "filterSeries": true,
+        "refresh": 2
+      }
+    ]
   },
   "annotations": {
     "list": []
@@ -56,7 +92,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(arena_model_capacity_tokens_per_second)",
+          "expr": "sum(arena_model_capacity_tokens_per_second{model=~\"$model\"})",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -117,7 +153,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))) or vector(0)",
+          "expr": "sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode{model=~\"$model\"} * llamacpp:n_decode_total{model=~\"$model\"})[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total{model=~\"$model\"}[1m])) or sum by (model) (rate(sglang:generation_tokens_total{model=~\"$model\"}[1m])))) or vector(0)",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -178,7 +214,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m]))) and on (model) arena_model_capacity_tokens_per_second) / sum(arena_model_capacity_tokens_per_second)",
+          "expr": "100 * sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode{model=~\"$model\"} * llamacpp:n_decode_total{model=~\"$model\"})[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total{model=~\"$model\"}[1m])) or sum by (model) (rate(sglang:generation_tokens_total{model=~\"$model\"}[1m]))) and on (model) arena_model_capacity_tokens_per_second{model=~\"$model\"}) / sum(arena_model_capacity_tokens_per_second{model=~\"$model\"})",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -239,7 +275,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "clamp_min(sum(arena_model_capacity_tokens_per_second) - (sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m]))) and on (model) arena_model_capacity_tokens_per_second) or vector(0)), 0)",
+          "expr": "clamp_min(sum(arena_model_capacity_tokens_per_second{model=~\"$model\"}) - (sum((sum by (model) (rate((llamacpp:n_busy_slots_per_decode{model=~\"$model\"} * llamacpp:n_decode_total{model=~\"$model\"})[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total{model=~\"$model\"}[1m])) or sum by (model) (rate(sglang:generation_tokens_total{model=~\"$model\"}[1m]))) and on (model) arena_model_capacity_tokens_per_second{model=~\"$model\"}) or vector(0)), 0)",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -297,7 +333,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count(max by (model) (arena_model_memory_bytes) unless on (model) arena_model_capacity_tokens_per_second) or vector(0)",
+          "expr": "count(max by (model) (arena_model_memory_bytes{model=~\"$model\"}) unless on (model) arena_model_capacity_tokens_per_second{model=~\"$model\"}) or vector(0)",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -361,7 +397,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))",
+          "expr": "(sum by (model) (rate((llamacpp:n_busy_slots_per_decode{model=~\"$model\"} * llamacpp:n_decode_total{model=~\"$model\"})[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total{model=~\"$model\"}[1m])) or sum by (model) (rate(sglang:generation_tokens_total{model=~\"$model\"}[1m])))",
           "legendFormat": "{{model}} now",
           "datasource": {
             "type": "prometheus",
@@ -370,7 +406,7 @@
         },
         {
           "refId": "B",
-          "expr": "arena_model_capacity_tokens_per_second",
+          "expr": "arena_model_capacity_tokens_per_second{model=~\"$model\"}",
           "legendFormat": "{{model}} capacity",
           "datasource": {
             "type": "prometheus",
@@ -474,7 +510,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) * (1 + ((sum(rate(llamacpp:spec_decode_num_accepted_tokens_total[5m])) / sum(rate(llamacpp:spec_decode_num_drafts_total[5m]))) > 0 or vector(0))) or vector(0)) + (sum(rate(vllm:generation_tokens_total[1m])) or vector(0)) + (sum(rate(sglang:generation_tokens_total[1m])) or vector(0))",
+          "expr": "(sum(rate((llamacpp:n_busy_slots_per_decode{model=~\"$model\"} * llamacpp:n_decode_total{model=~\"$model\"})[1m:15s])) * (1 + ((sum(rate(llamacpp:spec_decode_num_accepted_tokens_total{model=~\"$model\"}[5m])) / sum(rate(llamacpp:spec_decode_num_drafts_total{model=~\"$model\"}[5m]))) > 0 or vector(0))) or vector(0)) + (sum(rate(vllm:generation_tokens_total{model=~\"$model\"}[1m])) or vector(0)) + (sum(rate(sglang:generation_tokens_total{model=~\"$model\"}[1m])) or vector(0))",
           "legendFormat": "",
           "refId": "A",
           "instant": true,
@@ -539,7 +575,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "((sum(rate(llamacpp:tokens_predicted_total[5m])) or vector(0)) + (sum(rate(vllm:request_generation_tokens_sum[5m])) or vector(0)) + (sum(rate(sglang:inter_token_latency_seconds_count[5m])) or vector(0))) / ((sum(rate(llamacpp:tokens_predicted_seconds_total[5m])) or vector(0)) + (sum(rate(vllm:request_decode_time_seconds_sum[5m])) or vector(0)) + (sum(rate(sglang:inter_token_latency_seconds_sum[5m])) or vector(0))) >= 0",
+          "expr": "((sum(rate(llamacpp:tokens_predicted_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(vllm:request_generation_tokens_sum{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(sglang:inter_token_latency_seconds_count{model=~\"$model\"}[5m])) or vector(0))) / ((sum(rate(llamacpp:tokens_predicted_seconds_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(vllm:request_decode_time_seconds_sum{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(sglang:inter_token_latency_seconds_sum{model=~\"$model\"}[5m])) or vector(0))) >= 0",
           "legendFormat": "",
           "refId": "A",
           "instant": true,
@@ -612,7 +648,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "((sum(rate(llamacpp:prompt_tokens_total[5m])) or vector(0)) + (sum(rate(vllm:request_prompt_tokens_sum[5m])) or vector(0))) / ((sum(rate(llamacpp:prompt_seconds_total[5m])) or vector(0)) + (sum(rate(vllm:request_prefill_time_seconds_sum[5m])) or vector(0))) >= 0",
+          "expr": "((sum(rate(llamacpp:prompt_tokens_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(vllm:request_prompt_tokens_sum{model=~\"$model\"}[5m])) or vector(0))) / ((sum(rate(llamacpp:prompt_seconds_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(vllm:request_prefill_time_seconds_sum{model=~\"$model\"}[5m])) or vector(0))) >= 0",
           "legendFormat": "",
           "refId": "A",
           "instant": true,
@@ -677,7 +713,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(llamacpp:requests_processing) or vector(0)) + (sum(vllm:num_requests_running) or vector(0)) + (sum(sglang:num_running_reqs{tp_rank=\"0\",priority=\"\"}) or vector(0))",
+          "expr": "(sum(llamacpp:requests_processing{model=~\"$model\"}) or vector(0)) + (sum(vllm:num_requests_running{model=~\"$model\"}) or vector(0)) + (sum(sglang:num_running_reqs{tp_rank=\"0\",priority=\"\",model=~\"$model\"}) or vector(0))",
           "legendFormat": "",
           "refId": "A",
           "instant": true,
@@ -742,7 +778,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(llamacpp:requests_deferred) or vector(0)) + (sum(vllm:num_requests_waiting) or vector(0)) + (sum(sglang:num_queue_reqs{tp_rank=\"0\",priority=\"\"}) or vector(0))",
+          "expr": "(sum(llamacpp:requests_deferred{model=~\"$model\"}) or vector(0)) + (sum(vllm:num_requests_waiting{model=~\"$model\"}) or vector(0)) + (sum(sglang:num_queue_reqs{tp_rank=\"0\",priority=\"\",model=~\"$model\"}) or vector(0))",
           "legendFormat": "",
           "refId": "A",
           "instant": true,
@@ -815,7 +851,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "100 * ((sum(rate(llamacpp:spec_decode_num_accepted_tokens_total[5m])) or vector(0)) + (sum(rate(vllm:spec_decode_num_accepted_tokens_total[5m])) or vector(0))) / ((sum(rate(llamacpp:spec_decode_num_draft_tokens_total[5m])) or vector(0)) + (sum(rate(vllm:spec_decode_num_draft_tokens_total[5m])) or vector(0))) >= 0",
+          "expr": "100 * ((sum(rate(llamacpp:spec_decode_num_accepted_tokens_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(vllm:spec_decode_num_accepted_tokens_total{model=~\"$model\"}[5m])) or vector(0))) / ((sum(rate(llamacpp:spec_decode_num_draft_tokens_total{model=~\"$model\"}[5m])) or vector(0)) + (sum(rate(vllm:spec_decode_num_draft_tokens_total{model=~\"$model\"}[5m])) or vector(0))) >= 0",
           "legendFormat": "",
           "refId": "A",
           "instant": true,
@@ -888,7 +924,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m])))",
+          "expr": "(sum by (model) (rate((llamacpp:n_busy_slots_per_decode{model=~\"$model\"} * llamacpp:n_decode_total{model=~\"$model\"})[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total{model=~\"$model\"}[1m])) or sum by (model) (rate(sglang:generation_tokens_total{model=~\"$model\"}[1m])))",
           "legendFormat": "{{model}} (live)",
           "refId": "A"
         },
@@ -898,7 +934,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum by (model) (rate(llamacpp:tokens_predicted_total[5m])) or sum by (model) (rate(vllm:generation_tokens_total[5m])) or sum by (model) (rate(sglang:generation_tokens_total[5m])))",
+          "expr": "(sum by (model) (rate(llamacpp:tokens_predicted_total{model=~\"$model\"}[5m])) or sum by (model) (rate(vllm:generation_tokens_total{model=~\"$model\"}[5m])) or sum by (model) (rate(sglang:generation_tokens_total{model=~\"$model\"}[5m])))",
           "legendFormat": "{{model}} (5 min)",
           "refId": "B"
         }
@@ -962,7 +998,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(llamacpp:tokens_predicted_total[$__rate_interval])) or vector(0)) + (sum(increase(vllm:generation_tokens_total[$__rate_interval])) or vector(0)) + (sum(increase(sglang:generation_tokens_total[$__rate_interval])) or vector(0))",
+          "expr": "(sum(increase(llamacpp:tokens_predicted_total{model=~\"$model\"}[$__rate_interval])) or vector(0)) + (sum(increase(vllm:generation_tokens_total{model=~\"$model\"}[$__rate_interval])) or vector(0)) + (sum(increase(sglang:generation_tokens_total{model=~\"$model\"}[$__rate_interval])) or vector(0))",
           "legendFormat": "generated",
           "refId": "A",
           "instant": false,
@@ -974,7 +1010,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(llamacpp:prompt_tokens_total[$__rate_interval])) or vector(0)) + (sum(increase(vllm:prompt_tokens_total[$__rate_interval])) or vector(0)) + (sum(increase(sglang:prompt_tokens_total[$__rate_interval])) or vector(0))",
+          "expr": "(sum(increase(llamacpp:prompt_tokens_total{model=~\"$model\"}[$__rate_interval])) or vector(0)) + (sum(increase(vllm:prompt_tokens_total{model=~\"$model\"}[$__rate_interval])) or vector(0)) + (sum(increase(sglang:prompt_tokens_total{model=~\"$model\"}[$__rate_interval])) or vector(0))",
           "legendFormat": "prompt",
           "refId": "B",
           "instant": false,
@@ -986,7 +1022,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(llamacpp:prompt_tokens_cached_total[$__rate_interval])) or vector(0)) + (sum(increase(vllm:prefix_cache_hits_total[$__rate_interval])) or vector(0)) + (sum(increase(sglang:cached_tokens_total[$__rate_interval])) or vector(0))",
+          "expr": "(sum(increase(llamacpp:prompt_tokens_cached_total{model=~\"$model\"}[$__rate_interval])) or vector(0)) + (sum(increase(vllm:prefix_cache_hits_total{model=~\"$model\"}[$__rate_interval])) or vector(0)) + (sum(increase(sglang:cached_tokens_total{model=~\"$model\"}[$__rate_interval])) or vector(0))",
           "legendFormat": "prompt (cache hit)",
           "refId": "C",
           "instant": false,
@@ -1052,7 +1088,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "100 * sum(rate(llamacpp:prompt_tokens_cached_total[5m])) / (sum(rate(llamacpp:prompt_tokens_total[5m])) + sum(rate(llamacpp:prompt_tokens_cached_total[5m]))) >= 0",
+          "expr": "100 * sum(rate(llamacpp:prompt_tokens_cached_total{model=~\"$model\"}[5m])) / (sum(rate(llamacpp:prompt_tokens_total{model=~\"$model\"}[5m])) + sum(rate(llamacpp:prompt_tokens_cached_total{model=~\"$model\"}[5m]))) >= 0",
           "legendFormat": "prefix cache hit %",
           "refId": "A",
           "instant": false,
@@ -1064,7 +1100,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "100 * sum(rate(llamacpp:spec_decode_num_accepted_tokens_total[5m])) / sum(rate(llamacpp:spec_decode_num_draft_tokens_total[5m])) >= 0",
+          "expr": "100 * sum(rate(llamacpp:spec_decode_num_accepted_tokens_total{model=~\"$model\"}[5m])) / sum(rate(llamacpp:spec_decode_num_draft_tokens_total{model=~\"$model\"}[5m])) >= 0",
           "legendFormat": "MTP acceptance %",
           "refId": "B",
           "instant": false,
@@ -1132,7 +1168,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(llamacpp:requests_processing) or vector(0)) + (sum(vllm:num_requests_running) or vector(0)) + (sum(sglang:num_running_reqs{tp_rank=\"0\",priority=\"\"}) or vector(0))",
+          "expr": "(sum(llamacpp:requests_processing{model=~\"$model\"}) or vector(0)) + (sum(vllm:num_requests_running{model=~\"$model\"}) or vector(0)) + (sum(sglang:num_running_reqs{tp_rank=\"0\",priority=\"\",model=~\"$model\"}) or vector(0))",
           "legendFormat": "active",
           "refId": "A",
           "instant": false,
@@ -1144,7 +1180,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum(llamacpp:requests_deferred) or vector(0)) + (sum(vllm:num_requests_waiting) or vector(0)) + (sum(sglang:num_queue_reqs{tp_rank=\"0\",priority=\"\"}) or vector(0))",
+          "expr": "(sum(llamacpp:requests_deferred{model=~\"$model\"}) or vector(0)) + (sum(vllm:num_requests_waiting{model=~\"$model\"}) or vector(0)) + (sum(sglang:num_queue_reqs{tp_rank=\"0\",priority=\"\",model=~\"$model\"}) or vector(0))",
           "legendFormat": "queued",
           "refId": "B",
           "instant": false,
@@ -1219,7 +1255,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (gpu) ((sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m]))) * on (model) group_right arena_model_gpu_share)",
+          "expr": "sum by (gpu) ((sum by (model) (rate((llamacpp:n_busy_slots_per_decode{model=~\"$model\"} * llamacpp:n_decode_total{model=~\"$model\"})[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total{model=~\"$model\"}[1m])) or sum by (model) (rate(sglang:generation_tokens_total{model=~\"$model\"}[1m]))) * on (model) group_right arena_model_gpu_share{model=~\"$model\"})",
           "legendFormat": "GPU {{gpu}}",
           "datasource": {
             "type": "prometheus",
@@ -1228,7 +1264,7 @@
         },
         {
           "refId": "B",
-          "expr": "(sum by (model) (rate((llamacpp:n_busy_slots_per_decode * llamacpp:n_decode_total)[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total[1m])) or sum by (model) (rate(sglang:generation_tokens_total[1m]))) * on (model) group_right arena_model_gpu_share",
+          "expr": "(sum by (model) (rate((llamacpp:n_busy_slots_per_decode{model=~\"$model\"} * llamacpp:n_decode_total{model=~\"$model\"})[1m:15s])) or sum by (model) (rate(vllm:generation_tokens_total{model=~\"$model\"}[1m])) or sum by (model) (rate(sglang:generation_tokens_total{model=~\"$model\"}[1m]))) * on (model) group_right arena_model_gpu_share{model=~\"$model\"}",
           "legendFormat": "{{model}} on GPU {{gpu}}",
           "datasource": {
             "type": "prometheus",
@@ -1295,7 +1331,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (model) (rate(llamacpp:tokens_predicted_total[5m])) / sum by (model) (rate(llamacpp:tokens_predicted_seconds_total[5m])) >= 0 or sum by (model) (rate(vllm:request_generation_tokens_sum[5m])) / sum by (model) (rate(vllm:request_decode_time_seconds_sum[5m])) >= 0 or sum by (model) (rate(sglang:inter_token_latency_seconds_count[5m])) / sum by (model) (rate(sglang:inter_token_latency_seconds_sum[5m])) >= 0",
+          "expr": "sum by (model) (rate(llamacpp:tokens_predicted_total{model=~\"$model\"}[5m])) / sum by (model) (rate(llamacpp:tokens_predicted_seconds_total{model=~\"$model\"}[5m])) >= 0 or sum by (model) (rate(vllm:request_generation_tokens_sum{model=~\"$model\"}[5m])) / sum by (model) (rate(vllm:request_decode_time_seconds_sum{model=~\"$model\"}[5m])) >= 0 or sum by (model) (rate(sglang:inter_token_latency_seconds_count{model=~\"$model\"}[5m])) / sum by (model) (rate(sglang:inter_token_latency_seconds_sum{model=~\"$model\"}[5m])) >= 0",
           "legendFormat": "{{model}}",
           "refId": "A",
           "instant": false,
@@ -2346,7 +2382,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT model AS \"Model\", count(*) AS \"Requests\", COALESCE(sum(completion_tokens),0) AS \"Tokens generated\", round(100.0*COALESCE(sum(completion_tokens),0)/NULLIF(sum(sum(completion_tokens)) OVER (),0),1) AS \"Share %\", round((COALESCE(sum(completion_tokens),0)::numeric / GREATEST($__range_s,1)),2) AS \"Tokens a second, the window\", round((SELECT max(m.t) FROM (SELECT sum(r2.completion_tokens)/60.0 AS t FROM requests r2 WHERE r2.model = requests.model AND $__timeFilter(r2.started_at) AND r2.status <> 'refused' GROUP BY date_trunc('minute', r2.started_at)) m)::numeric,1) AS \"Busiest minute, tokens a second\", round((sum(completion_tokens - 1) FILTER (WHERE (completion_tokens > 1 AND first_token_at IS NOT NULL AND ended_at > first_token_at)) / NULLIF(sum(extract(epoch FROM (ended_at - first_token_at))) FILTER (WHERE (completion_tokens > 1 AND first_token_at IS NOT NULL AND ended_at > first_token_at)),0))::numeric,1) AS \"Decode speed a request\", COALESCE(sum(greatest(prompt_tokens - cached_tokens,0)),0) AS \"Input, uncached\", COALESCE(sum(cached_tokens),0) AS \"Input, cached\", round(COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM (first_token_at - started_at))),0)::numeric,2) AS \"Median first token, s\" FROM requests WHERE $__timeFilter(started_at) AND status <> 'refused' GROUP BY model ORDER BY \"Tokens generated\" DESC"
+          "rawSql": "SELECT model AS \"Model\", count(*) AS \"Requests\", COALESCE(sum(completion_tokens),0) AS \"Tokens generated\", round(100.0*COALESCE(sum(completion_tokens),0)/NULLIF(sum(sum(completion_tokens)) OVER (),0),1) AS \"Share %\", round((COALESCE(sum(completion_tokens),0)::numeric / GREATEST($__range_s,1)),2) AS \"Tokens a second, the window\", round((SELECT max(m.t) FROM (SELECT sum(r2.completion_tokens)/60.0 AS t FROM requests r2 WHERE r2.model = requests.model AND $__timeFilter(r2.started_at) AND $__filter(r2.model, model) AND r2.status <> 'refused' GROUP BY date_trunc('minute', r2.started_at)) m)::numeric,1) AS \"Busiest minute, tokens a second\", round((sum(completion_tokens - 1) FILTER (WHERE (completion_tokens > 1 AND first_token_at IS NOT NULL AND ended_at > first_token_at)) / NULLIF(sum(extract(epoch FROM (ended_at - first_token_at))) FILTER (WHERE (completion_tokens > 1 AND first_token_at IS NOT NULL AND ended_at > first_token_at)),0))::numeric,1) AS \"Decode speed a request\", COALESCE(sum(greatest(prompt_tokens - cached_tokens,0)),0) AS \"Input, uncached\", COALESCE(sum(cached_tokens),0) AS \"Input, cached\", round(COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM (first_token_at - started_at))),0)::numeric,2) AS \"Median first token, s\" FROM requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY model ORDER BY \"Tokens generated\" DESC"
         }
       ],
       "fieldConfig": {
@@ -2385,7 +2421,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, sum(completion_tokens) / ($__interval_ms / 1000.0) AS \"tokens a second\" FROM requests WHERE $__timeFilter(started_at) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, sum(completion_tokens) / ($__interval_ms / 1000.0) AS \"tokens a second\" FROM requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -2446,7 +2482,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, sum(completion_tokens) AS \"tokens\" FROM requests WHERE $__timeFilter(started_at) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, sum(completion_tokens) AS \"tokens\" FROM requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
         }
       ],
       "fieldConfig": {

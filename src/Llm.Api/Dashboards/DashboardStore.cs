@@ -26,9 +26,10 @@ public sealed class DashboardOptions
 }
 
 /// <summary>A dashboard variable: a list from a datasource (query), a text box, or fixed options (custom).</summary>
+/// <param name="FilterSeries">The app's own: a Prometheus panel's series that carry a label of the variable's name keep only the chosen values (a label a query makes, as the GPU of a join, that no selector can name).</param>
 public sealed record Variable(
     string Name, string? Label, string Type, string? Datasource, JsonNode? Query, bool Multi, bool IncludeAll, string? AllValue,
-    string? Regex, int Sort, JsonNode? Current, IReadOnlyList<string> CustomOptions, int Hide);
+    string? Regex, int Sort, JsonNode? Current, IReadOnlyList<string> CustomOptions, int Hide, bool FilterSeries = false);
 
 /// <summary>One query of a panel. Never sent to the browser.</summary>
 public sealed record PanelTarget(string RefId, string Datasource, string? RawSql, string Format, string? Expr = null, string? LegendFormat = null, bool Instant = false);
@@ -105,7 +106,8 @@ public sealed class DashboardStore(IOptions<DashboardOptions> options)
             v["sort"] is JsonValue sv && sv.TryGetValue<int>(out var sort) ? sort : 0,
             v["current"]?.DeepClone(),
             [.. (v["options"] as JsonArray ?? []).OfType<JsonObject>().Select(o => o["value"]?.GetValue<string>() ?? "")],
-            v["hide"] is JsonValue hv && hv.TryGetValue<int>(out var hide) ? hide : 0)).Where(v => v.Name.Length > 0).ToList();
+            v["hide"] is JsonValue hv && hv.TryGetValue<int>(out var hide) ? hide : 0,
+            v["filterSeries"]?.GetValue<bool>() == true)).Where(v => v.Name.Length > 0).ToList();
         var time = d["time"] is JsonObject t && t["from"] is JsonValue ? (JsonObject)t.DeepClone() : DefaultTime();
         return new Dashboard(uid, d["title"]?.GetValue<string>() ?? uid, time, d["refresh"]?.GetValue<string>(), panels, variables,
             d["permission"]?.GetValue<string>() ?? Core.Access.Permissions.MonitoringRead, d["area"]?.GetValue<string>() ?? "system", d["main"]?.GetValue<bool>() == true);
