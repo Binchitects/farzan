@@ -24,6 +24,7 @@ import { useTimeWindow } from '@/lib/use-time-window'
 import { cn } from '@/lib/utils'
 import { Markdown } from '@/pages/chat/markdown'
 import { PromptDetail } from './prompt-detail'
+import { WriteReport } from './prompt-write'
 
 type State = 'waiting' | 'running' | 'done' | 'failed' | 'stopped' | 'refused'
 
@@ -87,6 +88,7 @@ export function PromptLogPage() {
   const setSearch = (next: Partial<typeof search>) => filters.set(next)
   const [form, setForm] = useState({ q: search.q, person: search.person, model: search.model, tool: search.tool })
   const [view, setView] = useState('log')
+  const [writing, setWriting] = useState(false)
   const known = useQuery(tagsQuery)
   // When it was asked, in the address; any time until a window is chosen.
   const time = useTimeWindow({ from: allTime.from, to: 'now' })
@@ -186,6 +188,9 @@ export function PromptLogPage() {
         />
         <TimeWindow value={time.range} onChange={time.set} presets={[allTime, ...reportPresets]} />
         <Button type="submit">Search</Button>
+        <Button type="button" variant="outline" onClick={() => setWriting(true)}>
+          <FileText /> Write a report
+        </Button>
         {filters.active > 0 && (
           <Button
             type="button"
@@ -206,6 +211,12 @@ export function PromptLogPage() {
             All of them
           </button>
         </p>
+      )}
+      {writing && (
+        <WriteReport
+          filters={{ ...search, from: time.query().get('from'), to: time.query().get('to') }}
+          onClose={() => setWriting(false)}
+        />
       )}
       {log.error && <QueryError error={log.error} retry={() => log.refetch()} />}
       {log.isPending && <Skeleton className="h-40" />}

@@ -1453,6 +1453,14 @@ median and the 95th percentile, tokens), the chat's answers by model, the
 people who asked most, the tags and each day; **CSV** saves it. Each report
 is in the audit log as `prompts.report`.
 
+**Write a report** writes one on the lines the filters find now (up to 2,000,
+newest first) with a model you choose, as you (your credit and safeguards):
+say what it is about, or pick a ready-made ask (prompt quality, a project's
+progress, failures, topics). A long log is read a part at a time, then one
+report is written from the notes; it shows as it is written and **Markdown**
+saves it. Each is in the audit log as `prompts.report.written`, with the
+filters, the model and how many lines.
+
 Search by words (in the question, and in an API answer), by person (user name
 or email), by state and by where (all, chat, API); **Older** goes on 50 at a
 time (with a state chosen, each page looks through the newest 1,000 chat

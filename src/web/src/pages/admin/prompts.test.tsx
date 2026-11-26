@@ -155,6 +155,33 @@ describe('prompt log', () => {
     await waitFor(() => expect(calls.some((c) => c.path === '/api/admin/prompts?source=all&state=failed')).toBe(true))
   })
 
+  it('writes a report on the filtered lines with the model chosen, and keeps it as Markdown', async () => {
+    const calls = fakeApi(admin, {
+      'GET /api/admin/prompts': () => ({ json: { items: [row(0, 'api')], next: null } }),
+      'GET /api/chat/config': () => ({ json: { model: 'Qwen3-4B', models: [{ name: 'Qwen3-4B', loaded: true }, { name: 'Big-70B', loaded: true }] } }),
+      'POST /api/admin/prompts/write': () => ({
+        events: [
+          { type: 'progress', done: 0, of: 3, lines: 40 },
+          { type: 'progress', done: 2, of: 3, lines: 40 },
+          { type: 'report', markdown: '# Ann asks well\n\nMostly clear.', lines: 40, parts: 2, window: '2026-11-01 to 2026-11-26', filters: 'person ann' },
+        ],
+      }),
+    })
+    renderApp('/admin/prompts?person=ann&source=api')
+    await userEvent.click(await screen.findByRole('button', { name: 'Write a report' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Write a report on these lines' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Failures' }))
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Model' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Big-70B' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: /Write it/ }))
+    const report = await within(dialog).findByRole('region', { name: 'The report' })
+    expect(within(report).getByRole('heading', { name: 'Ann asks well' })).toBeInTheDocument()
+    expect(within(report).getByText(/40 lines, 2026-11-01 to 2026-11-26; person ann/)).toBeInTheDocument()
+    const sent = calls.find((c) => c.path === '/api/admin/prompts/write')!.body as Record<string, unknown>
+    expect(sent).toMatchObject({ person: 'ann', source: 'api', model: 'Big-70B', state: null })
+    expect(sent.ask).toMatch(/What went wrong/)
+  })
+
   it('is in the menu only for those who may review prompts', () => {
     const titles = (me: Parameters<typeof visibleNavigation>[0]) => visibleNavigation(me).flatMap((s) => s.items.map((i) => i.title))
     expect(titles(admin)).toContain('Prompt log')
