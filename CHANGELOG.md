@@ -15,6 +15,20 @@ Sections used:
   makes weaker (gone, a clause or a check dropped, fewer tests), by its id,
   and why ([compliance](docs/compliance/README.md#when-a-change-weakens-a-control))
 
+## v8.2.1 (2026-11-26)
+
+An upgrade from a checkout to 8.2 no longer stops on the Code workspaces
+feature that 8.2.0 removed.
+
+### :bug: Bugs fixed
+
+- **`./arenactl upgrade` and `./arenactl repair` stopped at once** on an
+  installation whose `.env` still turned on `workspaces` (every 8.1 host that
+  ran Code workspaces): "--with/--without workspaces: no such feature". The
+  installer itself already dropped such a feature. Now arenactl drops it too,
+  says so, and builds the images for the features left. The offline bundle's
+  `upgrade` was not affected.
+
 ## v8.2.0 (2026-11-26)
 
 Numbers you can trust and fewer, clearer tools. The dashboards say what the
