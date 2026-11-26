@@ -436,7 +436,8 @@ class PublishTests(unittest.TestCase):
             return 0
         self.a.Engine = Eng
         self.a.run = run
-        self.a.output = lambda cmd, **k: "1000" if cmd[1:3] == ["image", "inspect"] else None
+        self.tags = "v8.2.3\nv8.3.0-rc1\n"
+        self.a.output = lambda cmd, **k: "1000" if cmd[1:3] == ["image", "inspect"] else self.tags if "tag" in cmd else None
         # Patched for the test only: the modules are the process's own, every other test's too.
         sleep = unittest.mock.patch.object(self.a.time, "sleep", lambda *_: None)
         sleep.start()
@@ -485,6 +486,15 @@ class PublishTests(unittest.TestCase):
         with self.assertRaises(self.a.Stop) as e:
             self.publish(services="app")
         self.assertIn("run it again to go on", str(e.exception))
+
+    def test_an_older_release_published_after_a_newer_one_leaves_latest_with_it(self):
+        self.tags = "v8.2.3\nv8.4.0\n"
+        code, out = self.publish(services="app")
+        self.assertEqual([k for k in self.reg.manifests if not k[1].startswith("sha256:")], [("farzan/app", "8.3.0")])
+        self.assertIn(":latest stays with 8.4.0", out)
+
+    def test_a_work_folder_not_there_yet_is_made(self):
+        self.assertEqual(self.publish(services="app", work_dir=str(self.tmp / "not" / "yet"))[0], 0)
 
     def test_a_pre_release_never_moves_latest(self):
         self.publish(version="8.3.0-rc1", services="app")

@@ -870,12 +870,23 @@ def release_notes_with_images(body: str, table: str) -> str:
     return body.rstrip() + ("\n\n" if body.strip() else "") + block + "\n"
 
 
+def released_versions() -> list[str]:
+    """The final releases tagged here (vX.Y.Z), as X.Y.Z."""
+    tags = output(["git", "-C", str(ROOT), "tag", "-l", "v*"]) if shutil.which("git") else None
+    return [t[1:] for t in (tags or "").split() if re.fullmatch(r"v\d+\.\d+\.\d+", t)]
+
+
 def cmd_publish(a) -> int:
     """The release's own images on GitHub Packages, as REGISTRY/SERVICE:VERSION (and :latest for a final release)."""
     engine = Engine(a.engine)
     engine.need()
     version = a.version or VERSION
     final = re.fullmatch(r"\d+\.\d+\.\d+", version) is not None
+    # :latest is the newest final release's: an older one published after it (8.2.2 after 8.2.3) leaves it there.
+    newer = [t for t in released_versions() if version_of(t) > version_of(version)] if final else []
+    if newer and not a.no_latest:
+        say(f"  :latest stays with {max(newer, key=version_of)}, newer than {version}")
+        a.no_latest = True
     registry = (a.registry or os.environ.get("ARENA_REGISTRY") or REGISTRY).rstrip("/")
     wanted = set(a.services.split(",")) if a.services else None
     plan, missing = [], []
@@ -906,7 +917,6 @@ def cmd_publish(a) -> int:
     host, _, base = registry.partition("/")
     reg = Registry(host, registry_token(host), proxy(), retries=a.retries)
     work = Path(a.work_dir or os.environ.get("ARENA_PUBLISH_TMP") or tempfile.gettempdir())
-    # A folder named for the work that is not there yet is made (as --work-dir /var/tmp/arena-publish on a first run).
     work.mkdir(parents=True, exist_ok=True)
     rows = []
     for svc, src, refs in plan:
