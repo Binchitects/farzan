@@ -220,6 +220,7 @@ on; its API answers 404; and its background work does not run.
 | `video` | yes | `videogen` | a GPU |
 | `speech` | yes | `audio` | |
 | `sandbox` | yes | `sandbox` | |
+| `plugins` | yes | `plugins` (the plugin runtime: no network, each plugin its own worker) | |
 | `web-search` | yes | `searxng` | |
 | `browser` | no | `browser` | |
 | `3d` | no | `blender` | |

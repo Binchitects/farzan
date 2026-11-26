@@ -142,6 +142,8 @@ services:
       - vllm-status:/vllm-status:ro
       - directory:/directory
       - sandbox:/sandbox
+      # The plugin runtime's: the packages the app unpacks there (verified first) and the runtime's socket.
+      - plugin-runtime:/plugin-runtime
       - blender:/blender
       - lean:/lean
       # The audit log's daily anchors, kept apart from the database (docs/compliance).
@@ -494,6 +496,31 @@ services:
     tmpfs: ["/work:size=${SANDBOX_WORK:-1g},mode=0711", "/tmp:size=64m,mode=0700"]
     volumes: [sandbox:/jobs]
 
+  # Plugins' own server code (plugin.yaml's server:), each plugin a worker of its own: its own uid, its code copied
+  # where it can read and not change it, rlimits, a heap cap and a memory and CPU watch, a deadline on every call
+  # (services/plugins/supervisor.mjs). No network at all: the app reaches it through a socket on the plugin-runtime
+  # volume, and a plugin reaches the world only through the host API (http.fetch, to the hosts granted it). No
+  # Docker socket, a read-only root, only the capabilities to switch users, own its files and kill.
+  plugins:
+    <<: *service
+    profiles: [plugins]
+    build: ./services/plugins
+    image: arena-plugins
+    container_name: plugins
+    init: true
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, CHOWN, DAC_OVERRIDE, FOWNER, KILL]
+    security_opt: [no-new-privileges:true]
+    # Every plugin's workers together (.env: PLUGINS_MEMORY, PLUGINS_CPUS); each worker has its own limits in Arena.
+    pids_limit: ${PLUGINS_PIDS:-1024}
+    mem_limit: ${PLUGINS_MEMORY:-4g}
+    cpus: ${PLUGINS_CPUS:-2}
+    environment: { PLUGINS_SOCKET_GID: "1000", PLUGINS_MOST_MEMORY_MB: "${PLUGINS_MOST_MEMORY_MB:-1024}" }
+    tmpfs: ["/work:size=${PLUGINS_WORK:-1g},mode=0711", "/tmp:size=16m,mode=1777"]
+    volumes: [plugin-runtime:/plugin-runtime]
+
   # The browser agent's browser (the chat's Browser tool): Debian's Chromium, headless, driven by the app over its
   # DevTools. Off unless COMPOSE_PROFILES names browser. Its network leads nowhere: every page goes through the app's
   # proxy (port 3128 there), which opens public sites on the admin's lists only. A read-only root, its own user; each
@@ -805,6 +832,8 @@ volumes:
     driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/code-arena-signature" }
   sandbox:
     driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/sandbox" }
+  plugin-runtime:
+    driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/plugin-runtime" }
   # Code Studio's workspaces: each a clone, its engine's home and what the person has not pushed yet.
   workspaces:
     driver_opts: { type: none, o: bind, device: "${DATA_DIR:?set DATA_DIR in .env: an absolute folder for the stack's data}/workspaces" }

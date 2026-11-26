@@ -1,0 +1,6 @@
+apiVersion: arena.plugins/v3
+name: Bad_Name
+version: 1.0.0
+server: { entry: server/index.js }
+tools:
+  functions: [{ name: ping, description: Answers. }]

@@ -26,6 +26,7 @@ pictures       | on  | imagegen | gpu | - | Pictures made and edited (stable-dif
 video          | on  | videogen | gpu | - | Video made from words and pictures
 speech         | on  | audio | - | - | Speech to text and text to speech
 sandbox        | on  | sandbox | - | - | Python and commands run apart, for the chat's tools
+plugins        | on  | plugins | - | - | Plugins with code of their own, each run apart (the plugin runtime)
 web-search     | on  | searxng | - | - | The chat's web search (SearXNG)
 browser        | off | browser | - | - | The browser agent (Chromium)
 3d             | off | blender | - | - | 3D models (Blender)

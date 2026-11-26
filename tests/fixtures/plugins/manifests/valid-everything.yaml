@@ -1,0 +1,74 @@
+apiVersion: arena.plugins/v3
+name: ticket-desk
+version: 1.0.0
+title: Ticket desk
+description: Tickets made from the chat, a board to work them, a panel beside each chat, and a digest every weekday morning.
+author: Farzan Arena examples
+homepage: https://github.com/Binchitects/farzan-arena-plugin-framework
+icon: ticket
+arena: ">=8.3.0 <9.0.0"
+hostApi: 1
+
+permissions:
+  - chats.read                  # a ticket links back to the chat it came from
+  - models.use                  # the digest, written by a model
+  - knowledge.search            # similar answers in the company's knowledge
+  - storage                     # the tickets themselves
+  - notify                      # the digest on the bell
+  - network: [tickets.example.com]   # an outside tracker, when its address is set
+
+settings:
+  - { key: tracker_url, title: Outside tracker (optional), type: url, help: "Tickets are copied there too, e.g. https://tickets.example.com/api" }
+  - { key: tracker_key, title: The tracker's API key, type: secret }
+  - { key: prefix, title: Ticket prefix, type: text, default: T }
+  - { key: digest_to, title: Who gets the digest, type: select, options: [everyone, nobody], default: everyone }
+
+server:
+  entry: server/index.js
+  memoryMb: 128
+  timeoutMs: 15000
+
+tools:
+  functions:
+    - name: create_ticket
+      description: Opens a ticket with a title and what is wrong. Use it when someone reports a problem that needs follow-up.
+      writes: true
+    - name: list_tickets
+      description: Lists the open tickets, newest first.
+    - name: close_ticket
+      description: Closes a ticket by its id (like T-12).
+      writes: true
+
+routes:
+  - { method: GET, path: /tickets, access: person }
+  - { method: POST, path: /tickets, access: person }
+  - { method: GET, path: "/tickets/{id}", access: person }
+  - { method: PATCH, path: "/tickets/{id}", access: person }
+  - { method: GET, path: /stats, access: manager }
+
+hooks:
+  - { on: chat.message.before_model, mode: observe, timeoutMs: 1000 }
+
+events: [chat.message.created]
+
+jobs:
+  - { name: digest, cron: "0 7 * * 1-5", description: "Yesterday's tickets, summed up on the bell." }
+
+ui:
+  pages:
+    - { id: board, title: Ticket board, path: board, entry: ui/board.html, icon: ticket }
+  menu:
+    - { page: board, section: build }
+  panels:
+    - { id: related, title: Tickets of this chat, slot: chat.sidebar, entry: ui/panel.html }
+  settings: { entry: ui/settings.html }
+  chat:
+    composerActions:
+      - { id: attach-ticket, title: Mention a ticket, entry: ui/pick.html }
+    messageActions:
+      - { id: make-ticket, title: Make a ticket of this, run: "tool:create_ticket" }
+  ide:
+    panels:
+      - { id: tickets, title: Tickets, entry: ui/board.html }
+
+skills: [skills/triage]

@@ -1,0 +1,13 @@
+apiVersion: arena.plugins/v3
+name: gitlab-issues
+version: 1.1.0
+title: GitLab issues
+tools:
+  openapi: openapi.yaml
+  url: "{gitlab_url}/api/v4"
+auth:
+  per_person: oauth2
+  oauth2: { authorize: "{gitlab_url}/oauth/authorize", token: "{gitlab_url}/oauth/token", scopes: [api] }
+writes: [create_issue]
+settings:
+  - { key: gitlab_url, title: GitLab address, type: url, required: true }
