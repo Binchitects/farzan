@@ -79,6 +79,7 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="TestResults/shards")
     ap.add_argument("--coverage", action="store_true")
     ap.add_argument("--configuration", default="Release")
+    ap.add_argument("--exclude", help="a file of tests to leave out, one full name (Llm.Tests.Class.Method) a line: what the rest cover without them")
     ap.add_argument("--save-times", action="store_true", help="write the run's class times to the project's test-times.json")
     ap.add_argument("--dotnet", default=str(ROOT / "tools" / "dn"), help="the dotnet to run (tools/dn: the SDK in a container)")
     a = ap.parse_args(argv)
@@ -103,9 +104,13 @@ def main(argv=None) -> int:
     collector = f"/home/dev/.nuget/packages/coverlet.collector/{version}/build/netstandard2.0"
     target = next(built.glob(f"*/{project.name}.dll"))
 
+    left_out = [l.strip() for l in (ROOT / a.exclude).read_text().splitlines() if l.strip() and not l.startswith("#")] if a.exclude else []
+
     def run(i: int) -> tuple[int, int, float, str]:
         # A class by its full name and the dot after it, so one is never another's prefix.
         flt = "|".join(f"FullyQualifiedName~{c}." for c in shards[i])
+        if left_out:
+            flt = f"({flt})" + "".join(f"&FullyQualifiedName!={t}" for t in left_out)
         what = str(rel)
         if a.coverage:
             copy = out / f"bin{i + 1}"
