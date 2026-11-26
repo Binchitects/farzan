@@ -3,7 +3,7 @@
 A review of each merge request, and an explanation of each failed pipeline,
 from jobs in your own GitLab pipeline. For teams that prefer the job in their
 pipeline to a task the app runs on GitLab's events
-([Scheduled tasks](chat.md#scheduled-tasks)). Both call the gateway with an API
+([Automations on GitLab events](studio.md#on-a-schedule)). Both call the gateway with an API
 key, like any other tool.
 
 Two files in the repository:

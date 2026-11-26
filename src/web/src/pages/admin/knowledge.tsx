@@ -135,7 +135,7 @@ export function KnowledgePage() {
         {k.problem && <Alert variant="warning">{k.problem}</Alert>}
         {!k.gitlabBot && k.sources.some((s) => s.kind === 'gitlab') && (
           <Alert variant="warning">
-            GitLab sources are read with the GitLab bot: set its address and token under <Link to="/admin/settings" className="underline underline-offset-2">Settings → Scheduled tasks</Link>.
+            GitLab sources are read with the GitLab bot: set its address and token under <Link to="/admin/settings" className="underline underline-offset-2">Settings → Automations</Link>.
           </Alert>
         )}
         {k.sources.length === 0 ? (

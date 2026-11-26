@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { toast } from '@/components/ui/toaster'
 import { api, errorMessage } from '@/lib/api'
-import { blankSchedule, cronOf, describe, scheduleOf, weekdays, type Repeat, type Schedule } from '../tasks-schedule'
+import { blankSchedule, cronOf, describe, scheduleOf, weekdays, type Repeat, type Schedule } from '@/lib/schedule'
 
 interface IndexSchedule {
   schedule: string

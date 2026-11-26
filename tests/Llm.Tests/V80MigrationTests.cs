@@ -53,7 +53,8 @@ public sealed class V80MigrationTests(AppFixture app)
         await db.Database.MigrateAsync();
 
         Assert.Equal(["code-intel", "web", "argus-like"], (await db.Conversations.AsNoTracking().SingleAsync(c => c.Id == chat)).Tools);
-        Assert.Equal(["web", "code-intel"], (await db.ScheduledTasks.AsNoTracking().SingleAsync(t => t.Id == task)).Tools);
+        // The task is the workflow of its id now, its tools its answer's.
+        Assert.Equal(["web", "code-intel"], Llm.Api.Studio.FlowModel.Read((await db.Workflows.AsNoTracking().SingleAsync(w => w.Id == task)).Flow).Steps[0].Tools);
         Assert.Equal(["code-intel", "web"], (await db.ToolSettings.AsNoTracking().OrderBy(t => t.ToolId).ToListAsync()).Select(t => t.ToolId));
         Assert.False((await db.ToolSettings.AsNoTracking().SingleAsync(t => t.ToolId == "code-intel")).Enabled);
         // In their order, the rest as they were.

@@ -250,7 +250,7 @@ public sealed class PluginTests(AppFixture app)
     }
 
     [Fact]
-    public async Task A_plugin_offers_scheduled_tasks_to_add_and_skills_for_Code_Arena_to_those_who_may_use_it()
+    public async Task A_plugin_offers_scheduled_workflows_to_start_from_and_skills_for_Code_Arena_to_those_who_may_use_it()
     {
         await using var f = NewApp();
         var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
@@ -275,10 +275,15 @@ public sealed class PluginTests(AppFixture app)
         var person = await admin.JsonAsync(await admin.PostAsync("/api/admin/people", new { userName = name, email = $"{name}@example.test" }));
         var b = await new TestBrowser(f).SignedInAsync(name, person.GetProperty("password").GetString()!);
 
-        // The task, to add to one's own: its question, when, and the plugin's tool.
-        var template = (await b.JsonAsync(await b.GetAsync("/api/tasks/templates"))).EnumerateArray().Single();
-        Assert.Equal(("Morning pets", "0 8 * * 1-5", "Vet"), (template.GetProperty("name").GetString(), template.GetProperty("cron").GetString(), template.GetProperty("pluginTitle").GetString()));
-        Assert.Equal([toolId], template.GetProperty("tools").EnumerateArray().Select(t => t.GetString()));
+        // Automations' template, to start one's own from: on its schedule, its question with the plugin's tool, told under the bell.
+        static IEnumerable<JsonElement> Offered(JsonElement all) => all.EnumerateArray().Where(t => t.TryGetProperty("plugin", out var p) && p.ValueKind == JsonValueKind.String);
+        var template = Offered(await b.JsonAsync(await b.GetAsync("/api/studio/templates"))).Single();
+        var flow = template.GetProperty("flow");
+        Assert.Equal(("Morning pets", "0 8 * * 1-5", "Vet"), (template.GetProperty("name").GetString(), flow.GetProperty("trigger").GetProperty("cron").GetString(), template.GetProperty("plugin").GetString()));
+        Assert.Equal(("List today's pets.", "notify"), (flow.GetProperty("steps")[0].GetProperty("prompt").GetString(), flow.GetProperty("steps")[1].GetProperty("kind").GetString()));
+        Assert.Equal([toolId], flow.GetProperty("steps")[0].GetProperty("tools").EnumerateArray().Select(t => t.GetString()));
+        // Started from, it is the person's workflow.
+        await StatusAssert.Is(HttpStatusCode.Created, await b.PostAsync("/api/studio", new { name = "Morning pets", flow }));
 
         // The skill, as Code Arena reads it with the person's key.
         using var arena = f.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri($"https://{AppFixture.Domain}"), HandleCookies = false });
@@ -296,14 +301,14 @@ public sealed class PluginTests(AppFixture app)
             db.ToolSettings.Add(new Llm.Core.Chat.ToolSetting { ToolId = toolId, Enabled = false });
             await db.SaveChangesAsync();
         }
-        Assert.Empty((await b.JsonAsync(await b.GetAsync("/api/tasks/templates"))).EnumerateArray());
+        Assert.Empty(Offered(await b.JsonAsync(await b.GetAsync("/api/studio/templates"))));
         Assert.Empty(JsonDocument.Parse(await arena.GetStringAsync(new Uri("/api/code-arena/skills", UriKind.Relative))).RootElement.GetProperty("skills").EnumerateArray());
 
-        // Removed, the plugin takes its tasks with it.
+        // Removed, the plugin takes its templates with it (the workflows made from them stay).
         await StatusAssert.Is(HttpStatusCode.NoContent, await admin.Http.DeleteAsync(new Uri($"/api/admin/plugins/{made.GetProperty("id").GetGuid()}", UriKind.Relative)));
         await using (var scope = f.Services.CreateAsyncScope())
         {
-            Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().TaskTemplates.AnyAsync());
+            Assert.False(await scope.ServiceProvider.GetRequiredService<AppDbContext>().AutomationTemplates.AnyAsync());
         }
     }
 

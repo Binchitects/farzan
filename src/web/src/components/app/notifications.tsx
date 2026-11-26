@@ -45,7 +45,7 @@ const kinds: Record<string, { icon: LucideIcon; tint: string }> = {
 }
 
 /**
- * The bell: answers that finished while you were away, scheduled tasks, your credit,
+ * The bell: answers that finished while you were away, workflows' news, your credit,
  * the system's alerts (admins), model downloads. Checked every 15 seconds and when the
  * tab comes back; what arrives meanwhile also shows as a toast, or on the desktop when
  * the tab is hidden and desktop notifications are on.

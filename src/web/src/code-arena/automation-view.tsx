@@ -16,7 +16,7 @@ const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefin
 
 /**
  * The side bar's Automation: Code Arena's own schedules (a prompt run in a folder every so often, even with Code Arena
- * closed once an OS timer runs them), and Arena's agents and scheduled tasks, each run from here and followed.
+ * closed once an OS timer runs them), and Arena's agents and those of yours that run by themselves, each run from here and followed.
  */
 export function AutomationView() {
   const queryClient = useQueryClient()
@@ -103,12 +103,12 @@ export function AutomationView() {
                 </ul>
               )}
             </section>
-            <section aria-label="Scheduled tasks in Arena" className="grid gap-1.5">
-              <h3 className={heading}>Scheduled tasks in Arena</h3>
+            <section aria-label="Scheduled in Arena" className="grid gap-1.5">
+              <h3 className={heading}>Scheduled in Arena</h3>
               {data.tasksProblem ? (
                 <p className="text-muted-foreground">{data.tasksProblem}</p>
               ) : (data.tasks ?? []).length === 0 ? (
-                <p className="text-muted-foreground">None yet: Arena's Scheduled tasks makes them.</p>
+                <p className="text-muted-foreground">None yet: Arena's Automations makes them (a workflow on a schedule, a webhook or GitLab).</p>
               ) : (
                 <ul className="grid gap-1">
                   {(data.tasks ?? []).map((t) => (

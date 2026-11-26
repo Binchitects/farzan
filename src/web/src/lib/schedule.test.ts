@@ -1,5 +1,5 @@
 import { describe as group, expect, it } from 'vitest'
-import { blankSchedule, cronOf, describe, scheduleOf } from './tasks-schedule'
+import { blankSchedule, cronOf, describe, scheduleOf } from './schedule'
 
 group("a task's schedule", () => {
   it('becomes cron from the choices', () => {

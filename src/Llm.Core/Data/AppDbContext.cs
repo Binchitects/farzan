@@ -70,8 +70,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<ModelWindow> ModelWindows => Set<ModelWindow>();
     public DbSet<ModelToolMode> ModelToolModes => Set<ModelToolMode>();
     public DbSet<ModelDownload> ModelDownloads => Set<ModelDownload>();
-    public DbSet<ScheduledTask> ScheduledTasks => Set<ScheduledTask>();
-    public DbSet<TaskTemplate> TaskTemplates => Set<TaskTemplate>();
+    public DbSet<AutomationTemplate> AutomationTemplates => Set<AutomationTemplate>();
     public DbSet<Apps.ArenaApp> Apps => Set<Apps.ArenaApp>();
     public DbSet<Apps.ArenaAppVersion> AppVersions => Set<Apps.ArenaAppVersion>();
     public DbSet<Apps.ArenaAppData> AppData => Set<Apps.ArenaAppData>();
@@ -109,8 +108,6 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Media.MediaVector> MediaVectors => Set<Media.MediaVector>();
     public DbSet<Media.MediaVectorVersion> MediaVectorVersions => Set<Media.MediaVectorVersion>();
     public DbSet<MessageTranslation> MessageTranslations => Set<MessageTranslation>();
-    public DbSet<ScheduledRun> ScheduledRuns => Set<ScheduledRun>();
-    public DbSet<TaskEvent> TaskEvents => Set<TaskEvent>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Llm.Core.Notifications.Broadcast> Broadcasts => Set<Llm.Core.Notifications.Broadcast>();
     public DbSet<Llm.Core.Notifications.BroadcastDismissal> BroadcastDismissals => Set<Llm.Core.Notifications.BroadcastDismissal>();
@@ -1249,53 +1246,14 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Media.MediaItem>().WithMany().HasForeignKey(x => x.VideoItemId).OnDelete(DeleteBehavior.SetNull);
         });
-        builder.Entity<TaskTemplate>(e =>
+        builder.Entity<AutomationTemplate>(e =>
         {
-            e.ToTable("task_templates");
+            e.ToTable("automation_templates");
             e.Property(x => x.Plugin).HasMaxLength(50);
             e.Property(x => x.Name).HasMaxLength(100);
             e.Property(x => x.Cron).HasMaxLength(100);
             e.HasIndex(x => new { x.Plugin, x.Name }).IsUnique();
             e.HasOne<McpServer>().WithMany().HasForeignKey(x => x.ServerId).OnDelete(DeleteBehavior.Cascade);
-        });
-        builder.Entity<ScheduledTask>(e =>
-        {
-            e.ToTable("scheduled_tasks");
-            e.Property(x => x.Name).HasMaxLength(100);
-            e.Property(x => x.Trigger).HasMaxLength(20).HasDefaultValue("schedule");
-            e.Property(x => x.TriggerSecretHash).HasMaxLength(64);
-            e.Property(x => x.Events).HasDefaultValueSql("'{}'::text[]");
-            e.Property(x => x.Action).HasMaxLength(32).HasDefaultValue(ScheduledTask.Ask);
-            e.Property(x => x.Repositories).HasDefaultValueSql("'{}'::text[]");
-            e.Property(x => x.Ref).HasMaxLength(300);
-            e.Property(x => x.Cross).HasDefaultValue(true);
-            e.Property(x => x.Cron).HasMaxLength(200);
-            e.Property(x => x.TimeZone).HasMaxLength(100);
-            e.Property(x => x.Model).HasMaxLength(200);
-            e.Property(x => x.Thinking).HasMaxLength(50);
-            e.Property(x => x.WebhookEncrypted).HasMaxLength(4000);
-            e.Property(x => x.RunningOn).HasMaxLength(100);
-            e.HasIndex(x => x.UserId);
-            e.HasIndex(x => x.NextRunAt);
-            e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
-        });
-        builder.Entity<ScheduledRun>(e =>
-        {
-            e.Property(x => x.Link).HasMaxLength(300);
-            e.ToTable("scheduled_runs");
-            e.Property(x => x.Status).HasMaxLength(20);
-            e.Property(x => x.Error).HasMaxLength(2000);
-            e.Property(x => x.Delivery).HasMaxLength(1000);
-            e.HasIndex(x => new { x.TaskId, x.StartedAt });
-            e.HasOne<ScheduledTask>().WithMany().HasForeignKey(x => x.TaskId).OnDelete(DeleteBehavior.Cascade);
-        });
-        builder.Entity<TaskEvent>(e =>
-        {
-            e.ToTable("task_events");
-            e.Property(x => x.ReplyKind).HasMaxLength(20);
-            e.Property(x => x.ReplyId).HasMaxLength(100);
-            e.HasIndex(x => new { x.TaskId, x.CreatedAt });
-            e.HasOne<ScheduledTask>().WithMany().HasForeignKey(x => x.TaskId).OnDelete(DeleteBehavior.Cascade);
         });
         builder.Entity<Notification>(e =>
         {

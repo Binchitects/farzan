@@ -35,11 +35,10 @@ public static class StudioEndpoints
     {
         var g = app.MapGroup("/api/studio").RequireFeature("agents").PersonOnly().RequirePermission(Core.Access.Permissions.Studio);
         g.MapGet("", ListAsync);
-        g.MapGet("/templates", () => Results.Ok(StudioTemplates.All));
+        g.MapGet("/templates", TemplatesAsync);
         g.MapGet("/tools", ToolsAsync);
         g.MapGet("/tools/{tool}/functions", FunctionsAsync);
         g.MapPost("", CreateAsync);
-        g.MapPost("/from-task/{taskId:guid}", FromTaskAsync);
         g.MapGet("/{id:guid}", GetAsync);
         g.MapPut("/{id:guid}", UpdateAsync);
         g.MapDelete("/{id:guid}", DeleteAsync);
@@ -50,6 +49,8 @@ public static class StudioEndpoints
         g.MapPost("/runs/{runId:guid}/approve", ApproveAsync);
         g.MapPost("/runs/{runId:guid}/stop", StopAsync);
         app.MapPost("/api/studio/hooks/{id:guid}", HookAsync).AllowAnonymous("A workflow's webhook: its secret is checked.").DisableAntiforgery();
+        // The address scheduled tasks had: a task is now the workflow of the same id, and what posts to it goes on working.
+        app.MapPost("/api/hooks/{id:guid}", HookAsync).AllowAnonymous("A workflow's webhook at a scheduled task's old address: its secret is checked.").DisableAntiforgery();
     }
 
     private static async Task<AppUser> Me(ClaimsPrincipal p, UserManager<AppUser> users) => (await users.GetUserAsync(p))!;
@@ -66,7 +67,7 @@ public static class StudioEndpoints
     private static object Full(Workflow w, HttpRequest request) => new
     {
         w.Id, w.Name, w.Description, w.Enabled, w.Reach, w.GroupIds, w.NextRunAt, w.LastRunAt, w.CreatedAt, w.UpdatedAt, mine = true,
-        flow = JsonNode.Parse(w.Flow), hook = $"{request.Scheme}://{request.Host}/api/studio/hooks/{w.Id}", secretSet = w.SecretHash is not null,
+        flow = FlowModel.Shown(w.Flow), hook = $"{request.Scheme}://{request.Host}/api/studio/hooks/{w.Id}", secretSet = w.SecretHash is not null,
     };
 
     /// <summary>One's own workflows, and those whose form or run one may start (shared).</summary>
@@ -80,6 +81,17 @@ public static class StudioEndpoints
         var owners = list.Select(w => w.OwnerId).Distinct().ToList();
         var names = await db.Users.AsNoTracking().Where(u => owners.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName == "" ? u.UserName! : u.DisplayName, ct);
         return Results.Ok(list.Select(w => Brief(w, me.Id, names.GetValueOrDefault(w.OwnerId))));
+    }
+
+    /// <summary>Workflows to start from: Arena's own, and the scheduled ones the person's plugins offer (those whose tool they may use).</summary>
+    private static async Task<IResult> TemplatesAsync(ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, ToolRegistry registry, AccessService access, CancellationToken ct)
+    {
+        var me = await Me(p, users);
+        var usable = (await registry.ForAsync(await access.MembershipAsync(me, ct), ct)).Select(t => t.Tool.Id).ToHashSet();
+        var offered = await db.AutomationTemplates.AsNoTracking().OrderBy(t => t.Plugin).ThenBy(t => t.Name).ToListAsync(ct);
+        var names = await db.McpServers.AsNoTracking().Where(s => s.Plugin != null).ToDictionaryAsync(s => s.Id, s => s.Name, ct);
+        return Results.Ok(StudioTemplates.All.Concat(offered.Where(t => usable.Contains(McpServerTool.Prefix + t.ServerId))
+            .Select(t => StudioTemplates.FromPlugin(t, t.Tools.Where(usable.Contains), names.GetValueOrDefault(t.ServerId)))));
     }
 
     /// <summary>The tools a tool step may use: those its owner may use.</summary>
@@ -114,7 +126,7 @@ public static class StudioEndpoints
     }
 
     /// <summary>The request applied: its name, its flow (checked), who may run it; its next scheduled run worked out.</summary>
-    private static async Task<IResult?> ApplyAsync(Workflow w, WorkflowRequest body, AppUser me, AppDbContext db, AccessService access, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult?> ApplyAsync(Workflow w, WorkflowRequest body, AppUser me, AppDbContext db, AccessService access, TimeProvider clock, FlowRules rules, CancellationToken ct)
     {
         if (body.Name is { } name)
         {
@@ -143,6 +155,10 @@ public static class StudioEndpoints
                 {
                     return AuthEndpoints.Problem(400, "room", "A room the workflow uses must be one you write in.");
                 }
+            }
+            if (await rules.ApplyAsync(flow, w, db, ct) is { } refused)
+            {
+                return refused;
             }
             w.Flow = FlowModel.Write(flow);
             w.NextRunAt = StudioRuns.NextRun(flow.Trigger, clock.GetUtcNow());
@@ -191,8 +207,8 @@ public static class StudioEndpoints
 
     private static bool Hooked(Workflow w) => FlowModel.Read(w.Flow).Trigger.Kind is "webhook" or "gitlab";
 
-    private static async Task<IResult> CreateAsync(WorkflowRequest body, HttpRequest request, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, AccessService access,
-        TimeProvider clock, Audit audit, CancellationToken ct)
+    internal static async Task<IResult> CreateAsync(WorkflowRequest body, HttpRequest request, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, AccessService access,
+        TimeProvider clock, FlowRules rules, Audit audit, CancellationToken ct)
     {
         var me = await Me(p, users);
         if (body.Name is null || body.Flow is null)
@@ -204,7 +220,7 @@ public static class StudioEndpoints
             return AuthEndpoints.Problem(409, "workflows", $"You have {MostWorkflows} workflows, the most: remove one first.");
         }
         var w = new Workflow { OwnerId = me.Id, Name = "", Flow = "{}" };
-        if (await ApplyAsync(w, body, me, db, access, clock, ct) is { } problem)
+        if (await ApplyAsync(w, body, me, db, access, clock, rules, ct) is { } problem)
         {
             return problem;
         }
@@ -213,36 +229,6 @@ public static class StudioEndpoints
         await db.SaveChangesAsync(ct);
         await audit.WriteAsync("workflow.create", w.Name, detail: FlowModel.Read(w.Flow).Trigger.Kind);
         return Results.Created($"/api/studio/{w.Id}", new { workflow = Full(w, request), secret });
-    }
-
-    /// <summary>A scheduled task as a workflow: its trigger, its prompt and tools as an agent step, its email and GitLab answer as steps.</summary>
-    private static async Task<IResult> FromTaskAsync(Guid taskId, HttpRequest request, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, AccessService access,
-        TimeProvider clock, Audit audit, CancellationToken ct)
-    {
-        var me = await Me(p, users);
-        if (await db.ScheduledTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == taskId && t.UserId == me.Id, ct) is not { } task)
-        {
-            return Results.NotFound();
-        }
-        var flow = new Flow
-        {
-            Trigger = task.Trigger switch
-            {
-                Triggers.GitLab => new FlowTrigger { Kind = "gitlab", Events = task.Events },
-                Triggers.Webhook => new FlowTrigger { Kind = "webhook" },
-                _ => new FlowTrigger { Kind = "schedule", Cron = task.Cron, TimeZone = task.TimeZone },
-            },
-            Steps = [new FlowStep { Id = "answer", Kind = "agent", Name = "Answer", Prompt = task.Trigger == Triggers.Schedule ? task.Prompt : task.Prompt + "\n\n{{input.text}}", Tools = task.Tools, Model = task.Model }],
-        };
-        if (task.Email)
-        {
-            flow.Steps.Add(new FlowStep { Id = "mail", Kind = "email", Name = "Email it", Subject = task.Name, Text = "{{answer.text}}" });
-        }
-        if (task.ReplyInGitLab)
-        {
-            flow.Steps.Add(new FlowStep { Id = "reply", Kind = "comment", Name = "Answer in GitLab", Text = "{{answer.text}}" });
-        }
-        return await CreateAsync(new WorkflowRequest(task.Name, $"Made from the scheduled task {task.Name}.", flow, false), request, p, users, db, access, clock, audit, ct);
     }
 
     private static async Task<IResult> GetAsync(Guid id, HttpRequest request, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, AccessService access, CancellationToken ct)
@@ -263,14 +249,14 @@ public static class StudioEndpoints
     }
 
     private static async Task<IResult> UpdateAsync(Guid id, WorkflowRequest body, HttpRequest request, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db,
-        AccessService access, TimeProvider clock, Audit audit, CancellationToken ct)
+        AccessService access, TimeProvider clock, FlowRules rules, Audit audit, CancellationToken ct)
     {
         var me = await Me(p, users);
         if (await db.Workflows.SingleOrDefaultAsync(w => w.Id == id && w.OwnerId == me.Id, ct) is not { } w)
         {
             return Results.NotFound();
         }
-        if (await ApplyAsync(w, body, me, db, access, clock, ct) is { } problem)
+        if (await ApplyAsync(w, body, me, db, access, clock, rules, ct) is { } problem)
         {
             return problem;
         }
@@ -375,7 +361,7 @@ public static class StudioEndpoints
         return new
         {
             run.Id, run.WorkflowId, workflow = w.Name, run.Trigger, run.Status, run.Error, run.StartedAt, run.FinishedAt,
-            input = JsonNode.Parse(run.Input), flow = mine ? JsonNode.Parse(run.Flow) : null,
+            input = JsonNode.Parse(run.Input), flow = mine ? FlowModel.Shown(run.Flow) : null,
             // Someone it is shared with sees how it went, not what each step was given or gave.
             steps = steps.Select(s => new
             {

@@ -33,8 +33,8 @@ public sealed class Conversation
     public DateTimeOffset? ArchivedAt { get; set; }
     /// <summary>The chat this one was forked from, if any (it may since have been deleted).</summary>
     public Guid? ForkedFromId { get; set; }
-    /// <summary>The scheduled task whose run this chat is, if any.</summary>
-    public Guid? ScheduledTaskId { get; set; }
+    /// <summary>The workflow (Automations) whose run this chat is, if any: such a chat is not the person's own talk (memory leaves it).</summary>
+    public Guid? WorkflowId { get; set; }
     /// <summary>The assistant this chat is with, if any: its instructions and files go with every answer.</summary>
     public Guid? AssistantId { get; set; }
     /// <summary>Deleted by its owner while on legal hold: hidden from them, kept until the hold ends.</summary>

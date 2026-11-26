@@ -50,7 +50,6 @@ export const routeHelp: Record<string, TopicId> = {
   '/code/business/:id': 'business',
   '/code/fixes': 'fixes',
   '/code/fixes/:id': 'fix',
-  '/tasks': 'tasks',
   '/projects': 'projects',
   '/projects/:id': 'project',
   '/usage': 'usage',

@@ -31,7 +31,7 @@ public sealed class FlowEndException(string message, bool stopped = false, bool 
 /// </summary>
 public sealed class FlowRunner(AppDbContext db, OneQuestion one, AnswerJobs jobs, ToolRegistry registry, AccessService access, Mailer mailer, GitLabBot gitlab,
     QueuedMessages queue, StudioRuns runs, Audit audit, TimeProvider clock, Insights.DataQuestions questions, Knowledge.KnowledgeSearch knowledge, SandboxClient sandbox,
-    WebFetcher web, IHttpClientFactory http, Code.ReviewLauncher reviews)
+    WebFetcher web, IHttpClientFactory http, Code.ReviewLauncher reviews, Webhooks webhooks, FlowRules rules)
 {
     /// <summary>The longest a review step waits for its review.</summary>
     public static readonly TimeSpan LongestReview = TimeSpan.FromHours(6);
@@ -346,6 +346,19 @@ public sealed class FlowRunner(AppDbContext db, OneQuestion one, AnswerJobs jobs
                 return await DataAsync(step, input, ct);
             case "http":
                 return await HttpAsync(step, values, ct);
+            case "webhook":
+            {
+                if (rules.Address(step) is not { } address)
+                {
+                    throw new FlowEndException("Its address cannot be read (APP_DATA_KEY changed since): set it again.");
+                }
+                var link = $"/studio/{_workflow.Id}?run={_run.Id}";
+                await webhooks.PostAsync(address, input, new JsonObject
+                {
+                    ["workflow"] = _workflow.Name, ["run"] = _run.Id.ToString(), ["at"] = _run.StartedAt.ToString("o", CultureInfo.InvariantCulture),
+                }, ct);
+                return ($"Posted to {new Uri(address).Host}.", null, null);
+            }
             case "gitlab":
                 return await GitLabAsync(step, values, ct);
             case "room":
@@ -416,23 +429,51 @@ public sealed class FlowRunner(AppDbContext db, OneQuestion one, AnswerJobs jobs
     /// <summary>The model with its tools, as a chat of the owner's (to open from the run): the answer's last words.</summary>
     private async Task<(string, JsonNode?, string?)> AgentAsync(FlowStep step, string prompt, CancellationToken ct)
     {
-        var c = new Conversation { UserId = _owner.Id, Title = $"{_workflow.Name} · {step.Name ?? step.Id}", Tools = step.Tools ?? [], Model = step.Model is "small" ? null : step.Model };
-        db.Conversations.Add(c);
-        var question = new ChatMessage { ConversationId = c.Id, Role = "user", Sequence = 1, Content = prompt };
+        // Carried on: the chat this step had in the workflow's last run that had one.
+        Conversation? c = null;
+        if (step.SameChat == true)
+        {
+            var links = await db.WorkflowRunSteps.AsNoTracking()
+                .Where(x => x.StepId == step.Id && x.Link != null && x.Link.StartsWith("/chat/") && x.RunId != _run.Id && db.WorkflowRuns.Any(r => r.Id == x.RunId && r.WorkflowId == _workflow.Id))
+                .OrderByDescending(x => x.StartedAt).Select(x => x.Link!).Take(5).ToListAsync(ct);
+            foreach (var link in links)
+            {
+                if (Guid.TryParse(link["/chat/".Length..], out var kept)
+                    && await db.Conversations.SingleOrDefaultAsync(x => x.Id == kept && x.UserId == _owner.Id && x.DeletedAt == null, ct) is { } found)
+                {
+                    c = found;
+                    break;
+                }
+            }
+        }
+        if (c is null)
+        {
+            var title = step.SameChat == true ? _workflow.Name : $"{_workflow.Name} · {step.Name ?? step.Id}";
+            c = new Conversation
+            {
+                UserId = _owner.Id, Title = title.Length > 200 ? title[..200] : title, Tools = step.Tools, Model = step.Model is "small" ? null : step.Model,
+                Thinking = step.Thinking, WorkflowId = _workflow.Id,
+            };
+            db.Conversations.Add(c);
+        }
+        c.ArchivedAt = null;
+        c.UpdatedAt = clock.GetUtcNow();
+        var sequence = (await db.ChatMessages.Where(m => m.ConversationId == c.Id).MaxAsync(m => (int?)m.Sequence, ct) ?? 0) + 1;
+        var question = new ChatMessage { ConversationId = c.Id, ParentId = c.CurrentLeafId, Role = "user", Sequence = sequence, Content = prompt };
         db.ChatMessages.Add(question);
         c.CurrentLeafId = question.Id;
         await db.SaveChangesAsync(ct);
         if (jobs.Reserve(c.Id, _owner.Id) is not { } job)
         {
-            throw new FlowEndException("Its chat could not start.");
+            throw new FlowEndException("Its chat could not start: it is still answering the run before.");
         }
-        job.Emit(new { type = "question", id = question.Id, parentId = (Guid?)null });
+        job.Emit(new { type = "question", id = question.Id, parentId = question.ParentId });
         job.Notify = false;
         jobs.Start(job, question.Id, new AnswerOverrides(Unattended: true));
         await job.Running.WaitAsync(ct);
         var messages = await db.ChatMessages.AsNoTracking().Where(m => m.ConversationId == c.Id).ToDictionaryAsync(m => m.Id, ct);
         var leaf = await db.Conversations.AsNoTracking().Where(x => x.Id == c.Id).Select(x => x.CurrentLeafId).SingleAsync(ct);
-        var answer = ChatService.PathTo(messages, leaf).Where(m => m.Role == "assistant").ToList();
+        var answer = ChatService.PathTo(messages, leaf).SkipWhile(m => m.Id != question.Id).Where(m => m.Role == "assistant").ToList();
         var last = answer.LastOrDefault(m => m.Content.Length > 0) ?? answer.LastOrDefault();
         if (last is null || last.Status is MessageStatus.Failed or MessageStatus.Stopped || last.Content.Trim().Length == 0)
         {

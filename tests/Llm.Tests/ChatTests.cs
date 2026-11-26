@@ -514,21 +514,22 @@ public sealed class ChatTests(AppFixture app)
         await StatusAssert.Is(HttpStatusCode.NoContent, await b.Http.DeleteAsync(new Uri($"/api/chat/conversations/{second}", UriKind.Relative)));
         Assert.Equal(["three", "one"], (await HistoryAsync(b)).Select(m => m.Text));
 
-        // A task's run is not typed by the person: an event's text rides in its question.
-        var task = await b.JsonAsync(await b.PostAsync("/api/tasks", new { name = "Alert", prompt = "Say what this alert means.", trigger = "webhook", useCodeIntel = false }));
-        using var hook = new HttpRequestMessage(HttpMethod.Post, new Uri(task.GetProperty("hookUrl").GetString()!).PathAndQuery) { Content = JsonContent.Create(new { alert = "DiskFull" }) };
-        hook.Headers.Add("X-Hook-Secret", task.GetProperty("hookToken").GetString());
-        await StatusAssert.Is(HttpStatusCode.Accepted, await app.Factory.CreateClient().SendAsync(hook));
-        JsonElement run = default;
-        for (var i = 0; i < 200 && run.ValueKind != JsonValueKind.Object; i++)
+        // A workflow's run is not typed by the person: an event's text rides in its question.
+        var made = await b.JsonAsync(await b.PostAsync("/api/studio", new
         {
-            run = (await b.JsonAsync(await b.GetAsync($"/api/tasks/{task.GetProperty("id").GetString()}/runs"))).EnumerateArray()
-                .FirstOrDefault(r => r.GetProperty("status").GetString() != "running");
-            await Task.Delay(run.ValueKind == JsonValueKind.Object ? 0 : 100);
-        }
+            name = "Alert",
+            flow = new { trigger = new { kind = "webhook" }, steps = new object[] { new { id = "answer", kind = "agent", prompt = "Say what this alert means.\n\n{{input.text}}" } } },
+        }));
+        var workflow = made.GetProperty("workflow").GetProperty("id").GetGuid();
+        using var hook = new HttpRequestMessage(HttpMethod.Post, $"/api/studio/hooks/{workflow}") { Content = JsonContent.Create(new { alert = "DiskFull" }) };
+        hook.Headers.Add("X-Hook-Secret", made.GetProperty("secret").GetString());
+        await StatusAssert.Is(HttpStatusCode.Accepted, await app.Factory.CreateClient().SendAsync(hook));
+        var runId = (await b.JsonAsync(await b.GetAsync($"/api/studio/{workflow}/runs"))).EnumerateArray().Single().GetProperty("id").GetGuid();
+        await app.Factory.Services.GetRequiredService<Llm.Api.Studio.StudioRuns>().Finished(runId).WaitAsync(TimeSpan.FromSeconds(30));
+        var run = await b.JsonAsync(await b.GetAsync($"/api/studio/runs/{runId}"));
         Assert.Equal("done", run.GetProperty("status").GetString());
-        Assert.StartsWith("Say what this alert means.", (await ConversationAsync(b, run.GetProperty("conversationId").GetGuid())).GetProperty("messages")[0].GetProperty("content").GetString(),
-            StringComparison.Ordinal);
+        var chatOfRun = Guid.Parse(run.GetProperty("steps")[0].GetProperty("link").GetString()!["/chat/".Length..]);
+        Assert.StartsWith("Say what this alert means.", (await ConversationAsync(b, chatOfRun)).GetProperty("messages")[0].GetProperty("content").GetString(), StringComparison.Ordinal);
 
         // A fork copies someone else's questions, and one's own already in their chat: only what is written in it after counts.
         var shared = await NewChatAsync(other, new { useCodeIntel = false });

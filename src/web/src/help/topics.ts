@@ -53,7 +53,7 @@ export const topics = {
       { name: 'Version and Source', text: 'Under the sidebar: the version you use, and a link to its source.' },
       { name: 'Search (Ctrl K)', text: 'Goes to any page or runs a command (a theme, a colour theme such as "Sakura theme", sign out). Type part of a name.' },
       { name: '?', text: 'Help for the page you are on: this panel. On a wide screen it sits beside the page, which makes room for it, and stays open while you work and move between pages. On a smaller screen it opens over the page.' },
-      { name: 'The bell', text: 'Your news: answers that finished while you were away, scheduled tasks, your credit, and for admins the alerts. **Desktop notifications** at its foot say the same on your desktop.' },
+      { name: 'The bell', text: 'Your news: answers that finished while you were away, your workflows\' news, your credit, and for admins the alerts. **Desktop notifications** at its foot say the same on your desktop.' },
       { name: 'Your account menu', text: 'Your picture at the top right: **Your account**, **Theme**, **Colour theme**, **Width**, **Manual**, **Get help** when your admins set a contact, **Install the app** when the browser offers it, and **Sign out**.' },
     ],
     tasks: [
@@ -324,9 +324,11 @@ export const topics = {
       { name: 'Your workflows', text: 'Each with its trigger, whether it is on, and when it last ran.' },
       { name: 'Shared with you', text: 'Workflows others shared: fill their form or run them; they run as their owner.' },
       { name: 'Templates', text: 'A morning digest, a review of each merge request, a room\'s triage, a request form, one by one: a workflow to start from.' },
-      { name: 'From a scheduled task', text: 'One of your scheduled tasks as a workflow: its trigger, its question and tools, its email and GitLab answer.' },
+      { name: 'On a schedule', text: 'What scheduled tasks were: a workflow whose trigger is a schedule (every weekday at 9, once a week…), its agent asking as you with your model and tools, and its answer told under the bell, by email or to a chat channel. An agent step can carry on one chat, each run reading the runs before.' },
+      { name: 'From plugins', text: 'Templates a plugin offers (marked with its name): a scheduled question with the plugin\'s tool.' },
     ],
     tasks: [
+      { title: 'Get a morning digest', steps: ['Choose the template **Morning digest**, or a new workflow whose trigger is **On a schedule**.', 'Choose **Weekdays** at 08:00 in your time zone, and write what its agent asks.', 'Add **Email me** or **Post to a chat channel** if the bell is not enough; **Save**, **Run now** once to check, then switch it **On**.'] },
       { title: 'Review each merge request', steps: ['Choose the template **Review each merge request**.', 'In its trigger, copy its address; press **Save** and copy the secret shown.', 'In GitLab, add a webhook with that address and secret token, for merge request events.', 'Switch it **On**.'] },
     ],
     manual: { doc: 'studio', section: 'making-a-workflow' },
@@ -340,7 +342,7 @@ export const topics = {
       { name: 'The panel', text: 'What is chosen: its settings. **{}** puts a value in a text: the input, a field, what a step before gave.' },
       { name: 'On, Save, Run now', text: '**On** lets its trigger run it; **Save** keeps the changes; **Run now** runs it, with words or its fields.' },
       { name: 'Runs', text: 'Every run; open one to **Replay** it on the canvas or read its **Timeline**. A run that asks you waits for **Yes, go on** or **No, stop it**.' },
-      { name: 'Steps', text: 'Think (a model, an agent, a tool, Python), find (company knowledge, a data source, a web address), decide (if, for each, ask me first, wait, end the run), give out (text, a room, email, notify, GitLab, a file).' },
+      { name: 'Steps', text: 'Think (a model, an agent, a tool, Python), find (company knowledge, a data source, a web address), decide (if, for each, ask me first, wait, end the run), give out (text, a room, email, notify, a chat channel\'s webhook, GitLab, a file).' },
       { name: 'GitLab events', text: 'Merge requests opened, approved, merged or closed; pipelines and jobs; issues; comments; pushes and tags; releases, deployments and wiki pages. Kept to some branches, labels, or the words a comment holds; the app\'s own comments never start a run.' },
     ],
     tasks: [{ title: 'Ask before it posts', steps: ['Press **+** before the step that posts.', 'Choose **Ask me first** and write the question, with the draft in it ({{draft.text}}).', 'Save. Each run now waits for your yes, and a notification tells you.'] }],
@@ -370,23 +372,6 @@ export const topics = {
     ],
     tasks: [{ title: 'Ask for a test too', steps: ['Under **More to do on it**, write: "add a test for the empty case".', 'Press **Another round**, and read the new diff.'] }],
     manual: { doc: 'chat', section: 'fix-it' },
-  },
-
-  tasks: {
-    title: 'Scheduled tasks',
-    about: 'Questions asked for you on a schedule or on an event, with your model and tools: a morning digest, a weekly report, a review of each merge request.',
-    parts: [
-      { name: 'The tasks', text: 'Each card shows when it runs (in words, with the next runs), its last run, and a link to that run\'s chat.' },
-      { name: 'Run now', text: 'Runs it at once, to see what it brings.' },
-      { name: 'New task', text: 'A name, what to ask, and when it runs: **On a schedule**, **On GitLab events** or **On a webhook**. Also its model and tools, and where the answer goes.' },
-      { name: 'Delivery', text: 'Every run is a chat and a note under the bell. It can also email you the answer, post it to a channel\'s webhook, or answer as a comment in GitLab.' },
-      { name: 'New secret', text: 'For tasks run by events: a new secret for its address. The old one stops working at once.' },
-    ],
-    tasks: [
-      { title: 'Get a morning digest', steps: ['Press **New task**.', 'Name it and write what to ask, as you would in the chat.', 'Under **Runs**, choose **On a schedule**, then **Weekdays** at 08:00 in your time zone.', `Choose the tools it needs (${codeIntelName}, Web) and save.`, 'Press **Run now** once to check the answer.'] },
-      { title: 'Review each merge request in GitLab', steps: ['Press **New task** and choose **On GitLab events**.', 'Tick **A merge request opened or updated**, and **Answer as a comment in GitLab**.', 'Save: the task shows its address and a secret, once.', 'In GitLab, add a webhook to the project or group with that address and secret.'] },
-    ],
-    manual: { doc: 'chat', section: 'scheduled-tasks' },
   },
 
   projects: {
@@ -1031,8 +1016,8 @@ export const topics = {
       'python-and-web': { name: 'Python and web', text: 'The sites the chat\'s Web tool may open, the search engine, the longest Python run, how much of Python\'s output and of a web page comes back, and the chat\'s browsers: how many and when an idle one closes.' },
       plugins: { name: 'Plugins', text: 'Where the plugin catalog comes from, and the key its index is signed with.' },
       'arena-mcp': { name: 'Arena MCP', text: 'Whether each person\'s chat tools are served to their own agent at /mcp.' },
-      'scheduled-tasks': { name: 'Scheduled tasks', text: 'Whether tasks are on, tasks per person, how often one may run, the hosts webhooks may post to, and GitLab\'s address and bot token for answers as comments.' },
-      email: { name: 'Email', text: 'The mail server the app sends through: tasks\' answers, credit and alert news, and answers to email in.' },
+      automations: { name: 'Automations', text: 'Whether workflows may run on a schedule, how many scheduled ones a person may have, how often one may run, the hosts a webhook step may post to, and GitLab\'s address and bot token for workflows that read GitLab and comment.' },
+      email: { name: 'Email', text: 'The mail server the app sends through: workflows\' email steps, credit and alert news, and answers to email in.' },
       notifications: { name: 'Notifications', text: 'Whether credit and alert news also goes by email, the webhook the admins\' news is posted to, the push services the app posts to, and the devices one person gets news on.' },
       safeguards: { name: 'Safeguards', text: 'What keeps the chat from misuse: limits per person, secrets in messages, blocked words, the model\'s check of each message, personal data, and what happens after refusals. A group can set its own under Groups.' },
       'company-knowledge': { name: 'Company knowledge', text: 'How often sources are read again, how much of long files comes with each question, the languages read in scans, how long an answer waits for its files to be read, and the embeddings server: its address, model, key and prefixes, and whether Postgres compares with pgvector.' },

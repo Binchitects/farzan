@@ -60,7 +60,7 @@ public sealed partial class StorageReport(AppDbContext db, StorageDisks disks, S
         ["notifications"] = "the bell's news",
         ["memories"] = "what people asked the chat to remember",
         ["storage_samples"] = "the storage page's trends",
-        ["scheduled_runs"] = "scheduled tasks' runs",
+        ["workflow_run_steps"] = "Automations' runs, step by step",
         ["gateway.requests"] = "the app's own ledger of model requests: usage, cost, credit",
         ["gateway.api_keys"] = "API keys, as the app keeps them",
         ["gateway.rate_windows"] = "each API key's requests and tokens this minute",

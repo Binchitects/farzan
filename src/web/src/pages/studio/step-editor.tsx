@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Braces, Plus, Trash2, X } from 'lucide-react'
-import { useId, useRef } from 'react'
+import { useId, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { listQuery } from '../chat/api'
 import { sourcesQuery } from '../data/data-api'
+import { blankSchedule, cronOf, describe, scheduleOf, weekdays, type Repeat, type Schedule } from '@/lib/schedule'
 import { functionsQuery, gitlabEvents, opLabels, reviewKinds, stepLabels, toolsQuery, triggerLabels, type FlowField, type FlowStep, type FlowTrigger, type ReviewKind, type TriggerKind } from './studio-api'
 
 /** A field whose text may hold values of the run ({{s1.text}}): a menu puts one in where the cursor is. */
@@ -131,17 +132,45 @@ export function StepEditor({ step, values, onChange, onRemove }: { step: FlowSte
             </>
           )}
           {step.kind === 'agent' && (
-            <fieldset className="grid gap-1.5">
-              <legend className="mb-1 text-sm font-medium">Its tools</legend>
-              <div className="grid max-h-48 gap-1 overflow-y-auto rounded-lg border p-2">
-                {(tools.data ?? []).map((t) => (
-                  <div key={t.id} className="flex items-center gap-2 text-sm">
-                    <Checkbox id={`${uid}-${t.id}`} checked={step.tools?.includes(t.id) ?? false} onCheckedChange={(on) => set({ tools: on ? [...(step.tools ?? []), t.id] : (step.tools ?? []).filter((x) => x !== t.id) })} />
-                    <label htmlFor={`${uid}-${t.id}`}>{t.title}</label>
-                  </div>
-                ))}
+            <>
+              <fieldset className="grid gap-1.5">
+                <legend className="mb-1 text-sm font-medium">Its tools</legend>
+                <p className="text-xs text-muted-foreground">None chosen: the tools on in a new chat.</p>
+                <div className="grid max-h-48 gap-1 overflow-y-auto rounded-lg border p-2">
+                  {(tools.data ?? []).map((t) => (
+                    <div key={t.id} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        id={`${uid}-${t.id}`}
+                        checked={step.tools?.includes(t.id) ?? false}
+                        onCheckedChange={(on) => {
+                          const next = on ? [...(step.tools ?? []), t.id] : (step.tools ?? []).filter((x) => x !== t.id)
+                          set({ tools: next.length > 0 ? next : null })
+                        }}
+                      />
+                      <label htmlFor={`${uid}-${t.id}`}>{t.title}</label>
+                    </div>
+                  ))}
+                </div>
+              </fieldset>
+              <Field label="Thinking">
+                <Select value={step.thinking ?? 'default'} onValueChange={(v) => set({ thinking: v === 'default' ? null : v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">As a new chat</SelectItem>
+                    <SelectItem value="off">Off</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <div className="flex items-center gap-2 text-sm">
+                <Switch id={`${uid}-same`} checked={!!step.sameChat} onCheckedChange={(on) => set({ sameChat: on || null })} />
+                <label htmlFor={`${uid}-same`}>Carry on one chat: each run reads the runs before</label>
               </div>
-            </fieldset>
+            </>
           )}
         </>
       )}
@@ -318,6 +347,17 @@ export function StepEditor({ step, values, onChange, onRemove }: { step: FlowSte
           <Template label="Why (optional)" value={step.text ?? ''} onChange={(v) => set({ text: v })} values={values} rows={2} />
         </>
       )}
+      {step.kind === 'webhook' && (
+        <>
+          <Field
+            label="Address"
+            hint={step.secret && !step.url ? 'Set, and kept encrypted: type a new one to replace it.' : "A Slack, Teams, Mattermost or Discord incoming webhook (https; an admin allows its host under Settings → Automations). Kept encrypted, never shown again."}
+          >
+            <Input type="url" value={step.url ?? ''} placeholder={step.secret ? '•••••••• (set)' : 'https://hooks.slack.com/services/…'} onChange={(e) => set({ url: e.target.value || null })} autoComplete="off" />
+          </Field>
+          <Template label="Text" value={step.text ?? ''} onChange={(v) => set({ text: v })} values={values} rows={4} hint="What the channel gets." />
+        </>
+      )}
       {step.kind === 'notify' && (
         <>
           <Template label="Title" value={step.subject ?? ''} onChange={(v) => set({ subject: v })} values={values} rows={1} />
@@ -388,7 +428,7 @@ export function StepEditor({ step, values, onChange, onRemove }: { step: FlowSte
           {step.action === 'issue' && <Template label="Title" value={step.subject ?? ''} onChange={(v) => set({ subject: v })} values={values} rows={1} />}
           {(step.action === 'label' || step.action === 'issue') && <Template label="Labels" value={step.labels ?? ''} onChange={(v) => set({ labels: v })} values={values} rows={1} hint="Comma separated." />}
           {step.action !== 'label' && <Template label={step.action === 'issue' ? 'Description' : 'Comment'} value={step.text ?? ''} onChange={(v) => set({ text: v })} values={values} rows={5} />}
-          <p className="text-xs text-muted-foreground">With the app's GitLab bot (Settings → Scheduled tasks); each action is in the audit log.</p>
+          <p className="text-xs text-muted-foreground">With the app's GitLab bot (Settings → Automations); each action is in the audit log.</p>
         </>
       )}
     </div>
@@ -396,6 +436,75 @@ export function StepEditor({ step, values, onChange, onRemove }: { step: FlowSte
 }
 
 const zones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : ['UTC']
+
+/** When a schedule runs it, in words (every weekday at 9, once a week…) or as cron. */
+function SchedulePicker({ cron, onChange }: { cron: string; onChange: (cron: string) => void }) {
+  const [schedule, setSchedule] = useState<Schedule>(() => (cron ? scheduleOf(cron) : blankSchedule))
+  const set = (patch: Partial<Schedule>) => {
+    const next = { ...schedule, ...patch }
+    setSchedule(next)
+    onChange(cronOf(next))
+  }
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="Repeat">
+        <Select value={schedule.repeat} onValueChange={(v) => set({ repeat: v as Repeat, cron: cronOf(schedule) })}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="minutes">Every few minutes</SelectItem>
+            <SelectItem value="daily">Every day</SelectItem>
+            <SelectItem value="weekdays">Weekdays</SelectItem>
+            <SelectItem value="weekly">Once a week</SelectItem>
+            <SelectItem value="monthly">Once a month</SelectItem>
+            <SelectItem value="hours">Every few hours</SelectItem>
+            <SelectItem value="custom">Custom (cron)</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      {schedule.repeat === 'custom' ? (
+        <Field label="Cron" hint="Minute, hour, day of the month, month, day of the week.">
+          <Input required className="font-mono" autoComplete="off" value={schedule.cron} onChange={(e) => set({ cron: e.target.value })} />
+        </Field>
+      ) : schedule.repeat === 'minutes' ? (
+        <Field label="Every (minutes)" hint="An admin sets how often a schedule may run (Settings → Automations).">
+          <Input type="number" min={5} max={30} required value={schedule.minutes} onChange={(e) => set({ minutes: Number(e.target.value) })} />
+        </Field>
+      ) : schedule.repeat === 'hours' ? (
+        <Field label="Every (hours)">
+          <Input type="number" min={1} max={23} required value={schedule.hours} onChange={(e) => set({ hours: Number(e.target.value) })} />
+        </Field>
+      ) : (
+        <Field label="At">
+          <Input type="time" required value={schedule.time} onChange={(e) => set({ time: e.target.value })} />
+        </Field>
+      )}
+      {schedule.repeat === 'weekly' && (
+        <Field label="On">
+          <Select value={String(schedule.day)} onValueChange={(v) => set({ day: Number(v) })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {weekdays.map((d, i) => (
+                <SelectItem key={d} value={String(i + 1)}>
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      )}
+      {schedule.repeat === 'monthly' && (
+        <Field label="On day">
+          <Input type="number" min={1} max={28} required value={schedule.date} onChange={(e) => set({ date: Number(e.target.value) })} />
+        </Field>
+      )}
+      <p className="text-xs text-muted-foreground sm:col-span-2">{describe(cronOf(schedule))}.</p>
+    </div>
+  )
+}
 
 /** The trigger's settings. */
 export function TriggerEditor({ trigger, onChange, hook, onSecret }: { trigger: FlowTrigger; onChange: (t: FlowTrigger) => void; hook?: string; onSecret?: () => void }) {
@@ -422,9 +531,7 @@ export function TriggerEditor({ trigger, onChange, hook, onSecret }: { trigger: 
       </Field>
       {trigger.kind === 'schedule' && (
         <>
-          <Field label="When (cron)" hint="Minute, hour, day of month, month, day of week: 0 8 * * 1-5 is weekdays at 8.">
-            <Input value={trigger.cron ?? ''} onChange={(e) => set({ cron: e.target.value })} className="font-mono" placeholder="0 8 * * 1-5" />
-          </Field>
+          <SchedulePicker cron={trigger.cron ?? ''} onChange={(cron) => set({ cron })} />
           <Field label="Time zone">
             <Select value={trigger.timeZone ?? 'UTC'} onValueChange={(v) => set({ timeZone: v })}>
               <SelectTrigger>

@@ -237,7 +237,7 @@ public sealed class DeepResearchTests(AppFixture app)
     }
 
     [Fact]
-    public async Task Scheduled_tasks_are_not_offered_deep_research_while_it_asks_first_nor_Compare_at_all()
+    public async Task Scheduled_workflows_are_not_offered_deep_research_while_it_asks_first_nor_Compare_at_all()
     {
         var gateway = new FakeGateway();
         gateway.Models.Add(new GatewayModel("Other-Model", 32768, 4096, Vision: false, Tools: true, Thinking: true, null, null, null));
@@ -250,26 +250,19 @@ public sealed class DeepResearchTests(AppFixture app)
         await EventsAsync(await b.PostAsync($"/api/chat/conversations/{await NewChatAsync(b)}/messages", new { content = $"{marker}-web" }));
         Assert.Contains(ResearchTool.Function, Functions(Assert.Single(AnswerRequests($"{marker}-web"))));
 
-        // A scheduled task's answer has nobody to press Allow: not offered while it asks first, and the run ends without waiting.
-        var made = await b.PostAsync("/api/tasks", new { name = "Weekly research", prompt = $"{marker}-task", cron = "0 9 * * 1", timeZone = "Europe/Berlin" });
-        await StatusAssert.Is(HttpStatusCode.Created, made);
-        var task = (await b.JsonAsync(made)).GetProperty("id").GetGuid();
-        async Task<JsonObject> RunTaskAsync(int count)
+        // A scheduled workflow's answer has nobody to press Allow: not offered while it asks first, and the run ends without waiting.
+        var workflow = (await b.JsonAsync(await b.PostAsync("/api/studio", new
         {
-            await StatusAssert.Is(HttpStatusCode.Accepted, await b.PostAsync($"/api/tasks/{task}/run"));
-            for (var i = 0; ; i++)
-            {
-                var runs = (await b.JsonAsync(await b.GetAsync($"/api/tasks/{task}/runs"))).EnumerateArray().ToList();
-                if (runs.Count(r => r.GetProperty("status").GetString() != "running") >= count)
-                {
-                    Assert.Equal("done", runs[0].GetProperty("status").GetString());
-                    return AnswerRequests($"{marker}-task").Last();
-                }
-                Assert.True(i < 200, "the task's run never ended");
-                await Task.Delay(100);
-            }
+            name = "Weekly research",
+            flow = new { trigger = new { kind = "schedule", cron = "0 9 * * 1", timeZone = "Europe/Berlin" }, steps = new object[] { new { id = "answer", kind = "agent", prompt = $"{marker}-task" } } },
+        }))).GetProperty("workflow").GetProperty("id").GetGuid();
+        async Task<JsonObject> RunTaskAsync()
+        {
+            var (run, _) = await AutomationSchedulesTests.RunAgentAsync(b, f, "", workflow: workflow);
+            Assert.Equal("done", run.GetProperty("status").GetString());
+            return AnswerRequests($"{marker}-task").Last();
         }
-        var asked = Functions(await RunTaskAsync(1));
+        var asked = Functions(await RunTaskAsync());
         Assert.NotEmpty(asked);
         Assert.DoesNotContain(ResearchTool.Function, asked);
 
@@ -281,9 +274,9 @@ public sealed class DeepResearchTests(AppFixture app)
         Assert.Equal(2, both.Select(r => r["model"]!.GetValue<string>()).Distinct().Count());
         Assert.All(both, r => Assert.DoesNotContain(ResearchTool.Function, Functions(r)));
 
-        // Not asking first (an admin's choice): a task may start one, as the person could. Compare still not.
+        // Not asking first (an admin's choice): a workflow may start one, as the person could. Compare still not.
         await StatusAssert.Is(HttpStatusCode.NoContent, await SetResearchAsync(admin, askFirst: false));
-        Assert.Contains(ResearchTool.Function, Functions(await RunTaskAsync(2)));
+        Assert.Contains(ResearchTool.Function, Functions(await RunTaskAsync()));
         var again = await b.PostAsync($"/api/chat/conversations/{await NewChatAsync(b)}/compare", new { content = $"{marker}-again" });
         await again.Content.ReadAsStringAsync();
         Assert.Equal(2, AnswerRequests($"{marker}-again").Count);

@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Llm.Api.Retention;
 
 /// <summary>
-/// A person's data as one zip: their profile and preferences, assistants, scheduled tasks
+/// A person's data as one zip: their profile and preferences, assistants, workflows
 /// (never a secret: a webhook's address is only said to be set), every chat (all its
 /// branches as JSON, and the branch on screen as Markdown) and every file. An admin's
 /// export for eDiscovery has the chats they deleted while on legal hold too, marked so.
@@ -60,11 +60,10 @@ public sealed class DataExport(AppDbContext db, AccessService access)
             files = assistantFiles.Where(f => f.AssistantId == p.Id).OrderBy(f => f.AddedAt).Select(f => f.AttachmentId),
         }), ct);
 
-        var tasks = await db.ScheduledTasks.AsNoTracking().Where(t => t.UserId == user.Id).OrderBy(t => t.CreatedAt).ToListAsync(ct);
-        await JsonAsync(zip, "tasks.json", tasks.Select(t => new
+        var workflows = await db.Workflows.AsNoTracking().Where(w => w.OwnerId == user.Id).OrderBy(w => w.CreatedAt).ToListAsync(ct);
+        await JsonAsync(zip, "workflows.json", workflows.Select(w => new
         {
-            t.Name, t.Prompt, t.Cron, t.TimeZone, t.Model, t.Thinking, t.Tools, t.SameChat, t.Email,
-            webhook = t.WebhookEncrypted is not null, t.Trigger, t.Events, t.ReplyInGitLab, t.Enabled, t.CreatedAt, t.LastRunAt,
+            w.Id, w.Name, w.Description, w.Enabled, w.Reach, flow = Studio.FlowModel.Shown(w.Flow), w.CreatedAt, w.UpdatedAt, w.LastRunAt,
         }), ct);
 
         // The prompt log: what they asked with their API keys and the answers, as long as it keeps them (Retention:PromptLogDays).
@@ -116,7 +115,7 @@ public sealed class DataExport(AppDbContext db, AccessService access)
 
         person.json     the profile, preferences and groups
         assistants.json the assistants they made: instructions, settings and the files they hold
-        tasks.json      scheduled tasks (a webhook's address is a secret: only whether one is set)
+        workflows.json  Automations' workflows, their trigger and steps (a webhook's address is a secret: only that it is set)
         chats/          every chat: .json has every branch and message, .md the branch on screen
         files/          every file: the file itself, and the text the model read (.txt)
         {(hidden ? "\nChats with a deletedAt were deleted by the person while on legal hold, and kept.\n" : "")}

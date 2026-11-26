@@ -97,6 +97,8 @@ export function newStep(kind: StepKind, steps: FlowStep[]): FlowStep {
       return { id, kind, subject: '', text: '' }
     case 'file':
       return { id, kind, fileName: 'result.md', text: '' }
+    case 'webhook':
+      return { id, kind, url: 'https://', text: '' }
     case 'knowledge':
       return { id, kind, prompt: '{{input.text}}' }
     case 'data':

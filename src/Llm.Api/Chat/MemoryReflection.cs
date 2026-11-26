@@ -89,7 +89,7 @@ public sealed partial class MemoryReflection(IServiceScopeFactory scopes, Operat
         var now = clock.GetUtcNow();
         var (quiet, recent) = (now - Quiet, now - Recent);
         var chats = await db.Conversations
-            .Where(c => c.Kind != RoomMember.Room && c.ScheduledTaskId == null && c.DeletedAt == null && c.UpdatedAt <= quiet && c.UpdatedAt >= recent
+            .Where(c => c.Kind != RoomMember.Room && c.WorkflowId == null && c.DeletedAt == null && c.UpdatedAt <= quiet && c.UpdatedAt >= recent
                 && db.ChatMessages.Any(m => m.ConversationId == c.Id && m.Role == "user" && m.Sequence > c.ReflectedSequence))
             .OrderBy(c => c.UpdatedAt).Take(MostChats).ToListAsync(ct);
         var read = 0;

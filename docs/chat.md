@@ -141,7 +141,7 @@ chat tools too, with the same key: [Arena MCP](mcp.md) at `https://DOMAIN/mcp`.
     offered it, nor are **Compare**'s two answers (deep research is one
     model's report), nor a model that calls no tools.
   - **Where nobody can allow it.** While it asks first, it is not offered
-    where nobody can press **Allow**: a [scheduled task](#scheduled-tasks)'s
+    where nobody can press **Allow**: a [scheduled workflow](studio.md#on-a-schedule)'s
     run and a chat bot's thread ([integrations.md](integrations.md#chat-bots)).
     With asking turned off, they may start one too.
   - **For your agent.** [Arena MCP](mcp.md) serves `deep_research` to your
@@ -2226,78 +2226,6 @@ instructions) and the files beside it (references, templates, scripts).
   and reads one when the instructions point to it) and to Code Arena, which
   keeps them beside its `SKILL.md`. Code Arena exports and imports too
   ([code-arena.md](code-arena.md#import-and-export-skills)).
-
-## Scheduled tasks
-
-**Scheduled tasks** (in the sidebar, `/tasks`) ask a question on a schedule, as
-you: a morning digest, a weekly report on a repository with Farzan Graph. Or, with
-**What it does**, a task starts a review as you instead of asking: **Review a
-whole repository**, **Review several repositories** (looked at across),
-**Security review of a repository** or **of several**, each of the
-repositories you name at a branch, tag or commit (or each one's default
-branch). The run waits for the review to end (at most six hours) and
-delivers its summary (or the look across the repositories, with what is
-open) as an answer is delivered, with a link to the review; the task's card
-says **Open the review**. Starting one needs `review.run`; a review of
-several waits for one of yours still running (the run is skipped, and says
-so).
-
-**For developers** has ready-made tasks to add and fill in: **Merge requests
-waiting** (each weekday morning, the open merge requests of your projects,
-the old ones and those waiting on you first), **Failed pipelines** (each
-weekday, what failed since yesterday and the log lines that say why),
-**Release notes** (each Friday, what was merged that week), **Weekly
-repository review**, **Weekly product review** (several repositories),
-**Nightly security review** and **Weekly security review of a product**.
-
-- **The schedule** is chosen in words (every day, weekdays, once a week or a
-  month, every few hours, at a time) or written as cron (five fields), in a
-  time zone (your browser's by default). The card shows it in words and the
-  next three runs. A task may not run more often than **Most often** (15
-  minutes by default).
-- **Each run** asks the question with the task's model and tools (or the ones
-  a new chat would use), as any answer: in turn with everyone else's, against
-  your credit. Nobody is in the run's chat to press **Allow**, so the model is
-  not offered **Deep research** while it asks first (Admin → Tools); to have
-  a task research, an admin turns that off, or you ask for it in a chat. It
-  is a new chat, titled with the task and the
-  time, or with **One chat for every run**, the same chat carried on, so each
-  run reads the ones before ("what changed since yesterday").
-- **Delivered** under the bell in the header (a toast too, when the page is
-  open), and if asked by email (to your account's address; an admin sets the
-  mail server under **Settings → Email**) and to a channel: a Slack, Teams,
-  Mattermost or Discord incoming webhook. The post carries `text` (and
-  `content`) with the answer and a link to the chat, and `task`, `status`,
-  `url`, `at` beside them. A webhook URL is a secret: it is stored encrypted
-  (`APP_KEY`) and never shown again, and only hosts an admin allows
-  (**Webhook hosts**) are posted to, so a task cannot reach into the network.
-- **Run now** runs it at once; the card shows the last run (done, failed or
-  skipped, why, what was delivered) with a link to its chat. A run is skipped
-  while the one before is still answering, or when its owner is disabled.
-- A task that was due while the app was down runs once when it is back. A
-  removed task leaves its chats. Each person sees and changes only their own;
-  admins set **Tasks per person** (10).
-- **Run by events** instead of a schedule: **On GitLab events** (a merge
-  request opened or updated with new commits, a pipeline failed, an issue
-  opened) or **On a webhook** (any system posting JSON). The task gets an
-  address, `https://DOMAIN/api/hooks/<id>`, and a secret shown once (**New
-  secret** makes another): in GitLab, a project's or group's webhook with that
-  secret token; elsewhere the secret in `X-Hook-Secret`. The event, in words,
-  follows the task's question: a merge request with its changes, a failed
-  pipeline with the end of each failed job's log, a webhook's JSON as it came.
-  An event the task does not take is acknowledged and dropped. Events that
-  come while the task is answering wait their turn (up to 20; then the oldest
-  goes), so a busy repository loses none. They wait in the database: a restart
-  keeps them, and with several app replicas each runs once, in order.
-- **Answer as a comment in GitLab**: the answer goes on the merge request,
-  issue or commit. Reading the changes and logs and commenting use the **GitLab
-  bot token** an admin sets (Settings → Scheduled tasks, a bot account's token
-  with scope `api`, Reporter in the projects), never Farzan Graph's read-only token;
-  each comment is in the audit log (`task.gitlab_comment`). Examples: review
-  every merge request with Farzan Graph for context; explain each failed pipeline;
-  triage new issues. A team that wants the review and the explanation as jobs
-  in its own pipeline instead uses the `arena` CLI and its GitLab CI template
-  ([ci.md](ci.md)).
 
 ## Notifications
 

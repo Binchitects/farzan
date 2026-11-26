@@ -11,11 +11,11 @@ namespace Llm.Api.Schedules;
 public sealed class ScheduleOptions
 {
     public bool Enabled { get; set; } = true;
-    /// <summary>Scheduled tasks one person may have.</summary>
+    /// <summary>Workflows on a schedule one person may have.</summary>
     public int PerPerson { get; set; } = 10;
-    /// <summary>The shortest time between two runs of a task: a schedule may not run more often.</summary>
+    /// <summary>The shortest time between two runs of a workflow's schedule: it may not run more often.</summary>
     public TimeSpan MinInterval { get; set; } = TimeSpan.FromMinutes(15);
-    /// <summary>Hosts a task's answer may be posted to, comma separated; *.example.com for a domain and its subdomains.</summary>
+    /// <summary>Hosts a workflow's webhook step may post to, comma separated; *.example.com for a domain and its subdomains.</summary>
     public string WebhookHosts { get; set; } = "hooks.slack.com, *.webhook.office.com, *.logic.azure.com, discord.com";
 }
 

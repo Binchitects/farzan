@@ -2,14 +2,15 @@
 
 Workflows that do the work as you. A trigger starts one. Its steps ask a
 model, use tools, decide, loop and wait for your yes. What they give out
-goes to a room, an email, GitLab or a file. Every run is kept, with each
-step as it went, to read and to replay.
+goes to the bell, a room, an email, a chat channel, GitLab or a file. Every
+run is kept, with each step as it went, to read and to replay. What were
+scheduled tasks are workflows here ([On a schedule](#on-a-schedule)).
 
 ## Making a workflow
 
-**Workspace → Automations.** Press **New workflow**, start from a template,
-or turn one of your scheduled tasks into a workflow with **From a scheduled
-task**. A new workflow starts **Off**: it runs only by hand until you switch
+**Workspace → Automations.** Press **New workflow**, or start from a
+template: Arena's own, or one a plugin offers (marked **From** the plugin: a
+question on its schedule, with the plugin's tool). A new workflow starts **Off**: it runs only by hand until you switch
 it **On**. For code review the templates are **Review each merge request**
 (GitLab's merge request event, Code's review of it as a comment),
 **Weekly repository health** (a whole repository reviewed each Monday, its
@@ -26,8 +27,9 @@ beside the canvas. Press **+** between two steps to add one there.
 
 - **By hand**: **Run now**, with words to start from, or with fields of your
   own.
-- **On a schedule**: a five-field cron (`0 8 * * 1-5` is weekdays at 8), in
-  your time zone.
+- **On a schedule**: chosen in words (every day, weekdays, once a week or a
+  month, every few hours or minutes, at a time) or written as cron (five
+  fields, `0 8 * * 1-5` is weekdays at 8), in a time zone. More below.
 - **On a webhook**: any system posts JSON to its address, with its secret in
   the `X-Hook-Secret` header. The secret is shown once; **A new secret**
   replaces it.
@@ -67,7 +69,7 @@ beside the canvas. Press **+** between two steps to add one there.
 | Step | What it does |
 |---|---|
 | **Ask a model** | One question to your model. Its answer can be JSON, read as `{{id.json.…}}`. **The model for small steps** is quicker and cheaper. |
-| **Agent with tools** | The model with the tools you choose (the web, code search, your data…), as a chat of yours to open from the run. |
+| **Agent with tools** | The model with the tools you choose (the web, code search, your data…; none chosen: those on in a new chat), as a chat of yours to open from the run, with its thinking as you choose. **Carry on one chat**: each run asks in the chat of the run before, so it reads what was said ("what changed since yesterday"). |
 | **Use a tool** | One function of a tool you may use, with its arguments. A function that asks a person first (a browser's send, an API's write) is not run by a workflow. |
 | **Run Python** | Python in the sandbox, with no network, for at most 2 minutes. The run's values are in `input.json` beside it (`json.load(open('input.json'))`); what it prints is its answer, and its JSON when it prints JSON. Needs the Python tool. |
 | **Search company knowledge** | The company's documents you may read, nearest the words first: titles, links and passages, and `{{id.json}}` a list of them. |
@@ -82,6 +84,7 @@ beside the canvas. Press **+** between two steps to add one there.
 | **Say in a room** | A message in a room you write in, from you, for its people. |
 | **Email me** | An email to your account's address. |
 | **Notify me** | A notification in your bell (and on your phone, where you turned that on). |
+| **Post to a chat channel** | A post to a Slack, Teams, Mattermost or Discord incoming webhook: `text` (and `content`) with the words, and `workflow`, `run`, `at` beside them. Its address is a secret: kept encrypted (`APP_DATA_KEY`), never shown again (the step says it is set; type a new one to replace it), and only to hosts an admin allows (Settings → Automations → **Webhook hosts**), so a workflow cannot reach into the network. |
 | **Comment in GitLab** | A comment on the merge request or issue that started the run (a GitLab trigger). |
 | **Act in GitLab** | With the app's GitLab bot: comment on a merge request (`!12`) or an issue (`#34`), add labels to one, or open an issue in a project. The project and the merge request or issue are the event's when left empty. Each act is in the audit log (`workflow.gitlab_comment`, `workflow.gitlab_label`, `workflow.gitlab_issue`). |
 | **Save a file** | A file of yours, to download from the run. |
@@ -98,6 +101,50 @@ cursor is:
   `.author` and `.labels` are a GitLab event's facts, and `{{input.event.…}}`
   its whole payload;
 - `{{now}}` is the date and time.
+
+## On a schedule
+
+What were **scheduled tasks** are workflows whose trigger is a schedule (or
+a webhook, or GitLab's events): a morning digest, a weekly report on a
+repository, a review of every merge request. The template **Morning digest**
+is one to start from.
+
+- **The schedule** may not run a workflow more often than **Most often**
+  (Settings → Automations, 15 minutes by default), and a person has at most
+  **Scheduled workflows per person** (10) on a schedule. With **Schedules**
+  off there, no schedule runs and none can be set.
+- **Each run** is the owner's: their model, tools and credit, in turn with
+  everyone else's answers. Nobody is in an agent step's chat to press
+  **Allow**, so its model is not offered **Deep research** while it asks
+  first (Admin → Tools).
+- **What it gives out** is its steps': **Notify me** under the bell,
+  **Email me** (an admin sets the mail server under **Settings → Email**),
+  **Post to a chat channel**, **Comment in GitLab** on the merge request or
+  issue whose event started it. Reading a merge request's changes and a
+  failed job's log, and commenting, use the **GitLab bot token** an admin
+  sets (Settings → Automations: a bot account's token with scope `api`,
+  Reporter in the projects), never Farzan Graph's read-only token.
+- A schedule that came while the app was down runs once when it is back.
+  With several app replicas, one runs it: the replica that moves its next
+  time on first.
+- Runs of one workflow do not wait for each other: two events that come
+  together run side by side.
+- **Code Arena** lists the workflows of yours that run by themselves (a
+  schedule, a webhook, GitLab) under **Scheduled in Arena**, and runs one
+  now (`/schedule arena N`).
+
+**After the upgrade to 8.2** each scheduled task is the workflow of the same
+id, kept as it was: on or off, its next run, its schedule or events, its
+question as an agent step (its model, thinking and tools, one chat carried
+on when it had that) or its review as a review step, then **Notify me**,
+and **Email me**, **Post to a chat channel** (its webhook's address still
+encrypted) and **Comment in GitLab** as it delivered. Its runs are the
+workflow's, each with its chat or review, and its old address
+`/api/hooks/<id>` still takes its events with the same secret. A role that
+could schedule tasks (`feature.tasks`) may use Automations
+(`feature.studio`); whoever was denied scheduling is denied Automations.
+Plugins' tasks are Automations' templates. An event waiting for a task's
+run when the upgrade came is not run.
 
 ## Runs
 

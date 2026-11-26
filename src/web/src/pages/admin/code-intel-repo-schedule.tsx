@@ -6,7 +6,7 @@ import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/co
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { weekdays } from '../tasks-schedule'
+import { weekdays } from '@/lib/schedule'
 import { scheduleForm, scheduleSpec, scheduleWords, type RepoSchedule, type ScheduleKind } from './code-intel-schedule-spec'
 
 /** The fields of a schedule: how often, and when. */

@@ -92,7 +92,7 @@ public sealed class GitLabBot(IHttpClientFactory http, IOptionsMonitor<GitLabOpt
     {
         if (!Ready)
         {
-            throw new InvalidOperationException("the GitLab bot is not set up (Settings → Scheduled tasks)");
+            throw new InvalidOperationException("the GitLab bot is not set up (Settings → Automations)");
         }
         using var request = Request(method, path);
         request.Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");

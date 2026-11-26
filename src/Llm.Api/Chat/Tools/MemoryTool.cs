@@ -126,7 +126,7 @@ public sealed partial class MemoryTool(Memories memories, AppDbContext db, PastC
             return new ToolResult($"Already remembered: {same.Text}") { Details = Card(same.Id, same.Text, Kept) };
         }
         // A task's chat only offers: its question may carry an event's words (an issue, a webhook's JSON), never the person's own.
-        if (context.Conversation.ScheduledTaskId is not null || !AskedToRemember().IsMatch(await QuestionAsync(context.Conversation, ct)))
+        if (context.Conversation.WorkflowId is not null || !AskedToRemember().IsMatch(await QuestionAsync(context.Conversation, ct)))
         {
             return new ToolResult("Offered to the person: it is kept only if they accept it, on its card in the chat. Go on with your answer; do not wait for it.")
             {

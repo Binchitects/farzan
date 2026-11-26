@@ -652,7 +652,7 @@ or the Helm chart's `app.replicas`). What must happen once runs on one of them:
 
 - **The lead.** Each replica holds a Postgres connection of its own, outside
   any pool, and tries for an advisory lock on it every 5 seconds. The one
-  holding it leads. It runs the scheduled tasks' clock, the engine watcher
+  holding it leads. It runs the engine watcher
   (the models kept loaded, the presets, the gateway's routes, Prometheus's
   targets), the media servers' on and off, the downloads, the first model,
   the ledger's import once after an upgrade from before 8.0, the LDAP sync,
@@ -671,11 +671,10 @@ or the Helm chart's `app.replicas`). What must happen once runs on one of them:
   loaded or a download started on one wakes the leader; a changed key is
   forgotten by every `KeyBook`. A replica that asks waits up to 3 seconds for
   the one that has the answer.
-- **Scheduled tasks.** A run is claimed in the database first (the task row
-  names the replica running it, renewed every 20 seconds, let go after two
-  minutes without it): a task never runs twice at once. Events that come while
-  it runs wait in the `task_events` table, and the replica free next takes them
-  in order.
+- **Automations' schedules.** Every replica looks at the clock every half
+  minute; a due workflow is claimed by moving its next time on in the
+  database (only the update that finds the time it read succeeds), so one
+  replica runs it. A wait step is claimed the same way when its time comes.
 - **The answers' line.** Each replica keeps its own, with its share of the
   places the engine serves at once (rounded up), and its own table of engine
   slots. An answer runs on the replica that was asked and streams from there:

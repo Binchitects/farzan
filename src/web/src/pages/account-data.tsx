@@ -34,7 +34,7 @@ export function YourData({ mayExport = true }: { mayExport?: boolean } = {}) {
       <CardHeader>
         <CardTitle>Your data</CardTitle>
         <CardDescription>
-          A zip of your chats (each as JSON and as Markdown), your files, assistants, scheduled tasks and settings.
+          A zip of your chats (each as JSON and as Markdown), your files, assistants, workflows and settings.
           {data.data && (days ? ` Chats are kept for ${days} days after their last message, then deleted.` : ' Chats are kept until you delete them.')}
         </CardDescription>
         {data.data && (

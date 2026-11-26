@@ -119,59 +119,35 @@ public sealed class ScaleOutTests(AppFixture app)
     }
 
     [Fact]
-    public async Task A_due_task_runs_once_though_both_replicas_look_and_events_take_turns_across_replicas()
+    public async Task A_due_workflow_runs_once_though_both_replicas_look_and_each_replica_sees_its_run()
     {
         var (a, b) = await TwoAsync();
         await using var _a = a;
         await using var _b = b;
         var (onA, onB, _) = await PersonOnBothAsync(a, b);
-        var made = await onA.JsonAsync(await onA.PostAsync("/api/tasks", new { name = "Daily", prompt = "What is new?", cron = "0 8 * * *", timeZone = "UTC" }));
-        var id = made.GetProperty("id").GetGuid();
+        var made = await onA.JsonAsync(await onA.PostAsync("/api/studio", new
+        {
+            name = "Daily",
+            flow = new { trigger = new { kind = "schedule", cron = "0 8 * * *", timeZone = "UTC" }, steps = new object[] { new { id = "answer", kind = "agent", prompt = "What is new?" } } },
+        }));
+        var id = made.GetProperty("workflow").GetProperty("id").GetGuid();
         using (var scope = a.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var t = await db.ScheduledTasks.SingleAsync(x => x.Id == id);
-            t.NextRunAt = DateTimeOffset.UtcNow.AddMinutes(-1);
-            await db.SaveChangesAsync();
+            await db.Workflows.Where(w => w.Id == id).ExecuteUpdateAsync(u => u.SetProperty(w => w.NextRunAt, DateTimeOffset.UtcNow.AddMinutes(-1)));
         }
-        // Both replicas look at the clock at the same moment (only the leader does, but even so).
-        await Task.WhenAll(
-            a.Services.GetRequiredService<Scheduler>().RunDueAsync(CancellationToken.None),
-            b.Services.GetRequiredService<Scheduler>().RunDueAsync(CancellationToken.None));
-        await UntilAsync(async () => (await Runs(onA, id)).Count(r => r.GetProperty("status").GetString() == "done") == 1, "the run done",
-            said: async () => string.Join("; ", (await Runs(onA, id)).Select(r => r.GetRawText())));
-        await Task.Delay(500);
+        // Both replicas look at the clock at the same moment: the one that moves its next time on runs it.
+        var started = await Task.WhenAll(
+            a.Services.GetRequiredService<Llm.Api.Studio.StudioRuns>().DueAsync(CancellationToken.None),
+            b.Services.GetRequiredService<Llm.Api.Studio.StudioRuns>().DueAsync(CancellationToken.None));
+        Assert.Equal(1, started.Sum());
+        await UntilAsync(async () => (await Runs(onB, id)).Count(r => r.GetProperty("status").GetString() == "done") == 1, "the run done",
+            said: async () => string.Join("; ", (await Runs(onB, id)).Select(r => r.GetRawText())));
         Assert.Single(await Runs(onA, id));
-
-        // A task run by events: the first reaches one replica, the second the other while the first answers.
-        var hook = await onA.JsonAsync(await onA.PostAsync("/api/tasks", new { name = "Busy", prompt = "Say it [steady]", trigger = "webhook" }));
-        var (url, secret, hookId) = (new Uri(hook.GetProperty("hookUrl").GetString()!).PathAndQuery, hook.GetProperty("hookToken").GetString()!, hook.GetProperty("id").GetGuid());
-        Task<HttpResponseMessage> Post(WebApplicationFactory<Program> f, int n)
-        {
-            var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = new StringContent(JsonSerializer.Serialize(new { n }), Encoding.UTF8, "application/json") };
-            request.Headers.Add("X-Hook-Secret", secret);
-            return f.CreateClient().SendAsync(request);
-        }
-        Assert.Contains("started", await (await Post(a, 1)).Content.ReadAsStringAsync(), StringComparison.Ordinal);
-        Assert.Contains("queued", await (await Post(b, 2)).Content.ReadAsStringAsync(), StringComparison.Ordinal);
-        // The other replica sees it running too.
-        var listed = (await onB.JsonAsync(await onB.GetAsync("/api/tasks"))).GetProperty("tasks").EnumerateArray().Single(t => t.GetProperty("id").GetGuid() == hookId);
-        Assert.True(listed.GetProperty("running").GetBoolean());
-        await UntilAsync(async () => await Runs(onA, hookId) is { Count: 2 } runs && runs.All(r => r.GetProperty("status").GetString() == "done"), "both events run", 30,
-            async () => string.Join("; ", (await Runs(onA, hookId)).Select(r => r.GetRawText())));
-        var both = (await Runs(onA, hookId)).OrderBy(r => r.GetProperty("startedAt").GetDateTimeOffset()).ToList();
-        // One after the other, never at once.
-        Assert.True(both[1].GetProperty("startedAt").GetDateTimeOffset() >= both[0].GetProperty("finishedAt").GetDateTimeOffset());
-        using (var scope = b.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Assert.Empty(await db.TaskEvents.Where(e => e.TaskId == hookId).ToListAsync());
-            Assert.Null((await db.ScheduledTasks.AsNoTracking().SingleAsync(t => t.Id == hookId)).RunningOn);
-        }
     }
 
-    private static async Task<List<JsonElement>> Runs(TestBrowser b, Guid task) =>
-        [.. (await b.JsonAsync(await b.GetAsync($"/api/tasks/{task}/runs"))).EnumerateArray()];
+    private static async Task<List<JsonElement>> Runs(TestBrowser b, Guid workflow) =>
+        [.. (await b.JsonAsync(await b.GetAsync($"/api/studio/{workflow}/runs"))).EnumerateArray()];
 
     [Fact]
     public async Task A_decision_a_stop_and_answer_now_posted_to_the_other_replica_reach_the_answer()

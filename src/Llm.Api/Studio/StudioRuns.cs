@@ -13,7 +13,7 @@ namespace Llm.Api.Studio;
 /// background, one task each, stoppable; a run that waits for an approval goes on when it is given. Schedules are looked at
 /// every half minute (each due run claimed, so one replica runs it); a run left "running" by an app that stopped is ended.
 /// </summary>
-public sealed partial class StudioRuns(IServiceScopeFactory scopes, TimeProvider clock, ILogger<StudioRuns> logger) : BackgroundService
+public sealed partial class StudioRuns(IServiceScopeFactory scopes, TimeProvider clock, Microsoft.Extensions.Options.IOptionsMonitor<ScheduleOptions> schedules, ILogger<StudioRuns> logger) : BackgroundService
 {
     private static readonly TimeSpan Every = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan Abandoned = TimeSpan.FromHours(2);
@@ -135,9 +135,13 @@ public sealed partial class StudioRuns(IServiceScopeFactory scopes, TimeProvider
         }
     }
 
-    /// <summary>The workflows whose schedule has come: each claimed (its next time moved on) before it runs, so one replica runs it.</summary>
+    /// <summary>The workflows whose schedule has come: each claimed (its next time moved on) before it runs, so one replica runs it. None while schedules are off here (Schedules:Enabled).</summary>
     public async Task<int> DueAsync(CancellationToken ct)
     {
+        if (!schedules.CurrentValue.Enabled)
+        {
+            return 0;
+        }
         await using var scope = scopes.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var now = clock.GetUtcNow();

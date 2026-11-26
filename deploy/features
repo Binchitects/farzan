@@ -45,5 +45,5 @@ apps           | on  | - | - | - | Apps the chat builds
 data           | on  | - | - | - | Ask your data: questions to the company's databases
 decks          | on  | - | - | - | Decks: slides from a chat
 media          | on  | - | - | pictures | The media studio: pictures, video and vectors
-agents         | on  | - | - | - | Agent Studio: workflows the agents run
+agents         | on  | - | - | - | Automations: workflows run by hand, on a schedule (scheduled tasks), a webhook or GitLab
 code-studio    | on  | - | - | - | Code Studio: the IDE and reviews in the browser

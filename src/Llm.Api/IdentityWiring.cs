@@ -499,10 +499,7 @@ public static class IdentityWiring
         services.AddSingleton<Schedules.Webhooks>();
         services.AddHttpClient(Schedules.Webhooks.Client, c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddScoped<Code.ReviewLauncher>();
-        services.AddScoped<Schedules.TaskRunner>();
-        services.AddScoped<Schedules.TaskEndpoints.TaskContext>();
-        services.AddSingleton<Schedules.Scheduler>();
-        services.AddHostedService(sp => sp.GetRequiredService<Schedules.Scheduler>());
+        services.AddScoped<Studio.FlowRules>();
         services.AddSingleton<Models.ModelHoursState>();
         services.AddScoped<Models.ModelHours>();
         // The engines: llama.cpp's router, the vLLM supervisors, the servers the app does not run, and all of them as one.
@@ -722,7 +719,7 @@ public static class IdentityWiring
         Models.DefaultModelEndpoints.MapDefaultModels(app);
         Models.ModelHoursEndpoints.MapModelHours(app);
         Models.HuggingFaceEndpoints.MapHuggingFace(app);
-        Schedules.TaskEndpoints.MapTasks(app);
+        Notifications.NotificationEndpoints.MapNotifications(app);
         Models.RemoteServerEndpoints.MapRemoteServers(app);
         app.MapGovernance();
         AnswerCacheEndpoints.MapAnswerCache(app);

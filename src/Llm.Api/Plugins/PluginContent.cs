@@ -130,15 +130,15 @@ public static class PluginContent
         }
         db.Toolsets.RemoveRange(sets.Where(x => package.Manifest.Toolsets.All(t => t.Name != x.Name)));
 
-        // The scheduled tasks it offers: people add them to their own (Tasks → From plugins).
-        var templates = await db.TaskTemplates.Where(t => t.Plugin == plugin).ToListAsync(ct);
+        // The scheduled tasks it offers: people add them to their own (Automations → From plugins).
+        var templates = await db.AutomationTemplates.Where(t => t.Plugin == plugin).ToListAsync(ct);
         foreach (var t in package.Manifest.Tasks)
         {
             var row = templates.FirstOrDefault(x => x.Name == t.Name);
             if (row is null)
             {
-                row = new TaskTemplate { Plugin = plugin, ServerId = server.Id, Name = t.Name, Prompt = t.Prompt, Cron = t.Cron };
-                db.TaskTemplates.Add(row);
+                row = new AutomationTemplate { Plugin = plugin, ServerId = server.Id, Name = t.Name, Prompt = t.Prompt, Cron = t.Cron };
+                db.AutomationTemplates.Add(row);
             }
             row.ServerId = server.Id;
             row.Description = t.Description;
@@ -147,7 +147,7 @@ public static class PluginContent
             row.Tools = [.. Tools(t.Tools.Length > 0 ? t.Tools : ["self"])];
             row.UpdatedAt = DateTimeOffset.UtcNow;
         }
-        db.TaskTemplates.RemoveRange(templates.Where(x => package.Manifest.Tasks.All(t => t.Name != x.Name)));
+        db.AutomationTemplates.RemoveRange(templates.Where(x => package.Manifest.Tasks.All(t => t.Name != x.Name)));
         await db.SaveChangesAsync(ct);
     }
 
@@ -191,7 +191,7 @@ public static class PluginContent
         await db.Assistants.Where(a => a.Plugin == plugin).ExecuteDeleteAsync(ct);
         await db.SafeguardRules.Where(r => r.Plugin == plugin).ExecuteDeleteAsync(ct);
         await db.Toolsets.Where(t => t.Plugin == plugin).ExecuteDeleteAsync(ct);
-        await db.TaskTemplates.Where(t => t.Plugin == plugin).ExecuteDeleteAsync(ct);
+        await db.AutomationTemplates.Where(t => t.Plugin == plugin).ExecuteDeleteAsync(ct);
     }
 
     /// <summary>The version installed, kept so it can be put back.</summary>

@@ -1,6 +1,6 @@
 import {
   Bell, Bot, ClipboardList, Clock, Database, FileText, GitBranch, GitMerge, GitPullRequest, Globe, Hand, Hourglass, Library, Mail, MessageSquare, MessageSquareCode, MessagesSquare, OctagonX, Play,
-  Repeat, ScanSearch, SquareTerminal, Type, Webhook, Wrench, type LucideIcon,
+  Repeat, ScanSearch, Send, SquareTerminal, Type, Webhook, Wrench, type LucideIcon,
 } from 'lucide-react'
 import { opLabels, reviewKinds, type FlowStep, type FlowTrigger, type StepKind, type TriggerKind } from './studio-api'
 
@@ -25,6 +25,7 @@ export const stepIcons: Record<StepKind, LucideIcon> = {
   gitlab: GitPullRequest,
   file: FileText,
   review: ScanSearch,
+  webhook: Send,
 }
 
 export const triggerIcons: Record<TriggerKind, LucideIcon> = { manual: Play, schedule: Clock, webhook: Webhook, gitlab: GitMerge, room: MessagesSquare, form: ClipboardList }
@@ -33,7 +34,7 @@ export const groups: { label: string; kinds: StepKind[] }[] = [
   { label: 'Think', kinds: ['ask', 'agent', 'tool', 'code'] },
   { label: 'Find', kinds: ['knowledge', 'data', 'http', 'review'] },
   { label: 'Decide', kinds: ['condition', 'loop', 'approval', 'wait', 'stop'] },
-  { label: 'Give out', kinds: ['text', 'room', 'email', 'notify', 'comment', 'gitlab', 'file'] },
+  { label: 'Give out', kinds: ['text', 'room', 'email', 'notify', 'webhook', 'comment', 'gitlab', 'file'] },
 ]
 
 const cut = (s: string | null | undefined, n = 70) => {
@@ -47,7 +48,7 @@ export function summary(s: FlowStep): string {
     case 'ask':
     case 'agent':
     case 'knowledge':
-      return cut(s.prompt) + (s.kind === 'agent' && s.tools?.length ? ` · ${s.tools.join(', ')}` : '')
+      return cut(s.prompt) + (s.kind === 'agent' && s.tools?.length ? ` · ${s.tools.join(', ')}` : '') + (s.kind === 'agent' && s.sameChat ? ' · one chat' : '')
     case 'data':
       return cut(s.sql || s.prompt) || 'Choose a data source'
     case 'http':
@@ -76,6 +77,8 @@ export function summary(s: FlowStep): string {
       return cut(s.subject || s.text)
     case 'file':
       return s.fileName ?? 'result.md'
+    case 'webhook':
+      return s.url ? cut(s.url.replace(/^https:\/\//, ''), 50) : s.secret ? 'To the channel set' : 'Choose where to post'
     default:
       return cut(s.text)
   }

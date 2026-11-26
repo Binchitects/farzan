@@ -2,7 +2,7 @@ import { api } from '@/lib/api'
 
 export type TriggerKind = 'manual' | 'schedule' | 'webhook' | 'gitlab' | 'room' | 'form'
 export type StepKind =
-  | 'ask' | 'agent' | 'tool' | 'code' | 'data' | 'knowledge' | 'http' | 'condition' | 'loop' | 'approval' | 'wait' | 'stop' | 'text' | 'room' | 'email' | 'notify' | 'comment' | 'gitlab' | 'file' | 'review'
+  | 'ask' | 'agent' | 'tool' | 'code' | 'data' | 'knowledge' | 'http' | 'condition' | 'loop' | 'approval' | 'wait' | 'stop' | 'text' | 'room' | 'email' | 'notify' | 'comment' | 'gitlab' | 'file' | 'review' | 'webhook'
 
 export interface FlowField {
   name: string
@@ -34,6 +34,11 @@ export interface FlowStep {
   system?: string | null
   json?: boolean
   model?: string | null
+  /** agent: how hard it thinks; null: as a new chat. */
+  thinking?: string | null
+  /** agent: each run carries on the chat of the run before. */
+  sameChat?: boolean | null
+  /** agent: the tools it may call; null: those on in a new chat. */
   tools?: string[] | null
   tool?: string | null
   function?: string | null
@@ -65,6 +70,8 @@ export interface FlowStep {
   target?: string | null
   labels?: string | null
   url?: string | null
+  /** webhook: its address, kept encrypted; shown only as 'sealed' (set). A new url replaces it. */
+  secret?: string | null
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | null
   sourceId?: string | null
   sql?: string | null
@@ -166,6 +173,8 @@ export interface Template {
   name: string
   description: string
   flow: Flow
+  /** The plugin that offers it; absent for Arena's own. */
+  plugin?: string | null
 }
 
 export interface StudioTool {
@@ -233,8 +242,6 @@ export const newSecret = (id: string) => api<{ secret: string }>(`/api/studio/${
 
 export const removeWorkflow = (id: string) => api(`/api/studio/${id}`, { method: 'DELETE' })
 
-export const fromTask = (task: string) => api<{ workflow: Workflow; secret: string | null }>(`/api/studio/from-task/${task}`, { body: {} })
-
 export const stepLabels: Record<StepKind, string> = {
   ask: 'Ask a model',
   agent: 'Agent with tools',
@@ -256,6 +263,7 @@ export const stepLabels: Record<StepKind, string> = {
   gitlab: 'Act in GitLab',
   file: 'Save a file',
   review: 'Review code',
+  webhook: 'Post to a chat channel',
 }
 
 export type ReviewKind = 'merge-request' | 'review-repository' | 'review-repositories' | 'security' | 'security-several'

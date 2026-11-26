@@ -42,8 +42,8 @@ public sealed class FlowTrigger
 /// A step. ask: one question to a model; agent: the model with tools, as a chat; tool: one tool's function; code: Python in
 /// the sandbox; data: a question (or SQL) to a data source; knowledge: the company's documents searched; http: a request to
 /// a public address; condition: then or else; loop: its steps for each item; approval: waits for its owner; wait: waits a
-/// while; stop: ends the run; text: words made of the others (JSON too); room, email, notify, comment, gitlab, file: what it
-/// gives out.
+/// while; stop: ends the run; text: words made of the others (JSON too); room, email, notify, comment, gitlab, file, webhook
+/// (a post to Slack, Teams, Mattermost or Discord): what it gives out.
 /// </summary>
 public sealed class FlowStep
 {
@@ -56,6 +56,11 @@ public sealed class FlowStep
     public bool Json { get; set; }
     /// <summary>"small": the model for small steps.</summary>
     public string? Model { get; set; }
+    /// <summary>agent: how hard the model thinks (as a chat's choice); null: as a new chat would.</summary>
+    public string? Thinking { get; set; }
+    /// <summary>agent: every run carries on the chat of the run before (it reads what was said), instead of a new chat each time.</summary>
+    public bool? SameChat { get; set; }
+    /// <summary>agent: the tools it may call; null: those on in a new chat (what its owner may use still applies).</summary>
     public List<string>? Tools { get; set; }
     public string? Tool { get; set; }
     public string? Function { get; set; }
@@ -96,6 +101,8 @@ public sealed class FlowStep
     /// <summary>data: the data source asked, with <see cref="Prompt"/> (in words) or <see cref="Sql"/>.</summary>
     public Guid? SourceId { get; set; }
     public string? Sql { get; set; }
+    /// <summary>webhook: its address, encrypted (such an address is a secret); a step saved with <see cref="Url"/> has it sealed here, and it is shown only as <see cref="FlowModel.Sealed"/>.</summary>
+    public string? Secret { get; set; }
     /// <summary>wait: how many minutes.</summary>
     public int? Minutes { get; set; }
     /// <summary>stop: done (the run ends well) or failed.</summary>
@@ -113,8 +120,10 @@ public static partial class FlowModel
 {
     public static readonly string[] Triggers = ["manual", "schedule", "webhook", "gitlab", "room", "form"];
     public static readonly string[] Kinds =
-        ["ask", "agent", "tool", "code", "data", "knowledge", "http", "condition", "loop", "approval", "wait", "stop", "text", "room", "email", "notify", "comment", "gitlab", "file", "review"];
+        ["ask", "agent", "tool", "code", "data", "knowledge", "http", "condition", "loop", "approval", "wait", "stop", "text", "room", "email", "notify", "comment", "gitlab", "file", "review", "webhook"];
     public static readonly string[] GitLabActions = ["comment", "label", "issue"];
+    /// <summary>What a webhook step's sealed address is shown as: it is set, and stays as it is when saved so.</summary>
+    public const string Sealed = "sealed";
     public static readonly string[] Methods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
     /// <summary>The longest a wait step waits: a week.</summary>
     public const int MostMinutes = 7 * 24 * 60;
@@ -127,6 +136,17 @@ public static partial class FlowModel
     public static Flow Read(string json) => JsonSerializer.Deserialize<Flow>(json, Json) ?? new Flow();
 
     public static string Write(Flow flow) => JsonSerializer.Serialize(flow, Json);
+
+    /// <summary>The flow as its owner sees it: each webhook's sealed address shown only as set.</summary>
+    public static JsonNode? Shown(string json)
+    {
+        var flow = Read(json);
+        foreach (var s in All(flow.Steps).Where(s => s.Secret is not null))
+        {
+            s.Secret = Sealed;
+        }
+        return JsonSerializer.SerializeToNode(flow, Json);
+    }
 
     /// <summary>Every step, inner ones too, depth first.</summary>
     public static IEnumerable<FlowStep> All(IEnumerable<FlowStep> steps)
@@ -152,6 +172,10 @@ public static partial class FlowModel
         if (t.Kind == "schedule" && Schedules.Cron.Parse(t.Cron).Problem is { } cron)
         {
             return $"The schedule: {cron}";
+        }
+        if (t.Kind == "schedule" && Models.Hours.Zone(t.TimeZone).Problem is { } zone)
+        {
+            return zone;
         }
         if (t.Kind == "room" && (t.RoomId is null || string.IsNullOrWhiteSpace(t.Keyword)))
         {
@@ -196,7 +220,8 @@ public static partial class FlowModel
                 "condition" when !Ops.Contains(s.Op) => $"its test is one of: {string.Join(", ", Ops)}",
                 "loop" when string.IsNullOrWhiteSpace(s.Over) || s.Steps is not { Count: > 0 } => "it needs what to go over and steps to run for each",
                 "room" when s.RoomId is null || string.IsNullOrWhiteSpace(s.Text) => "it needs its room and what to say",
-                "text" or "email" or "comment" or "file" or "notify" when string.IsNullOrWhiteSpace(s.Text) => "it needs its text",
+                "text" or "email" or "comment" or "file" or "notify" or "webhook" when string.IsNullOrWhiteSpace(s.Text) => "it needs its text",
+                "webhook" when string.IsNullOrWhiteSpace(s.Url) && string.IsNullOrWhiteSpace(s.Secret) => "it needs the address to post to",
                 "code" when string.IsNullOrWhiteSpace(s.Text) => "it needs its code",
                 "knowledge" when string.IsNullOrWhiteSpace(s.Prompt) => "it needs what to look for",
                 "data" when s.SourceId is null || (string.IsNullOrWhiteSpace(s.Prompt) && string.IsNullOrWhiteSpace(s.Sql)) => "it needs a data source, and a question or SQL",

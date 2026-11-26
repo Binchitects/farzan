@@ -1,11 +1,24 @@
 namespace Llm.Api.Studio;
 
 /// <summary>A workflow to start from.</summary>
-public sealed record StudioTemplate(string Key, string Name, string Description, Flow Flow);
+/// <param name="Plugin">The plugin that offers it (its title), for one a plugin's manifest offers; null for Arena's own.</param>
+public sealed record StudioTemplate(string Key, string Name, string Description, Flow Flow, string? Plugin = null);
 
 /// <summary>Workflows to start from, made of what people already ask the tasks and reviews for.</summary>
 public static class StudioTemplates
 {
+    /// <summary>A plugin's scheduled automation as a workflow to start from: on its schedule, its prompt asked with its tools, its answer told to the owner.</summary>
+    public static StudioTemplate FromPlugin(Core.Chat.AutomationTemplate t, IEnumerable<string> tools, string? pluginTitle) => new(
+        $"plugin:{t.Id}", t.Name, t.Description ?? $"From the plugin {pluginTitle ?? t.Plugin}, on its schedule.", new Flow
+        {
+            Trigger = new FlowTrigger { Kind = "schedule", Cron = t.Cron, TimeZone = "UTC" },
+            Steps =
+            [
+                new FlowStep { Id = "answer", Kind = "agent", Name = "Answer", Prompt = t.Prompt, Tools = [.. tools] },
+                new FlowStep { Id = "tell", Kind = "notify", Name = "Tell me", Subject = t.Name, Text = "{{answer.text}}" },
+            ],
+        }, pluginTitle ?? t.Plugin);
+
     public static readonly IReadOnlyList<StudioTemplate> All =
     [
         new("digest", "Morning digest", "Every weekday at 8: the news on a subject from the web, short, by email.", new Flow

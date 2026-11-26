@@ -203,7 +203,7 @@ public sealed class RetentionTests(AppFixture app)
         Assert.Contains("\"compactAt\": 60", zip["person.json"], StringComparison.Ordinal);
         Assert.Contains("\"colorTheme\": \"copper\"", zip["person.json"], StringComparison.Ordinal);
         Assert.Contains("assistants.json", zip.Keys);
-        Assert.Contains("tasks.json", zip.Keys);
+        Assert.Contains("workflows.json", zip.Keys);
         var md = zip.Single(e => e.Key.EndsWith(".md", StringComparison.Ordinal)).Value;
         Assert.Contains("## You", md, StringComparison.Ordinal);
         Assert.Contains("Read my plan", md, StringComparison.Ordinal);

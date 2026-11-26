@@ -10,7 +10,8 @@ namespace Llm.Tests;
 /// Upgrading a stack that has data to v8.2: decks keep their slides and get the built-in look; the Decks tool, now the
 /// canvas's slides, is "canvas" wherever it was chosen (once), and its settings, groups' settings and rules are gone;
 /// requests imported from LiteLLM whose first token was their end have none; chat answers logged before requests carried
-/// their chat are linked to it, and to its project.
+/// their chat are linked to it, and to its project. Scheduled tasks are Automations' workflows of the same id, with their
+/// runs, chats, webhooks and plugins' templates, and whoever might schedule may use Automations (whoever was denied, is).
 /// </summary>
 [Collection(nameof(AppCollection))]
 public sealed class V82MigrationTests(AppFixture app)
@@ -76,7 +77,8 @@ public sealed class V82MigrationTests(AppFixture app)
         var twice = await db.Conversations.AsNoTracking().SingleAsync(c => c.Id == both);
         Assert.Equal(["canvas"], twice.Tools);
         Assert.Equal(["canvas"], twice.LoadedTools);
-        Assert.Equal(["canvas"], (await db.ScheduledTasks.AsNoTracking().SingleAsync(t => t.Id == task)).Tools);
+        // The task is the workflow of its id now, its tools its answer's.
+        Assert.Equal(["canvas"], Llm.Api.Studio.FlowModel.Read((await db.Workflows.AsNoTracking().SingleAsync(w => w.Id == task)).Flow).Steps[0].Tools);
         Assert.Equal(["web", "canvas"], (await db.Toolsets.AsNoTracking().SingleAsync(t => t.Id == set)).Tools);
         Assert.Equal(["web"], await db.ToolSettings.AsNoTracking().Select(t => t.ToolId).ToListAsync());
         Assert.False(await db.AccessRules.AsNoTracking().AnyAsync(r => r.Id == rule));
@@ -87,5 +89,87 @@ public sealed class V82MigrationTests(AppFixture app)
         Assert.Equal((old, project), (linked[0].ConversationId!.Value, linked[0].ProjectId!.Value));
         Assert.Equal((null, null), (linked[1].ConversationId, linked[1].ProjectId));
         Assert.Equal([null, new DateTimeOffset(2026, 10, 1, 10, 0, 1, TimeSpan.Zero), new DateTimeOffset(2026, 10, 1, 10, 0, 9, TimeSpan.Zero)], firsts);
+    }
+    [Fact]
+    public async Task Scheduled_tasks_become_workflows_of_the_same_id_with_their_runs_chats_webhooks_and_who_may()
+    {
+        var cs = app.ConnectionStringFor("v82t_" + Guid.NewGuid().ToString("N")[..8]);
+        var options = new DbContextOptionsBuilder<AppDbContext>();
+        options.UseNpgsql(cs);
+        options.UseOpenIddict<Guid>();
+        await using var db = new AppDbContext(options.Options);
+        var all = db.Database.GetMigrations().ToList();
+        var before = all[all.FindIndex(m => m.EndsWith("_TasksIntoAutomations", StringComparison.Ordinal)) - 1];
+        await db.GetService<IMigrator>().MigrateAsync(before);
+
+        var (person, chat, digest, review, done, going, role, deny, server) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var next = new DateTimeOffset(2026, 12, 1, 7, 0, 0, TimeSpan.Zero);
+        var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData("s3cret"u8.ToArray()));
+        await using (var conn = new NpgsqlConnection(cs))
+        {
+            await conn.OpenAsync();
+            await V61MigrationTests.InsertAsync(conn, "AspNetUsers", new() { ["Id"] = person, ["UserName"] = "lee", ["NormalizedUserName"] = "LEE" });
+            await V61MigrationTests.InsertAsync(conn, "conversations", new() { ["Id"] = chat, ["UserId"] = person, ["ScheduledTaskId"] = digest });
+            // A digest: asked every weekday, one chat carried on, by email and to a Slack webhook (its address encrypted as it was).
+            await V61MigrationTests.InsertAsync(conn, "scheduled_tasks", new()
+            {
+                ["Id"] = digest, ["UserId"] = person, ["Name"] = "Digest", ["Prompt"] = "What is new?", ["Cron"] = "0 8 * * 1-5", ["TimeZone"] = "Europe/Berlin",
+                ["Model"] = "qwen", ["Thinking"] = "low", ["Tools"] = new[] { "web" }, ["SameChat"] = true, ["ConversationId"] = chat, ["Email"] = true,
+                ["WebhookEncrypted"] = "sealed-by-app-data-key", ["Enabled"] = true, ["NextRunAt"] = next, ["Trigger"] = "schedule",
+            });
+            // A review GitLab's merge requests start, answered there; its secret as GitLab sends it.
+            await V61MigrationTests.InsertAsync(conn, "scheduled_tasks", new()
+            {
+                ["Id"] = review, ["UserId"] = person, ["Name"] = "Health", ["Prompt"] = "review-repository g/p", ["Cron"] = "", ["Action"] = "review-repository",
+                ["Repositories"] = new[] { "g/p" }, ["Ref"] = "main", ["Trigger"] = "gitlab", ["Events"] = new[] { "merge_request" }, ["TriggerSecretHash"] = hash,
+                ["ReplyInGitLab"] = true, ["Enabled"] = false,
+            });
+            await V61MigrationTests.InsertAsync(conn, "scheduled_runs", new() { ["Id"] = done, ["TaskId"] = digest, ["Status"] = "done", ["ConversationId"] = chat, ["Delivery"] = "email sent", ["FinishedAt"] = next });
+            await V61MigrationTests.InsertAsync(conn, "scheduled_runs", new() { ["Id"] = going, ["TaskId"] = review, ["Status"] = "running", ["Manual"] = true, ["Link"] = "/code/reviews/1" });
+            await V61MigrationTests.InsertAsync(conn, "mcp_servers", new() { ["Id"] = server, ["Name"] = "Pets", ["Url"] = "https://pets.test/v1", ["Plugin"] = "pets" });
+            await V61MigrationTests.InsertAsync(conn, "task_templates", new() { ["ServerId"] = server, ["Plugin"] = "pets", ["Name"] = "Feed", ["Prompt"] = "Feed them", ["Cron"] = "0 9 * * *", ["Tools"] = new[] { "web" } });
+            await V61MigrationTests.InsertAsync(conn, "access_roles", new() { ["Id"] = role, ["Key"] = "schedulers", ["Name"] = "Schedulers", ["Permissions"] = new[] { "feature.chat", "feature.tasks", "tasks.manage.all" } });
+            await V61MigrationTests.InsertAsync(conn, "access_rules", new() { ["Id"] = deny, ["Effect"] = 1, ["SubjectKind"] = 0, ["SubjectId"] = person, ["ResourceKind"] = "feature", ["Resource"] = "feature.tasks", ["Action"] = "use" });
+        }
+        await db.Database.MigrateAsync();
+
+        var d = await db.Workflows.AsNoTracking().SingleAsync(w => w.Id == digest);
+        Assert.Equal((person, "Digest", true, next), (d.OwnerId, d.Name, d.Enabled, d.NextRunAt));
+        var flow = Llm.Api.Studio.FlowModel.Read(d.Flow);
+        Assert.Equal(("schedule", "0 8 * * 1-5", "Europe/Berlin"), (flow.Trigger.Kind, flow.Trigger.Cron, flow.Trigger.TimeZone));
+        Assert.Equal(["agent", "notify", "email", "webhook"], flow.Steps.Select(s => s.Kind));
+        var ask = flow.Steps[0];
+        Assert.Equal(("What is new?", "qwen", "low", true), (ask.Prompt, ask.Model, ask.Thinking, ask.SameChat));
+        Assert.Equal(["web"], ask.Tools);
+        Assert.Equal("sealed-by-app-data-key", flow.Steps[3].Secret);
+        Assert.Contains("{{answer.text}}", flow.Steps[3].Text, StringComparison.Ordinal);
+        // Its owner sees only that the webhook is set.
+        Assert.Equal(Llm.Api.Studio.FlowModel.Sealed, Llm.Api.Studio.FlowModel.Shown(d.Flow)!["steps"]![3]!["secret"]!.GetValue<string>());
+
+        var h = await db.Workflows.AsNoTracking().SingleAsync(w => w.Id == review);
+        var hf = Llm.Api.Studio.FlowModel.Read(h.Flow);
+        Assert.Equal((hash, false, (DateTimeOffset?)null), (h.SecretHash, h.Enabled, h.NextRunAt));
+        Assert.Equal("gitlab", hf.Trigger.Kind);
+        Assert.Equal(["merge_request"], hf.Trigger.Events!);
+        Assert.Equal(["review", "notify", "comment"], hf.Steps.Select(s => s.Kind));
+        Assert.Equal(("review-repository", "g/p", "main"), (hf.Steps[0].Review, hf.Steps[0].Repositories, hf.Steps[0].Ref));
+        Assert.Null(Llm.Api.Studio.FlowModel.Check(hf));
+        Assert.Null(Llm.Api.Studio.FlowModel.Check(flow));
+
+        // Their runs: the one done with its chat and what it delivered; the one going when it was upgraded, ended.
+        var runs = await db.WorkflowRuns.AsNoTracking().Where(r => r.Id == done || r.Id == going).ToDictionaryAsync(r => r.Id);
+        Assert.Equal((digest, "schedule", "done"), (runs[done].WorkflowId, runs[done].Trigger, runs[done].Status));
+        Assert.Equal((review, "manual", "failed", person), (runs[going].WorkflowId, runs[going].Trigger, runs[going].Status, runs[going].ById!.Value));
+        Assert.Contains("upgraded", runs[going].Error, StringComparison.Ordinal);
+        Assert.NotNull(runs[going].FinishedAt);
+        var steps = await db.WorkflowRunSteps.AsNoTracking().Where(s => s.RunId == done || s.RunId == going).ToDictionaryAsync(s => s.RunId);
+        Assert.Equal(($"/chat/{chat}", "email sent", "answer"), (steps[done].Link, steps[done].Output, steps[done].StepId));
+        Assert.Equal("/code/reviews/1", steps[going].Link);
+        Assert.Equal(digest, (await db.Conversations.AsNoTracking().SingleAsync(c => c.Id == chat)).WorkflowId);
+
+        var template = await db.AutomationTemplates.AsNoTracking().SingleAsync(t => t.ServerId == server);
+        Assert.Equal(("Feed", "Feed them", "0 9 * * *"), (template.Name, template.Prompt, template.Cron));
+        Assert.Equal(["feature.chat", "feature.studio"], (await db.AccessRoles.AsNoTracking().SingleAsync(r => r.Id == role)).Permissions);
+        Assert.Equal("feature.studio", (await db.AccessRules.AsNoTracking().SingleAsync(r => r.Id == deny)).Resource);
     }
 }

@@ -144,9 +144,10 @@ tasks:
   `action`, and the detector's fields: `patterns`, `kinds`, `topics`,
   `domains`...). They come **in monitor mode**: an admin makes them bite.
 - **A toolset**: a named set of tools people switch a chat to.
-- **A scheduled task**: offered under **Tasks → From plugins** to the people
-  who may use the plugin's tool. **Add** opens a new task with its name,
-  question, schedule and tools filled in; once added it is theirs (runs as
+- **A scheduled task**: offered as a template in **Automations** (marked
+  **From** the plugin) to the people who may use the plugin's tool: a
+  workflow on its schedule that asks its question with the plugin's tool and
+  tells the answer under the bell. Once started from, it is theirs (runs as
   them, changed or removed as any of theirs) and stays if the plugin goes.
 ## Making a plugin
 

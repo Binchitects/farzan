@@ -15,6 +15,36 @@ Sections used:
   makes weaker (gone, a clause or a check dropped, fewer tests), by its id,
   and why ([compliance](docs/compliance/README.md#when-a-change-weakens-a-control))
 
+## v8.2.0 (unreleased, branch v8.2)
+
+### :sparkles: New features & Enhancements
+
+- **Scheduled tasks are Automations.** One place for work that runs by
+  itself: a workflow on a schedule (chosen in words, or as cron), a webhook
+  or GitLab's events. Its agent step can carry on one chat run after run and
+  choose its thinking; a new **Post to a chat channel** step posts to Slack,
+  Teams, Mattermost or Discord (its address kept encrypted, only to the hosts
+  an admin allows); plugins' tasks are templates to start from. The limits
+  tasks had hold for scheduled workflows (Settings → Automations: schedules
+  on, at most so many a person, no more often than Most often).
+
+### :boom: Breaking changes & Deprecations
+
+- **Scheduled tasks, their page (`/tasks`) and `/api/tasks` are gone.** The
+  upgrade makes each task the workflow of the same id with its runs, chats,
+  schedule or events, webhook (still encrypted), email and GitLab comment;
+  `/api/hooks/<id>` still takes its events with its secret, and Code
+  Arena's `/api/code-arena/scheduled` lists and runs the person's workflows
+  that run by themselves, as it listed tasks. Events waiting for a task's run
+  at the upgrade are not run; runs of one workflow no longer wait for each
+  other. A workflow's agent step with no tools chosen now has those on in a
+  new chat, as a task had (it had none).
+- **`feature.tasks` is `feature.studio`** (Automations): a role that held it
+  holds Automations, and whoever was denied it is denied Automations.
+  `tasks.manage.all` is gone (nothing used it). On an install with the
+  `agents` feature off, the scheduled tasks become workflows that run once
+  it is turned on.
+
 ## v8.1.0 (unreleased, branch v8.1)
 
 Work that goes on by itself and is counted as it goes. An answer cut at its

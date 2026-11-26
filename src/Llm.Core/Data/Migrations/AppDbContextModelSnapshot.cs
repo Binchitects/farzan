@@ -761,6 +761,54 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("attachment_pages", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.AutomationTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Cron")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Plugin")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Prompt")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<List<string>>("Tools")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServerId");
+
+                    b.HasIndex("Plugin", "Name")
+                        .IsUnique();
+
+                    b.ToTable("automation_templates", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.BotThread", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1389,9 +1437,6 @@ namespace Llm.Core.Data.Migrations
                     b.Property<int>("ReflectedSequence")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("ScheduledTaskId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("SystemPrompt")
                         .HasMaxLength(20000)
                         .HasColumnType("character varying(20000)");
@@ -1427,6 +1472,9 @@ namespace Llm.Core.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("WorkProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("WorkflowId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -2625,176 +2673,6 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("safeguard_marks", (string)null);
                 });
 
-            modelBuilder.Entity("Llm.Core.Chat.ScheduledRun", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ConversationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Delivery")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("Error")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<DateTimeOffset?>("FinishedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Link")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<bool>("Manual")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset>("StartedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<Guid>("TaskId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TaskId", "StartedAt");
-
-                    b.ToTable("scheduled_runs", (string)null);
-                });
-
-            modelBuilder.Entity("Llm.Core.Chat.ScheduledTask", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasDefaultValue("ask");
-
-                    b.Property<Guid?>("ConversationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Cron")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<bool>("Cross")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("Email")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("boolean");
-
-                    b.PrimitiveCollection<List<string>>("Events")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text[]")
-                        .HasDefaultValueSql("'{}'::text[]");
-
-                    b.Property<DateTimeOffset?>("LastRunAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Model")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTimeOffset?>("NextRunAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Prompt")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Ref")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<bool>("ReplyInGitLab")
-                        .HasColumnType("boolean");
-
-                    b.PrimitiveCollection<List<string>>("Repositories")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text[]")
-                        .HasDefaultValueSql("'{}'::text[]");
-
-                    b.Property<string>("RunningOn")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTimeOffset?>("RunningSeenAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("SameChat")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Thinking")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("TimeZone")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.PrimitiveCollection<List<string>>("Tools")
-                        .HasColumnType("text[]");
-
-                    b.Property<string>("Trigger")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("schedule");
-
-                    b.Property<string>("TriggerSecretHash")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("WebhookEncrypted")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NextRunAt");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("scheduled_tasks", (string)null);
-                });
-
             modelBuilder.Entity("Llm.Core.Chat.Skill", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2953,88 +2831,6 @@ namespace Llm.Core.Data.Migrations
                     b.HasIndex("UserId", "Proposed");
 
                     b.ToTable("skill_changes", (string)null);
-                });
-
-            modelBuilder.Entity("Llm.Core.Chat.TaskEvent", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ReplyId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("ReplyKind")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<long?>("ReplyProject")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("TaskId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Text")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TaskId", "CreatedAt");
-
-                    b.ToTable("task_events", (string)null);
-                });
-
-            modelBuilder.Entity("Llm.Core.Chat.TaskTemplate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Cron")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Plugin")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Prompt")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("ServerId")
-                        .HasColumnType("uuid");
-
-                    b.PrimitiveCollection<List<string>>("Tools")
-                        .IsRequired()
-                        .HasColumnType("text[]");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ServerId");
-
-                    b.HasIndex("Plugin", "Name")
-                        .IsUnique();
-
-                    b.ToTable("task_templates", (string)null);
                 });
 
             modelBuilder.Entity("Llm.Core.Chat.ToolCall", b =>
@@ -8769,6 +8565,15 @@ namespace Llm.Core.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.AutomationTemplate", b =>
+                {
+                    b.HasOne("Llm.Core.Chat.McpServer", null)
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.BotThread", b =>
                 {
                     b.HasOne("Llm.Core.Chat.Conversation", null)
@@ -9193,24 +8998,6 @@ namespace Llm.Core.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Llm.Core.Chat.ScheduledRun", b =>
-                {
-                    b.HasOne("Llm.Core.Chat.ScheduledTask", null)
-                        .WithMany()
-                        .HasForeignKey("TaskId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Llm.Core.Chat.ScheduledTask", b =>
-                {
-                    b.HasOne("Llm.Core.Identity.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Llm.Core.Chat.Skill", b =>
                 {
                     b.HasOne("Llm.Core.Chat.McpServer", null)
@@ -9235,24 +9022,6 @@ namespace Llm.Core.Data.Migrations
                     b.HasOne("Llm.Core.Identity.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Llm.Core.Chat.TaskEvent", b =>
-                {
-                    b.HasOne("Llm.Core.Chat.ScheduledTask", null)
-                        .WithMany()
-                        .HasForeignKey("TaskId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Llm.Core.Chat.TaskTemplate", b =>
-                {
-                    b.HasOne("Llm.Core.Chat.McpServer", null)
-                        .WithMany()
-                        .HasForeignKey("ServerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -12,7 +12,7 @@ public sealed record ReviewSeen(bool Done, bool Failed, string? Text);
 public sealed record StartedReview(string Path, Func<CancellationToken, Task<ReviewSeen>> Look);
 
 /// <summary>
-/// Starts the reviews scheduled tasks and Automations flows ask for, as their owner (who needs review.run), and reads how
+/// Starts the reviews Automations' flows ask for, as their owner (who needs review.run), and reads how
 /// they end: a merge request, a whole repository, several (looked at across), one repository's security or several's.
 /// No limit of a person's own reviews at once holds them back, as automatic reviews; a review of several waits for the
 /// person's running one.

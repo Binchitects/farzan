@@ -84,7 +84,7 @@ export function PushDevices() {
     <Card>
       <CardHeader>
         <CardTitle>Push notifications</CardTitle>
-        <CardDescription>The bell&apos;s news on your devices, even with the app closed: answers that finished while you were away, scheduled tasks, your credit.</CardDescription>
+        <CardDescription>The bell&apos;s news on your devices, even with the app closed: answers that finished while you were away, your workflows&apos; news, your credit.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
         {push.isPending ? (

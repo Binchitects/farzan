@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Llm.Api.Knowledge;
 
 /// <summary>
-/// A GitLab project, or every project of a group, read with the GitLab bot's token (Settings → Scheduled tasks):
+/// A GitLab project, or every project of a group, read with the GitLab bot's token (Settings → Automations):
 /// its wiki pages and its issues (with their comments; never confidential ones). Who may read them is the
 /// project's members (Guest and up, inherited too, active), matched to people by username as code-intel does:
 /// a person's user name here is their GitLab username. A project whose last activity has not moved since
@@ -27,7 +27,7 @@ public sealed class GitLabConnector(Schedules.GitLabBot bot, AppDbContext db, Ti
     public string Kind => "gitlab";
 
     public string? Check(KnowledgeSource source) =>
-        !bot.Ready ? "Set the GitLab bot first: Settings → Scheduled tasks, its address and token (Reporter in the projects)."
+        !bot.Ready ? "Set the GitLab bot first: Settings → Automations, its address and token (Reporter in the projects)."
         : string.IsNullOrWhiteSpace(source.Location) ? "Say which GitLab project or group, by its path (group/project)."
         : !source.Wiki && !source.Issues ? "Choose the wiki, the issues, or both."
         : null;

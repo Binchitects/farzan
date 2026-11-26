@@ -52,7 +52,6 @@ public static class Permissions
     public const string ExportPerson = "export.person";
     public const string StorageManage = "storage.manage";
     public const string BotsManage = "bots.manage";
-    public const string TasksManageAll = "tasks.manage.all";
     public const string CodeIntelRead = "code-intel.read";
     public const string CodeIntelManage = "code-intel.manage";
     public const string CodeIntelExplore = "code-intel.explore";
@@ -141,7 +140,6 @@ public static class Permissions
     public const string Speech = "feature.speech";
     public const string RoomsCreate = "feature.rooms.create";
     public const string ShareLinks = "feature.share_links";
-    public const string Tasks = "feature.tasks";
     public const string AssistantsShare = "feature.assistants.share";
     public const string Memory = "feature.memory";
     public const string CodeRead = "code.read";
@@ -218,7 +216,6 @@ public static class Permissions
         new(ExportPerson, "Data", "Export a person's data (eDiscovery).", true),
         new(StorageManage, "Data", "See and clean up stored files.", true),
         new(BotsManage, "Integrations", "Connect the chat bots (Slack, Teams, mail).", true),
-        new(TasksManageAll, "Integrations", "See and change everyone's scheduled tasks.", true),
         new(CodeIntelRead, $"{Brand.CodeIntel}", $"See {Brand.CodeIntel}'s repositories, indexing and health.", true),
         new(CodeIntelManage, $"{Brand.CodeIntel}", "Choose repositories, index, set packs and the webhook.", true),
         new(CodeIntelExplore, $"{Brand.CodeIntel}", "Explore the code index across repositories.", true),
@@ -276,7 +273,7 @@ public static class Permissions
         new(SettingsModels, "Settings", "Change the model, engine, prices and speech settings.", true, SettingsManage),
         new(SettingsTools, "Settings", "Change Python, the web, plugins' and Arena MCP's settings.", true, SettingsManage),
         new(SettingsSafeguards, "Settings", "Change the safeguards.", true, SettingsManage),
-        new(SettingsIntegrations, "Settings", "Change email, notifications, scheduled tasks and chat bots' settings.", true, SettingsManage),
+        new(SettingsIntegrations, "Settings", "Change email, notifications, Automations and chat bots' settings.", true, SettingsManage),
         new(SettingsData, "Settings", "Change retention, storage and company knowledge settings.", true, SettingsManage),
         new(SettingsGateway, "Settings", "Change the API keys' settings.", true, SettingsManage),
         new(SettingsCodeIntel, "Settings", $"Change {Brand.CodeIntel}'s settings.", true, SettingsManage),
@@ -303,7 +300,6 @@ public static class Permissions
         new(Speech, "Chat and knowledge", "Speak and hear answers read aloud.", false),
         new(RoomsCreate, "Sharing and rooms", "Make rooms.", false),
         new(ShareLinks, "Sharing and rooms", "Share chats by link.", false),
-        new(Tasks, "Agents and keys", "Schedule tasks.", false),
         new(AssistantsShare, "Sharing and rooms", "Share assistants and prompts with groups.", false),
         new(Memory, "Chat and knowledge", "Let the chat remember things.", false),
         new(CodeRead, "Code", $"Ask about the company's code ({Brand.CodeIntel}) and use the code assistant.", false),
@@ -317,7 +313,7 @@ public static class Permissions
         new(Apps, "Making", "Make apps with the chat and open them (opening them to others: feature.apps.share).", false),
         new(Data, "Making", "Ask the databases an admin connected, and keep boards of charts.", false),
         new(Decks, "Making", "Make slide decks with the model, and download them.", false),
-        new(Studio, "Agents and keys", "Build agent workflows in Automations that run as oneself on a trigger.", false),
+        new(Studio, "Agents and keys", "Build workflows in Automations that run as oneself: by hand, on a schedule, a webhook, GitLab, a room's message or a form.", false),
         new(FixIt, "Agents and keys", "Let an agent change code and open merge requests as oneself (Fix it), with one's own GitLab token.", false),
         new(Plans, "Agents and keys", "Make and keep plans.", false),
         new(Research, "Chat and knowledge", "Run deep research.", false),
@@ -426,8 +422,8 @@ public static class RoleTemplates
             [Permissions.PeopleRead, Permissions.PeopleLimits, Permissions.CreditsManage, Permissions.BillingRead, Permissions.UsageRead]),
         new("knowledge-curator", "Knowledge curator", "Company knowledge and the databases people ask: their sources and who may read them.",
             [Permissions.KnowledgeManage, Permissions.DataManage]),
-        new("integrations-admin", "Integrations admin", "Chat bots, MCP servers, plugins, everyone's scheduled tasks and their settings.",
-            [Permissions.BotsManage, Permissions.McpServersManage, Permissions.PluginsManage, Permissions.TasksManageAll, Permissions.SettingsIntegrations, Permissions.SettingsTools]),
+        new("integrations-admin", "Integrations admin", "Chat bots, MCP servers, plugins and their settings.",
+            [Permissions.BotsManage, Permissions.McpServersManage, Permissions.PluginsManage, Permissions.SettingsIntegrations, Permissions.SettingsTools]),
         new("security-reviewer", "Security reviewer", "Every project's reviews and automatic reviews, the safeguards' log and the audit log.",
             [Permissions.ReviewsAdmin, Permissions.ReviewPolicy, Permissions.SafeguardsRead, Permissions.AuditRead]),
         new("data-steward", "Data steward", "People's data requests, retention, legal holds, eDiscovery exports and stored files.",

@@ -21,7 +21,7 @@ public static class SettingsCatalog
     private const string Tools = "Python and web";
     private const string PluginsGroup = "Plugins";
     private const string ArenaMcp = "Arena MCP";
-    private const string Schedules = "Scheduled tasks";
+    private const string Schedules = "Automations";
     private const string Mail = "Email";
     private const string NotificationsGroup = "Notifications";
     private const string AuditGroup = "Audit log";
@@ -363,15 +363,15 @@ public static class SettingsCatalog
             { Unit = "MB", Min = 1, Max = 100_000_000 },
         new("Storage:MediaDays", StorageGroup, "Old generated media", "The clean-up of old pictures, videos and speech the tools made (Admin → Storage) takes them as old after this many days, unless you choose another age there. Nothing is deleted by itself.", SettingType.WholeNumber, SettingScope.Live)
             { Default = "90", Unit = "days", Min = 1, Max = 36500, Optional = false },
-        new("Schedules:Enabled", Schedules, "Scheduled tasks", "People may set questions to be asked on a schedule (a daily digest, a weekly report), answered as them, with their model, tools and credit.", SettingType.Boolean, SettingScope.Live)
+        new("Schedules:Enabled", Schedules, "Schedules", "Workflows may run on a schedule (a daily digest, a weekly report), as their owners, with their model, tools and credit. Off: no schedule runs, and none can be set.", SettingType.Boolean, SettingScope.Live)
             { Default = "true" },
-        new("Schedules:PerPerson", Schedules, "Tasks per person", "How many scheduled tasks one person may have.", SettingType.WholeNumber, SettingScope.Live)
+        new("Schedules:PerPerson", Schedules, "Scheduled workflows per person", "How many workflows on a schedule one person may have.", SettingType.WholeNumber, SettingScope.Live)
             { Default = "10", Min = 1, Max = 100, Optional = false },
-        new("Schedules:MinInterval", Schedules, "Most often", "A task may not run more often than this, so nobody fills the model's day.", SettingType.Duration, SettingScope.Live)
+        new("Schedules:MinInterval", Schedules, "Most often", "A schedule may not run a workflow more often than this, so nobody fills the model's day.", SettingType.Duration, SettingScope.Live)
             { Default = "00:15:00", Unit = "minutes", Min = 1, Max = 1440, Optional = false },
-        new("GitLab:Url", Schedules, "GitLab address for tasks", $"Where tasks run by GitLab's events read details (a merge request's changes, a failed job's log) and comment. Empty: {Brand.CodeIntel}'s (GITLAB_URL).", SettingType.Url, SettingScope.Live),
-        new("GitLab:BotToken", Schedules, "GitLab bot token", $"A bot account's token (scope api, Reporter in the projects): reads what an event leaves out and writes the comments of tasks that reply in GitLab. Never {Brand.CodeIntel}'s read-only token; each comment is audited.", SettingType.Secret, SettingScope.Live),
-        new("Schedules:WebhookHosts", Schedules, "Webhook hosts", "Hosts a task's answer may be posted to, comma separated; *.example.com for a domain and its subdomains. Add your Mattermost or chat server here. Empty: no webhooks.", SettingType.Text, SettingScope.Live)
+        new("GitLab:Url", Schedules, "GitLab address for workflows", $"Where workflows run by GitLab's events read details (a merge request's changes, a failed job's log) and comment. Empty: {Brand.CodeIntel}'s (GITLAB_URL).", SettingType.Url, SettingScope.Live),
+        new("GitLab:BotToken", Schedules, "GitLab bot token", $"A bot account's token (scope api, Reporter in the projects): reads what an event leaves out and writes the comments of workflows that answer in GitLab. Never {Brand.CodeIntel}'s read-only token; each comment is audited.", SettingType.Secret, SettingScope.Live),
+        new("Schedules:WebhookHosts", Schedules, "Webhook hosts", "Hosts a workflow's webhook step may post to, comma separated; *.example.com for a domain and its subdomains. Add your Mattermost or chat server here. Empty: no webhooks.", SettingType.Text, SettingScope.Live)
             { Default = "hooks.slack.com, *.webhook.office.com, *.logic.azure.com, discord.com" },
         new("Knowledge:SyncEvery", Knowledge, "Read sources again every", "How often each knowledge source (Admin → Knowledge) is read again. Only what changed is embedded again; a GitLab project with no new activity is not read at all. Members of GitLab projects are read every 15 minutes whatever this is.", SettingType.Duration, SettingScope.Live)
             { Default = "01:00:00", Unit = "minutes", Min = 15, Max = 10080, Optional = false },
@@ -388,7 +388,7 @@ public static class SettingsCatalog
             { Default = "search_query: ", Max = 100, Exact = true },
         new("Knowledge:PgVector", Knowledge, "Compare with pgvector", "Passages are compared in Postgres with pgvector, which the stack's Postgres has. Off for a company Postgres without the extension: plain SQL, slower but the same answers.", SettingType.Boolean, SettingScope.Live)
             { Default = "true" },
-        new("Mail:Host", Mail, "SMTP server", "The mail server the app sends email through (scheduled tasks' answers). Empty: no email.", SettingType.Text, SettingScope.Live),
+        new("Mail:Host", Mail, "SMTP server", "The mail server the app sends email through (workflows' email steps). Empty: no email.", SettingType.Text, SettingScope.Live),
         new("Mail:Port", Mail, "SMTP port", "587 for STARTTLS, 25 for plain SMTP inside the network.", SettingType.WholeNumber, SettingScope.Live)
             { Default = "587", Min = 1, Max = 65535, Optional = false },
         new("Mail:StartTls", Mail, "Use STARTTLS", "Upgrade the connection to TLS before signing in. Off only for a relay inside the network.", SettingType.Boolean, SettingScope.Live)
@@ -417,7 +417,7 @@ public static class SettingsCatalog
         new("Compliance:DisableUnused", ComplianceGroup, "Disable unused accounts", "Every day, accounts unused that long are disabled (audited, reason \"unused\"); the first admin never is. An admin enables one again under Admin → People.", SettingType.Boolean, SettingScope.Live)
             { Default = "false" },
 
-        new("Notifications:AlertsWebhook", NotificationsGroup, "Alerts webhook", "The admins' news (alerts that start firing, people who used up their credit) is posted here too, once each: a Slack, Teams or Mattermost incoming webhook. Its host must be one of the webhook hosts (Scheduled tasks). Empty: none.", SettingType.Secret, SettingScope.Live)
+        new("Notifications:AlertsWebhook", NotificationsGroup, "Alerts webhook", "The admins' news (alerts that start firing, people who used up their credit) is posted here too, once each: a Slack, Teams or Mattermost incoming webhook. Its host must be one of the webhook hosts (Automations). Empty: none.", SettingType.Secret, SettingScope.Live)
             { Pattern = @"https://\S+", PatternHelp = "an https:// webhook URL" },
 
         // ---------------------------------------------------------------- chat bots and email in, live --
@@ -466,7 +466,7 @@ public static class SettingsCatalog
             { Default = "*/15 * * * *" },
         new("CodeIntelIndex:TimeZone", CodeIntel, "Time zone of the index schedule", "An IANA name such as Europe/Berlin.", SettingType.Text, SettingScope.Live)
             { Default = "UTC", Pattern = @"^(UTC|[A-Za-z]+(/[A-Za-z0-9_+\-]+){1,2})$", PatternHelp = "An IANA time zone, e.g. Europe/Berlin, or UTC." },
-        new("Tls:CompanyCa", CodeIntel, "GitLab's CA (a company CA)", $"When GitLab's certificate comes from your company's own CA (or is self-signed): that CA's certificate (PEM, -----BEGIN CERTIFICATE-----; a bundle for an issuing CA with its root). Trusted besides the public CAs by everything that reaches GitLab: sign-in with it, people's GitLab tokens and apps linked, Fix it, scheduled tasks, knowledge sources, {Brand.CodeIntel}'s index and reviews, and Code's workspaces (git clone and push). A certificate must still be for GitLab's name and within its dates. At install: GITLAB_CA_FILE.", SettingType.Text, SettingScope.Live)
+        new("Tls:CompanyCa", CodeIntel, "GitLab's CA (a company CA)", $"When GitLab's certificate comes from your company's own CA (or is self-signed): that CA's certificate (PEM, -----BEGIN CERTIFICATE-----; a bundle for an issuing CA with its root). Trusted besides the public CAs by everything that reaches GitLab: sign-in with it, people's GitLab tokens and apps linked, Fix it, Automations, knowledge sources, {Brand.CodeIntel}'s index and reviews, and Code's workspaces (git clone and push). A certificate must still be for GitLab's name and within its dates. At install: GITLAB_CA_FILE.", SettingType.Text, SettingScope.Live)
             { Max = global::Llm.Api.Chat.Tools.ServerTls.MaxCaChars, Lines = 6 },
         new("Chat:GitlabLinkUrl", CodeIntel, "GitLab address for links", $"Where people's browsers open GitLab, for the files and lines in {Brand.CodeIntel}'s answers. Empty: the GitLab address above. Set it when {Brand.CodeIntel} reaches GitLab by an internal name.", SettingType.Url, SettingScope.Live)
             { Pattern = @"https?://\S+", PatternHelp = "http(s)://…" },
@@ -580,7 +580,7 @@ public static class SettingsCatalog
             { Default = "00:00:15", Unit = "seconds", Min = 1, Max = 600, Optional = false, Impact = "Prometheus's own interval is changed in its file, then arenactl restart prometheus." },
 
         new("Replicas:Enabled", ReplicasGroup, "Replicas work together", "Several app replicas on one database (scale.yml, the Helm chart) choose one to lead the once-only work and tell each other of saved settings and answers. Off only for a single replica behind a database pooler that keeps no sessions (PgBouncer in transaction mode), which breaks the lead and the signals.", SettingType.Boolean, SettingScope.AppRestart)
-            { Default = "true", Dangerous = true, Impact = "Off with two or more replicas, each leads: scheduled tasks run twice and models load twice." },
+            { Default = "true", Dangerous = true, Impact = "Off with two or more replicas, each leads: models load twice and models load twice." },
         new("Replicas:Renew", ReplicasGroup, "Check the lead every", "How often a replica tries for the lead, or checks it still has it, and counts the others: a replica that stops is replaced within this.", SettingType.Duration, SettingScope.Live)
             { Default = "00:00:05", Unit = "seconds", Min = 1, Max = 300, Optional = false },
         new("Replicas:AskTimeout", ReplicasGroup, "Wait for another replica", "How long a stop, a yes to a tool call or \"answer now\" sent to one replica waits for the replica writing that answer.", SettingType.Duration, SettingScope.Live)

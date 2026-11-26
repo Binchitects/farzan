@@ -42,7 +42,7 @@ public sealed class V62MigrationTests(AppFixture app)
         Assert.False(await db.RoomInvites.AnyAsync());
         Assert.False(await db.ReviewRules.AnyAsync());
         Assert.False(await db.PluginGroupSettings.AnyAsync());
-        Assert.False(await db.TaskTemplates.AnyAsync());
+        Assert.False(await db.AutomationTemplates.AnyAsync());
 
         // An automatic review of the project, and one of its reviews, side by side with what was there.
         db.ReviewRules.Add(new Llm.Core.Code.ReviewRule { UserId = user, Project = "g/app", RoomId = room });

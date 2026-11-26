@@ -352,7 +352,7 @@ and signals need a session of their own (a transaction pooler breaks them).
 ## Scale out
 
 Several app replicas share the database; one leads and runs the once-only
-background work (the scheduled tasks' clock, the engine's models, downloads,
+background work (the engine's models, downloads,
 the directory check), and the others take over within seconds if it stops
 ([architecture.md](architecture.md#9-several-app-replicas)). With compose, on one
 host:
@@ -382,7 +382,7 @@ What to know:
   (or asks it), so it never sends a turn to a slot another replica (or an API
   key) is using; a conversation whose turns reach both replicas may lose its
   slot now and then (its turn is read whole once).
-- A scheduled task runs once, whichever replica its event reaches.
+- A scheduled workflow runs once, whichever replicas look at the clock: the one that moves its next time on runs it.
 
 **More GPU servers**: add them under **Admin → Models → Other GPU servers**
 with the same model name. The gateway sends each request to the least busy
@@ -819,7 +819,7 @@ ways, both kept:
 
 Everything that reaches GitLab then trusts it besides the public CAs: a
 person signing in with GitLab or the company's provider, linking their
-GitLab token and apps (Fix it, Code, scheduled tasks, knowledge
+GitLab token and apps (Fix it, Code, Automations, knowledge
 sources), every other HTTP client the app makes without a check of its own,
 Farzan Graph's API client and its git clones (the app writes the CA to
 `company-ca.pem` beside the directory file, which Farzan Graph reads again whenever

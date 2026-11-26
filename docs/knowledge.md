@@ -20,7 +20,7 @@ first part ([below](#long-files-and-assistants)).
 - **Postgres with pgvector**: the stack's image has it, and the app turns the
   extension on by itself. On a Postgres without it, the comparison runs in
   plain SQL: the same answers, slower.
-- For GitLab sources, **the GitLab bot** (Settings → Scheduled tasks: GitLab
+- For GitLab sources, **the GitLab bot** (Settings → Automations: GitLab
   address and bot token). Its token needs `api` (or `read_api`) and Reporter
   in the projects. It is never Farzan Graph's token.
 - For Confluence and SharePoint sources, **APP_DATA_KEY**: their token or

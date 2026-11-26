@@ -145,7 +145,7 @@ What each person may do is decided in one place, from three things:
   `feature.code_arena` refuses Code Arena; `feature.web_search` takes the web
   and research tools; `feature.pictures`, `feature.video` and
   `feature.speech` take those tools, the speech routes and those models from
-  their API keys; `feature.memory`, `feature.tasks`, `feature.share_links`
+  their API keys; `feature.memory`, `feature.share_links`
   and `feature.assistants.share` stop new memories, tasks, share links and
   sharing assistants (Code Arena then leaves memory out: no Memory view,
   `/memory` says it is off, and the model is not offered `remember` or
@@ -154,7 +154,7 @@ What each person may do is decided in one place, from three things:
 - **What a person may not use is hidden**, not only refused. Their pages
   leave the sidebar, the command palette and Home (Chat, Memory, Meetings,
   Plans, Data, Decks, Media, Automations, Code without any
-  of `code.studio`, `code.read` and `review.run`, Scheduled tasks, Connect
+  of `code.studio`, `code.read` and `review.run`, Connect
   your tools); a link to one says it is not among what they may use, and
   where to ask. The chat leaves out Compare, Attach and the voice message,
   Sketch and screen sharing (they are files), Talk, the model picker,
@@ -1532,7 +1532,7 @@ deleted. **End the hold** erases the chats they deleted meanwhile
 (`person.legal_hold_end`); retention applies again from the next run.
 
 **Exports.** **Export their data** (on the person's page) downloads a zip for
-eDiscovery: their profile, groups and preferences, assistants, scheduled tasks
+eDiscovery: their profile, groups and preferences, assistants, workflows
 (never a webhook's address), every chat with every branch as JSON and the
 branch on screen as Markdown, and every file (the file itself and the text the
 model read). The chats they deleted under hold are in it, marked with
@@ -2037,7 +2037,7 @@ caller is told it:
   stopped says *Stopped by an admin:* and the reason under what it wrote, or
   alone when it was stopped before its first word (its tools starting, its
   chat compacting). Each keeps that when the chat is read again, and a
-  scheduled task's run says it too. When no page was open, the bell says so.
+  workflow's run says it too. When no page was open, the bell says so.
 - **An API request** taken out gets HTTP 403 `removed_by_admin` with the
   reason, and no `Retry-After`: the OpenAI and Anthropic clients ask again
   at once after a 429 or a 5xx, which would put it back in the line. One

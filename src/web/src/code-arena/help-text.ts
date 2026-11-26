@@ -21,7 +21,7 @@ export const about = 'An editor around the coding agent, for this folder: its fi
 export const parts: Record<Part, PartHelp> = {
   automation: {
     name: 'Automation',
-    text: "What runs on its own. **Schedules here**: a prompt Code Arena runs in a folder every so often (every 30 minutes to every week, a day's at a time of day), as a session of its own in the mode chosen (**reads only** unless you let it edit), its sessions synced to Arena as any. They run while this IDE is open, and with it closed once `code-arena schedule install` has set up an OS timer (systemd, launchd or Task Scheduler); ▶ runs one now, the switch turns one off. **Agents in Arena**: your Automations agents and those shared with you, each run here with a text, how it goes shown step by step. **Scheduled tasks in Arena**: yours, run now with ▶; their answers come to you in Arena. In the terminal: /schedule and /agents.",
+    text: "What runs on its own. **Schedules here**: a prompt Code Arena runs in a folder every so often (every 30 minutes to every week, a day's at a time of day), as a session of its own in the mode chosen (**reads only** unless you let it edit), its sessions synced to Arena as any. They run while this IDE is open, and with it closed once `code-arena schedule install` has set up an OS timer (systemd, launchd or Task Scheduler); ▶ runs one now, the switch turns one off. **Agents in Arena**: your Automations agents and those shared with you, each run here with a text, how it goes shown step by step. **Scheduled in Arena**: your Automations workflows that run by themselves (a schedule, a webhook, GitLab), run now with ▶; their answers come to you in Arena. In the terminal: /schedule and /agents.",
     manual: 'automation',
   },
   projects: {
@@ -319,5 +319,5 @@ export const regions: Record<string, Part> = {
   Automation: 'automation',
   'Schedules here': 'automation',
   'Agents in Arena': 'automation',
-  'Scheduled tasks in Arena': 'automation',
+  'Scheduled in Arena': 'automation',
 }

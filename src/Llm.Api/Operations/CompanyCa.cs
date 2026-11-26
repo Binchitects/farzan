@@ -22,7 +22,7 @@ public sealed class TlsOptions
 
 /// <summary>
 /// The company CA the whole stack trusts besides the public ones: every HTTP client the app makes (sign-in with the
-/// company's provider, a person's GitLab token linked and used, Fix it, scheduled tasks, knowledge sources), and
+/// company's provider, a person's GitLab token linked and used, Fix it, Automations, knowledge sources), and
 /// through the file it writes beside the directory (<see cref="SharedFile"/>), code-intel's API client and git. Code
 /// Studio's workspaces get it with each start. A certificate the system trusts stays trusted; one that is not is
 /// trusted only when its chain leads to this CA and its name and dates are right.

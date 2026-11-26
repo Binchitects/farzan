@@ -29,7 +29,7 @@ public static partial class ChatEndpoints
         // The database takes times in UTC.
         before = before?.ToUniversalTime();
         var sent = await db.ChatMessages.AsNoTracking()
-            .Join(db.Conversations.Where(c => c.UserId == me.Id && c.ScheduledTaskId == null), m => m.ConversationId, c => c.Id, (m, c) => new { m, Since = c.CreatedAt })
+            .Join(db.Conversations.Where(c => c.UserId == me.Id && c.WorkflowId == null), m => m.ConversationId, c => c.Id, (m, c) => new { m, Since = c.CreatedAt })
             // A copy keeps its original's time, from before the fork was made.
             .Where(x => x.m.CreatedAt >= x.Since)
             .Select(x => x.m)
