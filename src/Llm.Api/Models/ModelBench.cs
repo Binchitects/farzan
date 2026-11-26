@@ -21,7 +21,7 @@ public sealed record BenchTest(string Id, string Title, string Skill, Func<int, 
     JsonArray? Tools = null, int MaxTokens = 512);
 
 /// <summary>
-/// The model test bench: a model's capability (a set of tests, each checked by a rule, no judge model: arithmetic, following
+/// The model test bench, for every model: a chat model's (of this stack, another server or the gateway's) capability (a set of tests, each checked by a rule, no judge model: arithmetic, following
 /// an instruction, logic, JSON, a tool call, a fact found in a long text, Persian, code) and its capacity (answers at once,
 /// 1, 2, 4… raised until more do not make more, or answers fail or wait too long: the tokens a second all together and each
 /// answer's, and the wait for the first token). Through the app's own gateway as the admin who runs it, as any request.
@@ -127,10 +127,19 @@ public sealed partial class ModelBench(IServiceScopeFactory scopes, TimeProvider
         {
             try
             {
-                await (kind == ModelBenchRun.Capacity ? CapacityAsync(run.Id, model, by.Email!, Math.Clamp(most, 1, MostAtOnce)) : CapabilityAsync(run.Id, model, by.Email!));
+                // A picture, video or speech model by what it does; any other (chat, of any source) by its answers.
+                MediaControl.Model? media;
+                await using (var look = scopes.CreateAsyncScope())
+                {
+                    media = look.ServiceProvider.GetRequiredService<MediaControl>().Find(model);
+                }
+                await (media is not null
+                    ? kind == ModelBenchRun.Capacity ? MediaCapacityAsync(run.Id, media, by.Email!) : MediaCapabilityAsync(run.Id, media, by.Email!)
+                    : kind == ModelBenchRun.Capacity ? CapacityAsync(run.Id, model, by.Email!, Math.Clamp(most, 1, MostAtOnce)) : CapabilityAsync(run.Id, model, by.Email!));
                 await SaveAsync(run.Id, null, ModelBenchRun.Done, null);
             }
-            catch (Exception e) when (e is ChatGatewayException or HttpRequestException or InvalidOperationException or DbUpdateException or TaskCanceledException)
+            catch (Exception e) when (e is ChatGatewayException or HttpRequestException or InvalidOperationException or DbUpdateException or TaskCanceledException
+                or Llm.Api.Media.SdServer.SdException)
             {
                 LogFailed(logger, model, e);
                 await SaveAsync(run.Id, null, ModelBenchRun.Failed, e.Message.Length > 2000 ? e.Message[..2000] : e.Message);

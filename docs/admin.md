@@ -532,6 +532,17 @@ full the models kept loaded would make it.
   from when it is tried again; **Load** tries at once (should it
   fail, the next wait is the longer one). A model that loads is known to be
   fine again.
+- **Test** (`models.manage`), on every model: its capability, each test
+  checked by a rule, and its capacity, raised until more do not make more,
+  each run kept. A chat model (of this stack, another GPU server or the
+  gateway) answers arithmetic, an instruction, logic, JSON, a tool call, a
+  fact in a long text, Persian and code, and its capacity is tokens a second
+  at 1, 2, 4… answers at once. A picture model makes a picture, as big as
+  asked (read from its header), at two sizes; a video model a short clip; a
+  speech model says a sentence (in its language) that a speech-to-text model
+  hears back with most of its words; a speech-to-text model hears what a
+  speech model said. Their capacity is so many a minute (a picture or video
+  model one at a time, as the GPU makes them). Each counts to whoever runs it.
 - **The model for small steps** (Settings → Model → **Model for sub-agents
   and small steps**) does the many short steps around an answer: sub-agents,
   chat titles, compaction summaries, the safeguards' check, and Auto in the

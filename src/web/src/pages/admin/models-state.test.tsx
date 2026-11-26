@@ -220,4 +220,32 @@ describe('admin models: loading and unloading', () => {
     await screen.findByRole('heading', { name: /tiny-b/ })
     expect(within(card('tiny-b')).getByText('The engine keeps unloading it')).toBeInTheDocument()
   })
+  it('tests every model, a picture model by what it makes: so many pictures a minute', async () => {
+    fakeApi(admin, {
+      'GET /api/admin/models': () => ({ json: view({ status: 'unloaded' }) }),
+      'GET /api/admin/models/FLUX.2-klein-4B/bench': () => ({
+        json: [
+          {
+            id: 'r2', model: 'FLUX.2-klein-4B', kind: 'capacity', status: 'done', error: null, startedAt: '2026-11-26T10:00:00Z', finishedAt: '2026-11-26T10:01:00Z',
+            results: { unit: 'pictures', levels: [{ atOnce: 1, perMinute: 4.5, secondsEach: 13.3, failed: 0, seconds: 13.3 }], best: { atOnce: 1, perMinute: 4.5 } },
+          },
+          {
+            id: 'r1', model: 'FLUX.2-klein-4B', kind: 'capability', status: 'done', error: null, startedAt: '2026-11-26T09:59:00Z', finishedAt: '2026-11-26T10:00:00Z',
+            results: { tests: [{ id: 'picture', title: 'Makes a picture', skill: 'pictures', passed: true, why: null, ms: 12000, tokens: 0, answer: '1024×1024, 900 KB' }], passed: 1, total: 1 },
+          },
+        ],
+      }),
+    })
+    renderApp('/admin/models')
+    await screen.findByRole('heading', { name: /tiny-b/ })
+    // Every model has its Test: chat models and the picture model alike.
+    for (const name of ['Big-Model', 'tiny-b', 'FLUX.2-klein-4B']) expect(within(card(name)).getByRole('button', { name: `Test ${name}` })).toBeInTheDocument()
+    await userEvent.click(within(card('FLUX.2-klein-4B')).getByRole('button', { name: 'Test FLUX.2-klein-4B' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Test FLUX.2-klein-4B' })
+    expect(dialog).toHaveTextContent('It makes a picture, as big as asked')
+    expect(await within(dialog).findByRole('region', { name: 'Capacity' })).toHaveTextContent('4.5 pictures a minute, 1 at once')
+    expect(within(dialog).getByRole('table', { name: 'At once' })).toHaveTextContent('13.3 s')
+    // No tokens for a picture.
+    expect(within(within(dialog).getByRole('region', { name: 'Capability' })).queryByText(/tokens/)).not.toBeInTheDocument()
+  })
 })

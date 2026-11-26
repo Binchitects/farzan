@@ -67,6 +67,57 @@ public sealed class ModelBenchTests(AppFixture app)
     }
 
     [Fact]
+    public async Task Every_media_model_is_tested_by_what_it_does_each_test_saying_why_it_did_not_pass()
+    {
+        var admin = await new TestBrowser(app.Factory).SignedInAsync("admin", AppFixture.AdminPassword);
+        var expected = new Dictionary<string, string[]>
+        {
+            [MediaModels.TextToSpeech] = ["speak", "clear"], [MediaModels.SpeechToText] = ["hear"], [MediaModels.ImageModel] = ["picture", "size"], [MediaModels.VideoModel] = ["clip"],
+        };
+        foreach (var (model, ids) in expected)
+        {
+            var id = (await admin.JsonAsync(await admin.PostAsync($"/api/admin/models/{model}/bench", new { kind = "capability" }))).GetProperty("id").GetGuid();
+            await app.Factory.Services.GetRequiredService<ModelBench>().Finished(id).WaitAsync(TimeSpan.FromSeconds(90));
+            var run = await admin.JsonAsync(await admin.GetAsync($"/api/admin/models/bench/{id}"));
+            Assert.Equal("done", run.GetProperty("status").GetString());
+            var tests = run.GetProperty("results").GetProperty("tests").EnumerateArray().ToList();
+            Assert.Equal(ids, tests.Select(t => t.GetProperty("id").GetString()));
+            // The fake gateway's sound is a few bytes and no model is loaded here: each says why it did not pass.
+            Assert.All(tests.Where(t => !t.GetProperty("passed").GetBoolean()), t => Assert.False(string.IsNullOrEmpty(t.GetProperty("why").GetString()), model));
+        }
+        // Their capacity: so many a minute, by what they make.
+        var speech = (await admin.JsonAsync(await admin.PostAsync($"/api/admin/models/{MediaModels.TextToSpeech}/bench", new { kind = "capacity" }))).GetProperty("id").GetGuid();
+        await app.Factory.Services.GetRequiredService<ModelBench>().Finished(speech).WaitAsync(TimeSpan.FromSeconds(90));
+        var measured = (await admin.JsonAsync(await admin.GetAsync($"/api/admin/models/bench/{speech}"))).GetProperty("results");
+        Assert.Equal("sentences", measured.GetProperty("unit").GetString());
+        Assert.Equal(1, measured.GetProperty("levels")[0].GetProperty("atOnce").GetInt32());
+    }
+
+    [Fact]
+    public void A_pictures_size_is_read_from_its_header_and_videos_sound_and_words_heard_are_told()
+    {
+        // A PNG of 7 by 3, a JPEG of 640 by 480 (its frame header after an APP0), a WebP (VP8X) of 300 by 200.
+        byte[] png = [0x89, (byte)'P', (byte)'N', (byte)'G', 13, 10, 26, 10, 0, 0, 0, 13, (byte)'I', (byte)'H', (byte)'D', (byte)'R', 0, 0, 0, 7, 0, 0, 0, 3, 8, 6, 0, 0, 0];
+        byte[] jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0, 4, 0, 0, 0xFF, 0xC0, 0, 17, 8, 0x01, 0xE0, 0x02, 0x80, 3, 0, 0, 0, 0, 0, 0];
+        var webp = new byte[32];
+        "RIFF"u8.CopyTo(webp);
+        "WEBPVP8X"u8.CopyTo(webp.AsSpan(8));
+        (webp[24], webp[25], webp[27], webp[28]) = (43, 1, 199, 0);
+        Assert.Equal((7, 3), ModelBench.PictureSize(png));
+        Assert.Equal((640, 480), ModelBench.PictureSize(jpeg));
+        Assert.Equal((300, 200), ModelBench.PictureSize(webp));
+        Assert.Null(ModelBench.PictureSize("not a picture at all"u8.ToArray()));
+        Assert.True(ModelBench.IsVideo([0, 0, 0, 24, (byte)'f', (byte)'t', (byte)'y', (byte)'p', (byte)'i', (byte)'s', (byte)'o', (byte)'m', 0]));
+        Assert.False(ModelBench.IsVideo(png));
+        Assert.True(ModelBench.IsSound([(byte)'I', (byte)'D', (byte)'3', 4, 0]));
+        Assert.True(ModelBench.IsSound([0xFF, 0xFB, 0x90, 0x64, 0]));
+        Assert.False(ModelBench.IsSound(png));
+        Assert.Equal(1, ModelBench.Heard("The quick brown fox.", "the QUICK, brown fox!"));
+        Assert.Equal(0.5, ModelBench.Heard("one two three four", "one two"));
+        Assert.Equal(1, ModelBench.Heard("امروز هوا آفتابی است", "امروز هوا آفتابی است."));
+    }
+
+    [Fact]
     public void The_long_text_holds_the_code_once_and_follows_the_context()
     {
         var small = ModelBench.Haystack(4096);
