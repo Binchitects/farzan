@@ -230,7 +230,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count by (name) (nvidia_smi_gpu_info)",
+          "expr": "count by (name) (max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "{{name}}"
         }
       ],
@@ -886,55 +886,55 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (gpu) ((nvidia_smi_utilization_gpu_ratio) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_utilization_gpu_ratio) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "instant": true,
           "format": "table"
         },
         {
           "refId": "B",
-          "expr": "max by (gpu) ((nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "instant": true,
           "format": "table"
         },
         {
           "refId": "C",
-          "expr": "max by (gpu) ((nvidia_smi_memory_used_bytes) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_memory_used_bytes) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "instant": true,
           "format": "table"
         },
         {
           "refId": "D",
-          "expr": "max by (gpu) ((nvidia_smi_memory_total_bytes) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_memory_total_bytes) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "instant": true,
           "format": "table"
         },
         {
           "refId": "E",
-          "expr": "max by (gpu) ((nvidia_smi_temperature_gpu) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_temperature_gpu) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "instant": true,
           "format": "table"
         },
         {
           "refId": "F",
-          "expr": "max by (gpu) ((nvidia_smi_power_draw_watts) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_power_draw_watts) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "instant": true,
           "format": "table"
         },
         {
           "refId": "G",
-          "expr": "max by (gpu) ((nvidia_smi_pcie_link_gen_current) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_pcie_link_gen_current) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "instant": true,
           "format": "table"
         },
         {
           "refId": "H",
-          "expr": "max by (gpu) ((nvidia_smi_pcie_link_width_current) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_pcie_link_width_current) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "instant": true,
           "format": "table"
         },
         {
           "refId": "I",
-          "expr": "max by (gpu) ((nvidia_smi_clocks_event_reasons_hw_thermal_slowdown + nvidia_smi_clocks_event_reasons_sw_thermal_slowdown + nvidia_smi_clocks_event_reasons_hw_power_brake_slowdown) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_clocks_event_reasons_hw_thermal_slowdown + nvidia_smi_clocks_event_reasons_sw_thermal_slowdown + nvidia_smi_clocks_event_reasons_hw_power_brake_slowdown) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "instant": true,
           "format": "table"
         }
@@ -1217,7 +1217,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (gpu) ((nvidia_smi_utilization_gpu_ratio) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_utilization_gpu_ratio) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "legendFormat": "{{gpu}}"
         }
       ],
@@ -1257,7 +1257,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (gpu) ((nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "legendFormat": "{{gpu}}"
         }
       ],
@@ -1297,7 +1297,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (gpu) ((nvidia_smi_temperature_gpu) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_temperature_gpu) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "legendFormat": "{{gpu}}"
         }
       ],
@@ -1335,7 +1335,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (gpu) ((nvidia_smi_power_draw_watts) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_power_draw_watts) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "legendFormat": "{{gpu}}"
         }
       ],
@@ -1373,7 +1373,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (gpu) ((nvidia_smi_clocks_event_reasons_hw_thermal_slowdown + nvidia_smi_clocks_event_reasons_sw_thermal_slowdown + nvidia_smi_clocks_event_reasons_hw_power_brake_slowdown) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
+          "expr": "max by (gpu) ((nvidia_smi_clocks_event_reasons_hw_thermal_slowdown + nvidia_smi_clocks_event_reasons_sw_thermal_slowdown + nvidia_smi_clocks_event_reasons_hw_power_brake_slowdown) * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) label_replace(max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\")))",
           "legendFormat": "{{gpu}}"
         }
       ],

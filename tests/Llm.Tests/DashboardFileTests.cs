@@ -235,13 +235,16 @@ public sealed partial class DashboardFileTests(Promtool promtool) : IClassFixtur
     {
         // A total over every GPU (a sum, an average, the hottest; how many of each model) is one series, with no GPU to tell
         // apart; so is a total over a time ("the busiest hour", "the share of the window").
-        static bool Total(string e) => Regex.IsMatch(e, @"^((avg|max|min)_over_time\(\(?)?(sum|avg|max|min|count)( by \(name\))? ?\(") && !e.Contains("uuid", StringComparison.Ordinal);
+        // The GPUs' info is read one series a GPU (its uuid and name), whatever other labels the exporter gives it.
+        const string info = "max by (instance, uuid, name) (nvidia_smi_gpu_info)";
+        static bool Total(string e) => Regex.IsMatch(e, @"^((avg|max|min)_over_time\(\(?)?(sum|avg|max|min|count)( by \(name\))? ?\(")
+            && !e.Replace(info, "", StringComparison.Ordinal).Contains("uuid", StringComparison.Ordinal);
         var targets = PromTargets().Where(x => x.Target.Expr!.Contains("nvidia_smi_", StringComparison.Ordinal) && !Total(x.Target.Expr!)).ToList();
         Assert.True(targets.Count > 20, $"only {targets.Count} nvidia-smi queries");
         // Every nvidia-smi query ends in the same naming of its GPU, and its legend shows it.
         var naming = targets[0].Target.Expr![targets[0].Target.Expr!.IndexOf(" * on (instance, uuid) group_left (gpu) (", StringComparison.Ordinal)..];
-        var asColumn = naming.Replace("or on (instance, uuid) nvidia_smi_gpu_info)",
-            "or on (instance, uuid) label_replace(nvidia_smi_gpu_info, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\"))", StringComparison.Ordinal);
+        var asColumn = naming.Replace($"or on (instance, uuid) {info})",
+            $"or on (instance, uuid) label_replace({info}, \"gpu\", \"$1\", \"name\", \"^(?:NVIDIA )?(.+)$\"))", StringComparison.Ordinal);
         foreach (var (d, p, t) in targets)
         {
             // One series a GPU by its name ("max by (gpu)"), a single GPU named too (by its model), for a table's queries to merge on it.
@@ -249,7 +252,8 @@ public sealed partial class DashboardFileTests(Promtool promtool) : IClassFixtur
             Assert.True(byName || t.Expr!.EndsWith(naming, StringComparison.Ordinal), $"{d.Uid} / {p.Title}: the GPU is not named: {t.Expr}");
             Assert.True(t.Format == "table" || t.LegendFormat?.Contains("{{gpu}}", StringComparison.Ordinal) == true, $"{d.Uid} / {p.Title}: the legend \"{t.LegendFormat}\" leaves out the GPU");
         }
-        // "one": a single GPU keeps its legends short ("temp", not "temp GPU 0 · ..."). "two": two
+        // "one": a single GPU keeps its legends short ("temp", not "temp GPU 0 · ..."), even while its info has two series (the
+        // exporter's update added labels: the old series and the new one overlap until the old goes stale). "two": two
         // of one model, told apart by the index nvidia-smi gives them. "mixed": the vendor's
         // "NVIDIA " is left out where the name has it. "none": a machine with no GPU.
         var test = $$"""
@@ -262,6 +266,10 @@ public sealed partial class DashboardFileTests(Promtool promtool) : IClassFixtur
                   - series: 'nvidia_smi_index{instance="one",uuid="u1"}'
                     values: '0x3'
                   - series: 'nvidia_smi_gpu_info{instance="one",uuid="u1",name="NVIDIA GeForce RTX 3090",driver_version="595.91.07"}'
+                    values: '1x3'
+                  - series: 'nvidia_smi_gpu_info{instance="one",uuid="u1",name="NVIDIA GeForce RTX 3090",driver_version="595.91.07",index="0",pci_bus_id="00000000:01:00.0"}'
+                    values: '1x3'
+                  - series: 'nvidia_smi_gpu_info{instance="two",uuid="u2",name="NVIDIA GeForce RTX 3090",index="0"}'
                     values: '1x3'
                   - series: 'nvidia_smi_temperature_gpu{instance="two",uuid="u2"}'
                     values: '60x3'

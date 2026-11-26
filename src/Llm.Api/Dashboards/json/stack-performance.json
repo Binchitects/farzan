@@ -1410,7 +1410,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "nvidia_smi_utilization_gpu_ratio * 100 * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_utilization_gpu_ratio * 100 * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "compute {{gpu}}",
           "range": true,
           "instant": false,
@@ -1422,7 +1422,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "nvidia_smi_utilization_memory_ratio * 100 * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_utilization_memory_ratio * 100 * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "memory bandwidth {{gpu}}",
           "range": true,
           "instant": false,
@@ -1490,7 +1490,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "nvidia_smi_memory_used_bytes * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_memory_used_bytes * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "used {{gpu}}",
           "range": true,
           "instant": false,
@@ -1502,7 +1502,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "nvidia_smi_memory_total_bytes * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_memory_total_bytes * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "total {{gpu}}",
           "range": true,
           "instant": false,
@@ -1568,7 +1568,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "nvidia_smi_temperature_gpu * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_temperature_gpu * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "temp C {{gpu}}",
           "range": true,
           "instant": false,
@@ -1580,7 +1580,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "nvidia_smi_power_draw_watts * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_power_draw_watts * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "power W {{gpu}}",
           "range": true,
           "instant": false,
@@ -1592,7 +1592,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "nvidia_smi_power_limit_watts * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_power_limit_watts * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "power limit W {{gpu}}",
           "range": true,
           "instant": false,
@@ -1658,7 +1658,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "nvidia_smi_clocks_current_sm_clock_hz / 1e6 * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_clocks_current_sm_clock_hz / 1e6 * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "SM clock MHz {{gpu}}",
           "range": true,
           "instant": false,
@@ -1670,7 +1670,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "nvidia_smi_clocks_event_reasons_sw_power_cap * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_clocks_event_reasons_sw_power_cap * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "throttle: power cap {{gpu}}",
           "range": true,
           "instant": false,
@@ -1682,7 +1682,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "nvidia_smi_clocks_event_reasons_hw_thermal_slowdown * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_clocks_event_reasons_hw_thermal_slowdown * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "throttle: thermal {{gpu}}",
           "range": true,
           "instant": false,

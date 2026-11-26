@@ -30,3 +30,19 @@ llama.cpp's own count of tokens made within 0.5–9% a day (2,728 against 2,713 
 | Tokens the engines made against tokens the gateway booked (at most 10% apart) | 2,100,998 against 2,072,823: 1.3% | 2,435 against 2,351: 3.5% |
 | Requests: LLM Overview against LLM and users (equal) | 5,435 and 5,435 | 6 and 6 |
 | The stack's tokens a second now, two ways (2%) | not on v8.0 (its panel is v8.2's) | — |
+
+Again on live once it ran v8.2.2 (2026-11-26):
+
+| Check | 30 days | 7 days |
+|---|---|---|
+| Tokens the engines made against tokens the gateway booked (10%) | 1,587,287 against 1,535,800: 3.2% | 7,373 against 7,134: 3.2% |
+| Requests: LLM Overview against LLM and users (equal) | 5,172 and 5,172 | 68 and 68 |
+| The stack's tokens a second now, two ways (2%), sampled every 5 s while the functional check chatted | 1.73, 5.07, 8.20, 10.02: 0.0% apart each time | — |
+
+The same audit's panel run (6 hours) found **60 GPU queries failing** on live: "found duplicate series for the match group
+{uuid=...}". The GPU exporter's update in v8.1 added labels to `nvidia_smi_gpu_info` (index, pci_bus_id...), so across
+its restart one GPU had two info series, and every join on it failed for a window that held both. Each query now reads
+the info one series a GPU, `max by (instance, uuid, name) (nvidia_smi_gpu_info)`; promtool checks it with two info
+series for one GPU (`DashboardFileTests`), and the 45 changed queries answered on live's Prometheus over the same 6
+hours.
+
