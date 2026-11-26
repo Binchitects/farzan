@@ -83,3 +83,10 @@ Each of the 396 server candidates measured alone was tried and stopped: a run's 
 and Llm.Core before the first test (about ten minutes, paid once a shard in the runs above), so 396 single runs would
 take some 66 hours. Coverage per test needs a collector that keeps its instrumented build between runs, or resets its
 counts between tests in one run; until then, the leave-out runs above are what decide.
+
+## Coverage per test (2026-11-26)
+
+With dotnet-coverage's session reset after each test ([coverage-per-test.md](coverage-per-test.md); coverlet had
+needed ten minutes a run): 1,752 tests ran 105,632 lines of Llm.Api and Llm.Core; 1,007 of them, chosen greedily, run
+every one of those lines, and 745 run only lines they run too. Those are the candidates to look at, one by one: a test
+outside the cover may still be the only one that checks an answer, a refusal or a number.
