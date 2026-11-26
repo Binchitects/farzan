@@ -15,7 +15,7 @@ Sections used:
   makes weaker (gone, a clause or a check dropped, fewer tests), by its id,
   and why ([compliance](docs/compliance/README.md#when-a-change-weakens-a-control))
 
-## v8.1.0 (unreleased, branch v8.1)
+## v8.1.0 (2026-11-26)
 
 Work that goes on by itself and is counted as it goes. An answer cut at its
 longest carries on until it ends; the time of the model, the tools and the
