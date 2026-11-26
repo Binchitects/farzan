@@ -81,7 +81,7 @@ public sealed class DownloadTests(AppFixture app)
             Assert.Contains("for size in 128 256 512; do", sh, StringComparison.Ordinal);
             Assert.Contains("Icon=$share/icons/hicolor/512x512/apps/code-arena.png", sh, StringComparison.Ordinal);
             Assert.Contains("\"$arena/icons/code-arena.icns\"", sh, StringComparison.Ordinal);
-            var window = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "CodeArena", "AppWindow.cs"));
+            var window = await File.ReadAllTextAsync(Path.Combine(AppFixture.DashboardsPath, "..", "..", "..", "CodeArena", "AppWindow.cs"));
             Assert.Contains("\"--class=CodeArena\"", window, StringComparison.Ordinal);
             var ps1 = await http.GetStringAsync("/api/downloads/code-arena/install.ps1");
             // Each Windows build's SHA-256, the one for the machine's own system chosen as it runs.

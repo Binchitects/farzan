@@ -340,6 +340,7 @@ public static class SettingsCatalog
             { Default = "00:16:00", Unit = "minutes", Min = 1, Max = 240, Optional = false },
         new("Gateway:LogPrompts", Api, "Prompt log of API requests", "Keeps each API request's last question and its answer, for those with prompts.review (Admin → Prompt log); the chat's questions and answers are there from the chats themselves. Off: API requests are not kept.", SettingType.Boolean, SettingScope.Live)
             { Default = "true" },
+        new("Gateway:PromptLogFull", Api, "Prompt log: each API request whole", "Each API request is kept whole with its line: the messages new since its run's step before (each tool's result among them), the tools it offered, and the answer's whole thinking, words and tool calls with their arguments, zipped and sealed, gone with the line. Off: only the last question and the answer's words.", SettingType.Boolean, SettingScope.Live),
         new("Gateway:PromptLogKeep", Api, "Prompt log: how much of each question and answer", "The first so many characters of each API request's last question and of its answer are kept; the rest is cut (…).", SettingType.WholeNumber, SettingScope.Live)
             { Default = "20000", Min = 200, Max = 20_000, Unit = "characters", Optional = false },
         new("Gateway:PromptLogPictures", Api, "Prompt log: keep the pictures", "A question's pictures (sent as data) are kept with its line and go with it. Off: only the words.", SettingType.Boolean, SettingScope.Live)

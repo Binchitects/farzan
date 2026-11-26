@@ -115,7 +115,8 @@ def main(argv=None) -> int:
                 # A host that crashes leaves the tests it was running (Sequence_*.xml), to tell which.
                 "--blame"]
         if a.coverage:
-            args += ["--collect:XPlat Code Coverage"]
+            # The collector from the shard's own copy: a dll run directly finds it only where it is told to look.
+            args += ["--collect:XPlat Code Coverage", "--test-adapter-path", str(Path(what).parent)]
         start = time.time()
         with open(out / f"shard{i + 1}.log", "w") as log:
             code = subprocess.run(args, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT).returncode
