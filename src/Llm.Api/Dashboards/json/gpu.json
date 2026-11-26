@@ -1073,8 +1073,8 @@
         },
         {
           "type": "timeseries",
-          "title": "DCGM: clock throttle reasons",
-          "description": "The reasons the clocks are held back now, as DCGM's bit mask (0: none).",
+          "title": "DCGM: clock events",
+          "description": "Why the clocks were held back in the last five minutes, by reason (power, thermal, idle, ...): how many times each was seen (0: none).",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -1088,8 +1088,8 @@
           "targets": [
             {
               "refId": "A",
-              "expr": "DCGM_FI_DEV_CLOCK_THROTTLE_REASONS",
-              "legendFormat": "GPU {{gpu}}"
+              "expr": "DCGM_EXP_CLOCK_EVENTS_COUNT",
+              "legendFormat": "GPU {{gpu}}: {{clock_event}}"
             }
           ],
           "fieldConfig": {

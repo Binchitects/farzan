@@ -3977,8 +3977,10 @@ cmd_status() {
   [[ "$(state_get maintenance)" == on ]] && say "  IN MAINTENANCE since $(state_get maintenance-since) (maintenance off brings it back)"
   step "services"
   local -A seen=()
-  local models
+  local models maint_stopped=""
   models=" $(model_waits | tr '\n' ' ') "
+  # In maintenance, what it stopped is meant to be stopped: named, not counted as a problem.
+  [[ "$(state_get maintenance)" == on ]] && maint_stopped=" $(state_get maintenance-stopped) "
   while IFS='|' read -r svc name st health img ref; do
     [[ -n "$svc" ]] || continue
     seen[$svc]=1
@@ -3987,6 +3989,7 @@ cmd_status() {
     [[ $svc == code-intel ]] && v="$(code_intel_version)" && v="${v:+says $v}"
     [[ "$models" == *" $svc "* ]] && v="waits for $EMBED_FILE in MODELS_DIR"
     printf '  %-18s %-10s %-10s %s%s\n' "$svc" "$st" "${health:--}" "$ref" "${v:+  ($v)}"
+    [[ $st != running && "$maint_stopped" == *" $svc "* ]] && continue
     [[ $st == running && ( "$models" == *" $svc "* || ( $health != unhealthy && $health != starting ) ) ]] || problems=$((problems + 1))
   done < <(container_rows | sort)
   for svc in $(dc config --services 2>/dev/null); do [[ -n "${seen[$svc]:-}" ]] || { printf '  %-18s %s\n' "$svc" "no container"; problems=$((problems + 1)); }; done
@@ -4017,6 +4020,7 @@ cmd_status() {
   [[ -n "$(state_get previous)" ]] && say "  rollback: to $(state_get previous) (upgrade --rollback), its images kept as $PROJECT-rollback:$(state_get previous)-..."
   say ""
   [[ -n "${models// /}" ]] && say "The embedding server waits for its model: bring $EMBED_FILE into $MODELS_DIR (search by meaning needs it)."
+  if [[ -n "$maint_stopped" && $problems -eq 0 ]]; then say "In maintenance: the services it stopped stay down until maintenance off; the rest are up."; return 0; fi
   if [[ $problems -eq 0 ]]; then say "Every service is up."; return 0; fi
   say "$problems service(s) not up or not healthy: repair puts them right."
   return 1
@@ -4170,7 +4174,8 @@ http {
 EOF
   chmod 644 "$dir/index.html" "$dir/nginx.conf"
 }
-# Traefik's route to the page, over every other (the highest priority), for every name and path.
+# Traefik's route to the page, over every other, for every name and path: a router's own priority is its rule's length
+# (a few hundred at most), and Traefik keeps those near int32's top for its internal routers.
 maint_write_route() {
   local acme; acme="$(env_get ACME_EMAIL)"
   cat > "$DEPLOY/$MAINT_ROUTE_REL.tmp" <<EOF
@@ -4180,7 +4185,7 @@ http:
   routers:
     maintenance:
       rule: HostRegexp(\`.+\`)
-      priority: 2147483000
+      priority: 100000
       service: maintenance
       tls: $([[ -n "$acme" ]] && echo "{ certResolver: letsencrypt }" || echo "{}")
   services:
@@ -4235,6 +4240,11 @@ cmd_maintenance() {
       step "the maintenance page"
       maint_write_page "$MESSAGE_ARG" "$since"
       dc --profile maintenance up -d --no-build --pull never --no-deps maintenance >> "$LOG" 2>&1 || die "the maintenance page's container did not start (its log: $LOG)"
+      # Healthy before it is the only answer: its health check runs every 15 seconds.
+      for _ in $(seq 1 $(( ${MAINTENANCE_WAIT_S:-60} / 2 + 1 ))); do
+        [[ "$(E inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{end}}' maintenance 2>/dev/null)" =~ ^(healthy|)$ ]] && break
+        sleep 2
+      done
       maint_write_route
       if maint_until_page; then ok "every address answers with it (503)"; else note "Traefik did not answer with the page within a minute: status says what runs ($LOG)"; fi
       state_set maintenance on maintenance-since "$since" maintenance-message "$MESSAGE_ARG" maintenance-stopped "${stop_list[*]}"

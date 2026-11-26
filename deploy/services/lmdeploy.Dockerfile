@@ -10,7 +10,7 @@
 #   APT_MIRROR        a Debian mirror the admin names in place of deb.debian.org: empty (the default) keeps deb.debian.org
 #   PIP_INDEX_URL     a PyPI mirror the admin names in place of pypi.org: empty (the default) keeps pypi.org
 #
-# A base that already has a C compiler (gcc) skips apt. deb.debian.org and pypi.org are both served by Fastly: on a
+# A base that already has a C compiler (gcc) installs none, but its packages are brought up to date. deb.debian.org and pypi.org are both served by Fastly: on a
 # network where some of Fastly's addresses stall, apt waits on each file for minutes and then reports 404 for the plain
 # Packages file it falls back to, and pip times out; a mirror of each (APT_MIRROR, PIP_INDEX_URL) builds it there.
 #
@@ -25,10 +25,12 @@ ARG PIP_INDEX_URL=
 
 # gcc and the C headers for the kernels compiled as they are first used (Triton); procps for the supervisor. apt gives up
 # on a file after 30 seconds (three tries), not ten minutes.
-RUN if command -v gcc >/dev/null && command -v ps >/dev/null; then exit 0; fi \
- && if [ -n "$APT_MIRROR" ]; then sed -i "s|http://deb.debian.org/debian|$APT_MIRROR|g" /etc/apt/sources.list.d/debian.sources; fi \
+# The base's own packages brought up to date first, whatever it has (a fix Debian shipped since the base was made).
+RUN if [ -n "$APT_MIRROR" ]; then sed -i "s|http://deb.debian.org/debian|$APT_MIRROR|g" /etc/apt/sources.list.d/debian.sources; fi \
  && apt-get -o Acquire::http::Timeout=30 -o Acquire::Retries=3 update \
- && apt-get -o Acquire::http::Timeout=30 -o Acquire::Retries=3 install -y --no-install-recommends gcc g++ libc6-dev ca-certificates procps libnuma1 \
+ && apt-get -o Acquire::http::Timeout=30 -o Acquire::Retries=3 upgrade -y \
+ && if ! command -v gcc >/dev/null || ! command -v ps >/dev/null; then \
+      apt-get -o Acquire::http::Timeout=30 -o Acquire::Retries=3 install -y --no-install-recommends gcc g++ libc6-dev ca-certificates procps libnuma1; fi \
  && rm -rf /var/lib/apt/lists/*
 
 # Checked by its metadata: LMDeploy's server looks for a GPU, which a build has none of. pip's cache is kept between
@@ -36,6 +38,7 @@ RUN if command -v gcc >/dev/null && command -v ps >/dev/null; then exit 0; fi \
 RUN --mount=type=cache,target=/root/.cache/pip \
     python3 -m venv /opt/lmdeploy \
  && /opt/lmdeploy/bin/pip install --timeout 60 --retries 5 ${PIP_INDEX_URL:+--index-url "$PIP_INDEX_URL"} "lmdeploy==${LMDEPLOY_VERSION}" \
+ && /opt/lmdeploy/bin/pip install --timeout 60 --retries 5 ${PIP_INDEX_URL:+--index-url "$PIP_INDEX_URL"} --upgrade "certifi>=2026.10.18" \
  && /opt/lmdeploy/bin/python -c "import importlib.metadata as m; print('lmdeploy', m.version('lmdeploy'))"
 
 ENV PATH=/opt/lmdeploy/bin:${PATH} \

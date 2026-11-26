@@ -23,8 +23,8 @@ public sealed record ParserAdvice(string? Family, string? FamilyLabel, bool Buil
 /// The tool-call and reasoning parsers each engine is started with for a model (vLLM's --enable-auto-tool-choice
 /// --tool-call-parser and --reasoning-parser, SGLang's and LMDeploy's --tool-call-parser and --reasoning-parser). Without one,
 /// an engine answers a request with tools with an error (vLLM, LMDeploy) or with the call as text (SGLang), and puts the
-/// thinking in the answer's text. The names are each engine's own, as their images have them (vLLM 0.31.0's
-/// ToolParserManager and ReasoningParserManager, SGLang 0.5.21's --help, LMDeploy 0.18.0's --help); the automatic choice is by
+/// thinking in the answer's text. The names are each engine's own, as their images have them (vLLM 0.34.0's
+/// ToolParserManager and ReasoningParserManager, SGLang 0.5.23's --help, LMDeploy 0.18.0's --help); the automatic choice is by
 /// the model's family, from its name and its config.json (architectures, model_type). Strata reads both by itself.
 /// </summary>
 public static partial class EngineParsers
@@ -37,18 +37,19 @@ public static partial class EngineParsers
     {
         [EngineKinds.Vllm] =
         [
-            "apertus", "cohere_command3", "cohere_command4", "deepseek_v3", "deepseek_v31", "deepseek_v32", "deepseek_v4", "deepseek_v41", "dots", "ernie45",
-            "functiongemma", "gemma4", "gigachat3", "glm45", "glm47", "granite", "granite-20b-fc", "granite4", "hermes", "hunyuan_a13b", "hy_v3", "hy_v4", "inkling",
-            "internlm", "jamba", "k2_horizon", "kimi_k2", "kimi_k3", "lfm2", "ling3", "llama3_json", "llama4_json", "llama4_pythonic", "longcat", "mimo", "minicpm5",
-            "minimax_m2", "minimax_m3", "mistral", "muse_glimmer", "olmo3", "openai", "phi4_mini_json", "poolside_v1", "pythonic", "qwen3_coder", "qwen3_xml",
-            "seed_oss", "step3", "step3p5", "xlam",
+            "apertus", "beam", "cohere_command3", "cohere_command4", "deepseek_v3", "deepseek_v31", "deepseek_v32", "deepseek_v4", "deepseek_v41",
+            "dots", "ernie45", "functiongemma", "gemma4", "gigachat3", "glm45", "glm47", "granite", "granite-20b-fc", "granite4",
+            "granite_toolcall_parser", "hermes", "hf", "hunyuan_a13b", "hy_v3", "hy_v4", "inkling", "internlm", "jamba", "k2_horizon", "kimi_k2",
+            "kimi_k3", "lfm2", "ling3", "llama3_json", "llama4_json", "llama4_pythonic", "longcat", "mimo", "minicpm5", "minimax_m2", "minimax_m3",
+            "mistral", "muse", "muse_glimmer", "musespark", "olmo3", "openai", "phi4_mini_json", "plamo3", "poolside_v1", "pythonic", "qwen3_coder",
+            "qwen3_json", "qwen3_xml", "ripple", "seed_oss", "step3", "step3p5", "step5", "xlam", "zaya", "zaya_xml",
         ],
         [EngineKinds.Sglang] =
         [
-            "apertus2509", "cohere_command4", "deepseekv3", "deepseekv31", "deepseekv32", "deepseekv4", "deepseekv41", "dots", "gemma4", "gigachat3", "gigachat35",
-            "glm", "glm45", "glm47", "gpt-oss", "hermes", "hunyuan", "inkling", "interns1", "iquest_q1", "k2_horizon", "kimi_k2", "kimi_k3", "lfm2", "ling3", "llama3",
-            "mimo", "minicpm5", "minimax-m2", "minimax-m3", "mistral", "muse", "nanbeige", "poolside_v1", "pythonic", "qwen", "qwen25", "qwen3_coder", "spark25",
-            "step3", "step3p5", "trinity",
+            "apertus2509", "auto", "beam", "cohere_command4", "deepseekv3", "deepseekv31", "deepseekv32", "deepseekv4", "deepseekv41", "dots",
+            "gemma4", "gigachat3", "gigachat35", "glm", "glm45", "glm47", "gpt-oss", "hermes", "hunyuan", "inkling", "interns1", "iquest_q1",
+            "k2_horizon", "kimi_k2", "kimi_k3", "lfm2", "ling3", "llama3", "mimo", "minicpm5", "minimax-m2", "minimax-m3", "mistral", "muse",
+            "nanbeige", "poolside_v1", "pythonic", "qwen", "qwen25", "qwen3_coder", "response_template", "spark25", "step3", "step3p5", "trinity",
         ],
         [EngineKinds.Lmdeploy] =
         [
@@ -63,16 +64,18 @@ public static partial class EngineParsers
     {
         [EngineKinds.Vllm] =
         [
-            "cohere_command3", "cohere_command4", "deepseek_r1", "deepseek_v3", "deepseek_v4", "deepseek_v41", "ernie45", "gemma4", "glm45", "glm47", "granite",
-            "granite_thinking_parser", "holo2", "hunyuan_a13b", "hy_v3", "hy_v4", "inkling", "k2_horizon", "kimi_k2", "kimi_k3", "ling3", "mimo", "minimax_m2",
-            "minimax_m2_append_think", "minimax_m3", "mistral", "muse_glimmer", "nemotron_v3", "olmo3", "openai_gptoss", "poolside_v1", "qwen3", "seed_oss", "step3",
-            "step3p5",
+            "beam", "cohere_command3", "cohere_command4", "deepseek_r1", "deepseek_v3", "deepseek_v4", "deepseek_v41", "ernie45", "gemma4", "glm45",
+            "glm47", "granite", "granite_thinking_parser", "hf", "holo2", "hunyuan_a13b", "hy_v3", "hy_v4", "inkling", "k2_horizon", "kimi_k2",
+            "kimi_k3", "ling3", "mimo", "minicpmv", "minimax_m2", "minimax_m2_append_think", "minimax_m3", "mistral", "muse", "muse_glimmer",
+            "musespark", "nemotron_v3", "olmo3", "openai_gptoss", "plamo3", "poolside_v1", "qwen3", "ripple", "seed_oss", "step3", "step3p5", "step5",
+            "zaya",
         ],
         [EngineKinds.Sglang] =
         [
-            "apertus2509", "cohere_command4", "deepseek-r1", "deepseek-v3", "deepseek-v4", "deepseek-v41", "dots", "gemma4", "gigachat35", "glm45", "gpt-oss",
-            "granite_thinking_parser", "hunyuan", "inkling", "interns1", "iquest_q1", "k2_horizon", "kimi", "kimi_k2", "kimi_k3", "ling3", "mimo", "minimax",
-            "minimax-append-think", "minimax-m3", "mistral", "muse", "nanbeige", "nemotron_3", "poolside_v1", "qwen3", "qwen3-thinking", "step3", "step3p5",
+            "apertus2509", "auto", "beam", "cohere_command4", "deepseek-r1", "deepseek-v3", "deepseek-v4", "deepseek-v41", "dots", "gemma4",
+            "gigachat35", "glm45", "gpt-oss", "granite_thinking_parser", "hunyuan", "inkling", "interns1", "iquest_q1", "k2_horizon", "kimi",
+            "kimi_k2", "kimi_k3", "ling3", "mimo", "minimax", "minimax-append-think", "minimax-m3", "mistral", "muse", "nanbeige", "nemotron_3",
+            "poolside_v1", "qwen3", "qwen3-thinking", "response_template", "step3", "step3p5",
         ],
         [EngineKinds.Lmdeploy] = ["default", "deepseek-v3", "deepseek-v32", "deepseek-v3.2", "deepseek-v4"],
         [EngineKinds.Strata] = [],

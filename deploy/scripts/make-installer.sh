@@ -160,7 +160,8 @@ trap cleanup EXIT
 { printf '%s=placeholder\n' APP_KEY DB_PASSWORD ENGINE_KEY CODE_INTEL_KEY; echo DATA_DIR=/placeholder; } > "$WORK/placeholder.env"
 PROFILES=""
 rc() { (cd "$ROOT" && env -u COMPOSE_FILE COMPOSE_PROFILES="$PROFILES" COMPOSE_PROJECT_NAME="$PROJECT" "$ENGINE" compose --env-file "$WORK/placeholder.env" -f docker-compose.yml "$@"); }
-PROFILES="$(rc config --profiles 2>/dev/null | grep -vx off | paste -sd, -)"
+# Every feature's profile; not the maintenance page's (it runs the web's own image, which the installer tags for it).
+PROFILES="$(rc config --profiles 2>/dev/null | grep -vxE 'off|maintenance' | paste -sd, -)"
 # The services compose builds: the release's own images.
 mapfile -t BUILT < <(rc config 2>/dev/null | awk '
   /^services:/ { s = 1; next }
