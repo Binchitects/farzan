@@ -130,7 +130,7 @@ public sealed class Retention(AppDbContext db, AccessService access, IOptionsMon
     /// <summary>Stands in for "who did it" in the audit log when the sweep deletes.</summary>
     public static readonly AppUser Sweeper = new() { Id = Guid.Empty, UserName = "retention" };
 
-    /// <summary>The person's files older than the cutoff that no chat of theirs (hidden ones too), no message of theirs (in a room) and no project uses.</summary>
+    /// <summary>The person's files older than the cutoff that no chat of theirs (hidden ones too), no message of theirs (in a room), no story and no project uses.</summary>
     private async Task<int> EraseUnusedFilesAsync(Guid userId, DateTimeOffset cutoff, CancellationToken ct)
     {
         var candidates = await db.ChatAttachments.AsNoTracking().Where(a => a.UserId == userId && a.CreatedAt < cutoff && !db.AssistantFiles.Any(f => f.AttachmentId == a.Id))
@@ -143,6 +143,15 @@ public sealed class Retention(AppDbContext db, AccessService access, IOptionsMon
             .Where(m => m.AttachmentsJson != null && (m.AuthorId == userId || db.Conversations.IgnoreQueryFilters().Any(c => c.Id == m.ConversationId && c.UserId == userId)))
             .Select(m => m.AttachmentsJson).ToListAsync(ct);
         var used = lists.SelectMany(ChatService.ParseIds).ToHashSet();
+        // A story's pictures, clips, narration and music are its: kept while it is.
+        foreach (var story in await db.MediaStories.AsNoTracking().Where(st => st.OwnerId == userId).Select(st => new { st.Shots, st.MusicFileId }).ToListAsync(ct))
+        {
+            used.UnionWith(Media.StoryModel.Read(story.Shots).SelectMany(x => new[] { x.Picture, x.Clip, x.Speech }).OfType<Guid>());
+            if (story.MusicFileId is { } music)
+            {
+                used.Add(music);
+            }
+        }
         var unused = candidates.Where(id => !used.Contains(id)).ToList();
         return unused.Count == 0 ? 0 : await db.ChatAttachments.Where(a => a.UserId == userId && unused.Contains(a.Id)).ExecuteDeleteAsync(ct);
     }

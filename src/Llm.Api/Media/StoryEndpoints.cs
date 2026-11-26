@@ -43,8 +43,16 @@ public static class StoryEndpoints
 
     private static string? Url(Guid? file) => file is { } f ? $"/api/chat/attachments/{f}/content" : null;
 
-    private static object View(MediaStory s, DateTimeOffset now, Guid? videoFile = null)
+    /// <summary>The shots' files that are still there: one taken out elsewhere (the studio, retention) is shown as not made, not as a broken link.</summary>
+    private static async Task<HashSet<Guid>> PresentAsync(AppDbContext db, IEnumerable<MediaStory> stories, CancellationToken ct)
     {
+        var files = stories.SelectMany(s => StoryModel.Read(s.Shots)).SelectMany(x => new[] { x.Picture, x.Clip, x.Speech }).OfType<Guid>().Distinct().ToList();
+        return files.Count == 0 ? [] : [.. await db.ChatAttachments.AsNoTracking().Where(a => files.Contains(a.Id)).Select(a => a.Id).ToListAsync(ct)];
+    }
+
+    private static object View(MediaStory s, DateTimeOffset now, HashSet<Guid> present, Guid? videoFile = null)
+    {
+        string? Kept(Guid? file) => file is { } f && present.Contains(f) ? Url(f) : null;
         var lost = s.Status == MediaStory.Making && now - s.UpdatedAt > StoryRuns.Lost;
         return new
         {
@@ -54,7 +62,7 @@ public static class StoryEndpoints
             error = lost ? "It stopped: the app was restarted meanwhile. Make it again: what was made is kept." : s.Error,
             shots = StoryModel.Read(s.Shots).Select(x => new
             {
-                x.Visual, x.Narration, x.Seconds, picture = Url(x.Picture), clip = Url(x.Clip), speech = Url(x.Speech),
+                x.Visual, x.Narration, x.Seconds, picture = Kept(x.Picture), clip = Kept(x.Clip), speech = Kept(x.Speech),
             }),
         };
     }
@@ -65,7 +73,8 @@ public static class StoryEndpoints
         var stories = await db.MediaStories.AsNoTracking().Where(s => s.OwnerId == me.Id).OrderByDescending(s => s.UpdatedAt).Take(MostStories).ToListAsync(ct);
         var videos = await VideosAsync(db, stories, ct);
         var now = clock.GetUtcNow();
-        return Results.Ok(stories.Select(s => View(s, now, videos.GetValueOrDefault(s.Id))));
+        var present = await PresentAsync(db, stories, ct);
+        return Results.Ok(stories.Select(s => View(s, now, present, videos.GetValueOrDefault(s.Id))));
     }
 
     /// <summary>Each story's video file, once cut.</summary>
@@ -80,7 +89,7 @@ public static class StoryEndpoints
     {
         var me = await Me(p, users);
         return await db.MediaStories.AsNoTracking().SingleOrDefaultAsync(s => s.Id == id && s.OwnerId == me.Id, ct) is { } s
-            ? Results.Ok(View(s, clock.GetUtcNow(), (await VideosAsync(db, [s], ct)).GetValueOrDefault(s.Id)))
+            ? Results.Ok(View(s, clock.GetUtcNow(), await PresentAsync(db, [s], ct), (await VideosAsync(db, [s], ct)).GetValueOrDefault(s.Id)))
             : Results.NotFound();
     }
 
@@ -106,7 +115,7 @@ public static class StoryEndpoints
         var story = new MediaStory { OwnerId = me.Id, Title = written!.Title, Brief = brief, Music = written.Music, Shots = StoryModel.Write(written.Shots) };
         db.MediaStories.Add(story);
         await db.SaveChangesAsync(ct);
-        return Results.Created($"/api/media/stories/{story.Id}", View(story, clock.GetUtcNow()));
+        return Results.Created($"/api/media/stories/{story.Id}", View(story, clock.GetUtcNow(), await PresentAsync(db, [story], ct)));
     }
 
     /// <summary>The person's own changes: what was made for a shot stays while what it came from holds.</summary>
@@ -158,7 +167,7 @@ public static class StoryEndpoints
         story.Music = body.Music?.Trim() is { Length: > 0 } music ? music[..Math.Min(music.Length, 1000)] : null;
         story.UpdatedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
-        return Results.Ok(View(story, clock.GetUtcNow(), (await VideosAsync(db, [story], ct)).GetValueOrDefault(story.Id)));
+        return Results.Ok(View(story, clock.GetUtcNow(), await PresentAsync(db, [story], ct), (await VideosAsync(db, [story], ct)).GetValueOrDefault(story.Id)));
     }
 
     private static async Task<IResult> StartAsync(MediaStory story, AppDbContext db, StoryRuns runs, Operations.Modules modules, TimeProvider clock, CancellationToken ct)
@@ -180,7 +189,7 @@ public static class StoryEndpoints
         (story.Status, story.Phase, story.Error, story.UpdatedAt) = (MediaStory.Making, "Starting", null, clock.GetUtcNow());
         await db.SaveChangesAsync(ct);
         runs.Go(story.Id);
-        return Results.Accepted($"/api/media/stories/{story.Id}", View(story, clock.GetUtcNow()));
+        return Results.Accepted($"/api/media/stories/{story.Id}", View(story, clock.GetUtcNow(), await PresentAsync(db, [story], ct)));
     }
 
     private static async Task<IResult> MakeAsync(Guid id, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, StoryRuns runs, Operations.Modules modules,
