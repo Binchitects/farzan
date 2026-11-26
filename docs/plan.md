@@ -370,6 +370,29 @@ audit. 5. The UI slots, the bridge, the error boundaries, the admin pages. 6. Th
 `publish`. 7. Compose, the feature, Helm, the offline bundle, docs; every suite, the compliance check, release-scan,
 image-scan, the upgrade from 7.x and 8.x, the offline scenarios; then framework 1.0.0 and, after 8.2.0, Arena 8.3.0.
 
+### Engines (asked 2026-11-26, in 8.3.0)
+
+Newest versions of the engines' images, and four engines more: TokenSpeed, FreeToken, Unsloth and Ollama.
+
+- **Where they stand.** vLLM v0.34.0, SGLang v0.5.23, LMDeploy 0.18.0 and Strata 0.2.22 are their latest releases;
+  llama.cpp runs the floating `server-cuda` tag (the live stack's copy, from 2026-11-25) and vLLM's PyPI build
+  0.31.0. Fix: llama.cpp pinned to a build tag (`server-cuda-b12767`, llamacpp and embed), the PyPI build to v0.34.0;
+  the local `server-cuda` tag is never moved (the live stack runs it).
+- **The new kinds**, each run by the same supervisor as vLLM (one server a model, on its GPUs), its own feature and
+  compose profile (off until asked for), Helm Deployment, launcher (`services/KIND/serve.py`), fake for tests, the
+  key by the environment only (IAM-08), readiness on `/health`, its load from `/metrics` where it has one:
+  - **TokenSpeed** 0.1.1 (LightSeek, MIT): snapshots on NVIDIA GPUs, tensor parallel, a prefix cache; `ts serve`.
+  - **FreeToken** 0.2.3 (FlashML, Apache-2.0): MoE models with experts in RAM on one GPU, GGUF or snapshots;
+    `ft serve`; built from PyPI on CUDA 13 (its kernels compiled in the image, nothing at first use).
+  - **Ollama** 0.40.18 (MIT): GGUF files of the library made into its models with no pull; it has no key of its own,
+    so its launcher fronts it with one, else it is not a managed engine.
+  - **Unsloth** (Apache-2.0, beta): its OpenAI-compatible server, if it can be run per model with a key from the
+    environment and nothing downloaded; else said why, as TensorRT-LLM was.
+- **Proof.** Each launcher's arguments, key and GPUs (test_engine_launchers.py), its kind's settings in the app
+  (EngineKindTests, VllmBackendTests, the advisor), the form (engine-fields), parity with Helm, and each engine run
+  for real on this machine's GPU with a model of the library. The images scanned, the bundle and offline scenarios
+  made again.
+
 ## Next
 
 1. **Farzan Graph's code graphs.** Who calls a method, what implements an interface,
