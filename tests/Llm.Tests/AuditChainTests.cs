@@ -151,4 +151,26 @@ public sealed class AuditChainTests(AppFixture app)
         Assert.True(report.Holds, $"broken at {report.BrokenAt}");
         Assert.Equal(await db.AuditEvents.CountAsync(), report.Entries);
     }
+
+    [Fact]
+    public async Task The_audit_log_is_searched_by_words_action_and_outcome()
+    {
+        var admin = await new TestBrowser(app.Factory).SignedInAsync("admin", AppFixture.AdminPassword);
+        var name = "au" + Guid.NewGuid().ToString("N")[..10];
+        await admin.JsonAsync(await admin.PostAsync("/api/admin/people", new { userName = name, email = $"{name}@example.test" }));
+        // A failed sign-in of theirs: an entry that did not succeed.
+        await new TestBrowser(app.Factory).LoginAsync(name, "not their password");
+        var found = (await admin.JsonAsync(await admin.GetAsync($"/api/admin/audit?q={name}"))).EnumerateArray().ToList();
+        Assert.True(found.Count >= 2, $"{found.Count} entries mention {name}");
+        Assert.All(found, e => Assert.Contains(name, e.GetRawText(), StringComparison.OrdinalIgnoreCase));
+        var failed = (await admin.JsonAsync(await admin.GetAsync($"/api/admin/audit?q={name}&success=false"))).EnumerateArray().ToList();
+        Assert.NotEmpty(failed);
+        Assert.All(failed, e => Assert.False(e.GetProperty("success").GetBoolean()));
+        // An action by its name, or every one starting so.
+        var action = found[0].GetProperty("action").GetString()!;
+        Assert.All((await admin.JsonAsync(await admin.GetAsync($"/api/admin/audit?q={name}&action={action}"))).EnumerateArray(), e => Assert.Equal(action, e.GetProperty("action").GetString()));
+        var family = action[..(action.IndexOf('.') + 1)];
+        Assert.All((await admin.JsonAsync(await admin.GetAsync($"/api/admin/audit?action={family}&take=50"))).EnumerateArray(),
+            e => Assert.StartsWith(family, e.GetProperty("action").GetString(), StringComparison.Ordinal));
+    }
 }

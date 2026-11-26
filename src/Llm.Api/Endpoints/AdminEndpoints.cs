@@ -405,22 +405,41 @@ public static class AdminEndpoints
 
     /// <param name="actor">Only what this person did (their duties, as Admin → Access hands them out).</param>
     /// <summary>The audit log, newest first, a page at a time (before: the last id seen); from and to: what happened in that window.</summary>
-    private static async Task<IResult> AuditAsync(AppDbContext db, int take = 200, long? before = null, Guid? actor = null, DateTimeOffset? from = null, DateTimeOffset? to = null)
+    /// <summary>
+    /// The audit log, newest first: in a time, by a person, of an action (its name or the start of it: "prompts." is every
+    /// prompt-log look), that succeeded or failed, and with words in it (in its action, whom it was about, its detail or who did it).
+    /// </summary>
+    private static async Task<IResult> AuditAsync(AppDbContext db, int take = 200, long? before = null, Guid? actor = null, DateTimeOffset? from = null, DateTimeOffset? to = null,
+        string? action = null, string? q = null, bool? success = null)
     {
         if (from >= to)
         {
             return AuthEndpoints.Problem(400, "range", "The range must start before it ends.");
         }
-        var q = db.AuditEvents.AsNoTracking().Where(e => (from == null || e.At >= from) && (to == null || e.At < to));
+        var events = db.AuditEvents.AsNoTracking().Where(e => (from == null || e.At >= from) && (to == null || e.At < to));
         if (actor is { } who)
         {
-            q = q.Where(e => e.ActorId == who);
+            events = events.Where(e => e.ActorId == who);
+        }
+        if (action?.Trim() is { Length: > 0 } named)
+        {
+            events = named.EndsWith('.') ? events.Where(e => e.Action.StartsWith(named)) : events.Where(e => e.Action == named);
+        }
+        if (success is { } ok)
+        {
+            events = events.Where(e => e.Success == ok);
+        }
+        if (q?.Trim() is { Length: > 0 } words)
+        {
+            var like = "%" + words.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal) + "%";
+            events = events.Where(e => EF.Functions.ILike(e.Action, like, "\\") || EF.Functions.ILike(e.Target!, like, "\\") || EF.Functions.ILike(e.Detail!, like, "\\")
+                || EF.Functions.ILike(e.Actor!, like, "\\"));
         }
         if (before is { } b)
         {
-            q = q.Where(e => e.Id < b);
+            events = events.Where(e => e.Id < b);
         }
-        return Results.Ok(await q.OrderByDescending(e => e.Id).Take(Math.Clamp(take, 1, 1000)).ToListAsync());
+        return Results.Ok(await events.OrderByDescending(e => e.Id).Take(Math.Clamp(take, 1, 1000)).ToListAsync());
     }
 
     private static async Task<IResult> WithPerson(Guid id, PeopleService people, Func<AppUser, Task<IResult>> action)

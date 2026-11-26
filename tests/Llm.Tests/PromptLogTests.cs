@@ -77,6 +77,12 @@ public sealed class PromptLogTests(AppFixture app)
         Assert.Equal(["Main", "Sub-agent 1"], run.GetProperty("threads").EnumerateArray().Select(t => t.GetProperty("name").GetString()));
         Assert.Equal(steps[0].GetProperty("thread").GetString(), steps[1].GetProperty("thread").GetString());
         Assert.NotEqual(steps[0].GetProperty("thread").GetString(), steps[2].GetProperty("thread").GetString());
+        // Found by its run, by a tool its answer called, by its model; nothing by another model.
+        int Count(JsonElement r) => r.GetProperty("items").GetArrayLength();
+        Assert.Equal(3, Count(await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts?source=api&run={chat}"))));
+        Assert.Equal(1, Count(await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts?source=api&run={chat}&tool=read_file"))));
+        Assert.Equal(3, Count(await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts?source=api&run={chat}&model=Qwen3.8-Flash-Next"))));
+        Assert.Equal(0, Count(await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts?source=api&run={chat}&model=another"))));
         // Each line of the log says which run it is a step of.
         var listed = (await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts?person={name}&source=api"))).GetProperty("items").EnumerateArray().ToList();
         Assert.All(listed, i => Assert.Equal(chat, i.GetProperty("run").GetGuid()));

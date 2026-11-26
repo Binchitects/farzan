@@ -72,9 +72,15 @@ public static class PromptLogEndpoints
 
     private static string Like(string q) => "%" + q.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal) + "%";
 
+    /// <param name="model">Answered by this model.</param>
+    /// <param name="project">In this project: a chat's, or an API step of one of its chats or sessions.</param>
+    /// <param name="tool">Its answer called this tool.</param>
+    /// <param name="run">A step of this chat or Code Arena session.</param>
     private static async Task<IResult> SearchAsync(string? q, string? person, string? source, string? state, string? tag, DateTimeOffset? from, DateTimeOffset? to, DateTimeOffset? before,
-        AppDbContext db, Audit audit, Chat.AnswerJobs jobs, TimeProvider clock, CancellationToken ct)
+        string? model, Guid? project, string? tool, Guid? run, AppDbContext db, Audit audit, Chat.AnswerJobs jobs, TimeProvider clock, CancellationToken ct)
     {
+        model = model?.Trim() is { Length: > 0 } m0 ? m0 : null;
+        tool = tool?.Trim() is { Length: > 0 } t0 ? t0 : null;
         source = source is "chat" or "api" ? source : "all";
         state = state is not null && States.Contains(state) ? state : null;
         var text = q?.Trim() is { Length: > 0 } t ? t : null;
@@ -97,6 +103,23 @@ public static class PromptLogEndpoints
             var questions = db.ChatMessages.AsNoTracking().Where(m => m.Role == "user" && m.CreatedAt < end && m.CreatedAt >= start)
                 .Join(db.Conversations.AsNoTracking(), m => m.ConversationId, c => c.Id, (m, c) => new { m, c })
                 .Where(x => who == null || (x.m.AuthorId ?? x.c.UserId) == who);
+            if (run is { } r1)
+            {
+                questions = questions.Where(x => x.c.Id == r1);
+            }
+            if (project is { } p1)
+            {
+                questions = questions.Where(x => x.c.WorkProjectId == p1);
+            }
+            if (model is not null)
+            {
+                questions = questions.Where(x => db.ChatMessages.Any(a => a.ParentId == x.m.Id && a.Role == "assistant" && a.Model == model));
+            }
+            if (tool is not null)
+            {
+                questions = questions.Where(x => db.ChatMessages.Any(a => a.ParentId == x.m.Id && a.Role == "assistant"
+                    && db.ChatMessages.Any(t => t.Role == "tool" && t.ToolName == tool && (t.AnswerId == a.Id || t.ParentId == a.Id))));
+            }
             if (text is not null)
             {
                 questions = questions.Where(x => EF.Functions.ILike(x.m.Content, Like(text), "\\"));
@@ -149,7 +172,13 @@ public static class PromptLogEndpoints
         if (source != "chat")
         {
             var api = db.PromptLog.AsNoTracking().Where(p => p.At < end && p.At >= start && (who == null || p.UserId == who) && (state == null || p.State == state)
-                && (tagged == null || p.Tags.Contains(tagged)));
+                && (tagged == null || p.Tags.Contains(tagged)) && (model == null || p.Model == model) && (run == null || p.ChatId == run)
+                && (project == null || db.Conversations.Any(c => c.Id == p.ChatId && c.WorkProjectId == project)));
+            if (tool is not null)
+            {
+                // "Called a, b": the tools its answer called.
+                api = api.Where(p => EF.Functions.ILike(p.Answer!, "Called %" + Like(tool).Trim('%') + "%", "\\"));
+            }
             if (text is not null)
             {
                 api = api.Where(p => EF.Functions.ILike(p.Prompt, Like(text), "\\") || EF.Functions.ILike(p.Answer!, Like(text), "\\"));
@@ -163,7 +192,8 @@ public static class PromptLogEndpoints
         var names = await db.Users.AsNoTracking().Where(u => people.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => new { u.Id, u.UserName, u.DisplayName }, ct);
         await audit.WriteAsync("prompts.viewed", person, detail: string.Join("; ", new[]
         {
-            $"source {source}", state is null ? null : $"state {state}", tagged is null ? null : $"tag {tagged}", text is null ? null : $"text \"{text}\"", person is null ? null : $"person {person}",
+            $"source {source}", state is null ? null : $"state {state}", model is null ? null : $"model {model}", project is null ? null : $"project {project}",
+            tool is null ? null : $"tool {tool}", run is null ? null : $"run {run}", tagged is null ? null : $"tag {tagged}", text is null ? null : $"text \"{text}\"", person is null ? null : $"person {person}",
             from is null ? null : $"from {from.Value.ToString("O", CultureInfo.InvariantCulture)}", to is null ? null : $"to {to.Value.ToString("O", CultureInfo.InvariantCulture)}",
             $"{page.Count} shown",
         }.OfType<string>()));
