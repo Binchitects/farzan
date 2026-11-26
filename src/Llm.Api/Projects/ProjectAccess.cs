@@ -46,5 +46,18 @@ public static class ProjectAccess
         return p is null ? (null, null) : (await RoleAsync(db, p, me, m, ct)) is { } role ? (p, role) : (null, null);
     }
 
+    /// <summary>
+    /// The active projects an admin put on the person or one of their groups (<see cref="ProjectMember.Forced"/>), by name:
+    /// their new chats go in the first, and they move work only among these.
+    /// </summary>
+    public static async Task<List<Guid>> ForcedAsync(AppDbContext db, Guid me, Membership m, CancellationToken ct)
+    {
+        var groups = m.Groups.ToList();
+        return await db.ProjectMembers.AsNoTracking()
+            .Where(x => x.Forced && (x.UserId == me || (x.GroupId != null && groups.Contains(x.GroupId.Value))))
+            .Join(db.Projects.Where(p => p.Status == Project.Active), x => x.ProjectId, p => p.Id, (x, p) => p)
+            .Distinct().OrderBy(p => p.Name).Select(p => p.Id).ToListAsync(ct);
+    }
+
     public static bool Holds(string? role, string need) => ProjectMember.Rank(role) >= ProjectMember.Rank(need);
 }

@@ -405,7 +405,7 @@ public static class CodeEndpoints
         var where = body.Project is { Length: > 0 } project
             ? $"About the project {project}" + (body.Iid is { } iid ? $", merge request !{iid}" : body.Ref is { Length: > 0 } r ? $", at {r}" : "") + ":\n\n"
             : "";
-        var c = new Conversation { UserId = me.Id, Title = ChatService.TitleFrom(question), Tools = ["code-intel"] };
+        var c = new Conversation { UserId = me.Id, Title = ChatService.TitleFrom(question), Tools = ["code-intel"], WorkProjectId = await Projects.ProjectChats.StartAsync(db, access, me, ct) };
         db.Conversations.Add(c);
         await db.SaveChangesAsync(ct);
         return Results.Ok(new { id = c.Id, message = where + question });

@@ -103,4 +103,6 @@ public sealed class ApiKey
     public DateTimeOffset? LastUsedAt { get; set; }
     /// <summary>What it has cost in all.</summary>
     public decimal Spend { get; set; }
+    /// <summary>A project's key (an own key made for it): its requests that name no other project count to it.</summary>
+    public Guid? ProjectId { get; set; }
 }

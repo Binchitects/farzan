@@ -53,6 +53,11 @@ public sealed class ProjectMember
     public Guid? UserId { get; set; }
     public Guid? GroupId { get; set; }
     public string Role { get; set; } = Contributor;
+    /// <summary>
+    /// Put on the person or the group by an admin: their new chats, rooms and Code Arena sessions go in it, their API
+    /// requests that name no project count to it, and they take nothing out of it but into another project put on them.
+    /// </summary>
+    public bool Forced { get; set; }
     public Guid? AddedById { get; set; }
     public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.UtcNow;
 

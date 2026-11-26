@@ -5675,6 +5675,10 @@ namespace Llm.Core.Data.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("preview");
 
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
                     b.Property<int?>("RequestsPerMinute")
                         .HasColumnType("integer")
                         .HasColumnName("requests_per_minute");
@@ -5700,6 +5704,8 @@ namespace Llm.Core.Data.Migrations
 
                     b.HasIndex("Alias")
                         .IsUnique();
+
+                    b.HasIndex("ProjectId");
 
                     b.HasIndex("UserId");
 
@@ -7711,6 +7717,11 @@ namespace Llm.Core.Data.Migrations
                     b.Property<Guid?>("AddedById")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("Forced")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid");
 
@@ -9473,6 +9484,11 @@ namespace Llm.Core.Data.Migrations
 
             modelBuilder.Entity("Llm.Core.Gateway.ApiKey", b =>
                 {
+                    b.HasOne("Llm.Core.Projects.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Llm.Core.Identity.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")

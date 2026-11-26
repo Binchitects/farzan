@@ -34,15 +34,18 @@ public static class ProjectTags
     /// <summary>
     /// Each request's chat and project (by index, the tags of the same row): a chat tag counts when the chat is the person's
     /// own or a room they are in; a project tag when the project is active and the person may add to it. Others are left out.
+    /// A request with neither (a key used outside Code Arena) counts to its key's project when the key is a project's, else
+    /// to the project an admin put on the person.
     /// </summary>
     public static async Task ResolveAsync(AppDbContext db, AccessService access, List<GatewayRequest> rows, IReadOnlyList<(string? Chat, string? Project)> tags, CancellationToken ct)
     {
         var chatIds = tags.Select(t => Guid.TryParse(t.Chat, out var g) ? g : (Guid?)null).ToList();
         var projectIds = tags.Select(t => Guid.TryParse(t.Project, out var g) ? g : (Guid?)null).ToList();
-        if (chatIds.All(c => c is null) && projectIds.All(p => p is null))
-        {
-            return;
-        }
+        // The keys that are a project's (an active one), for the requests that name none.
+        var hashes = rows.Select(r => r.KeyHash).OfType<string>().Distinct().ToList();
+        var keyProjects = hashes.Count == 0 ? [] : await db.ApiKeys.AsNoTracking().Where(k => hashes.Contains(k.Hash) && k.ProjectId != null)
+            .Join(db.Projects.Where(p => p.Status == Project.Active), k => k.ProjectId, p => p.Id, (k, p) => new { k.Hash, p.Id }).ToDictionaryAsync(k => k.Hash, k => k.Id, ct);
+        var forced = new Dictionary<Guid, Guid?>();
         var wantedChats = chatIds.OfType<Guid>().Distinct().ToList();
         var chats = await db.Conversations.AsNoTracking().Where(c => wantedChats.Contains(c.Id))
             .Select(c => new { c.Id, c.UserId, c.Kind, c.WorkProjectId }).ToDictionaryAsync(c => c.Id, ct);
@@ -52,11 +55,38 @@ public static class ProjectTags
         var projects = await db.Projects.AsNoTracking().Where(p => wantedProjects.Contains(p.Id) && p.Status == Project.Active).ToDictionaryAsync(p => p.Id, ct);
         var memberships = new Dictionary<Guid, Membership?>();
         var roles = new Dictionary<(Guid, Guid), bool>();
+        async Task<Membership?> MembershipAsync(Guid user)
+        {
+            if (!memberships.TryGetValue(user, out var m))
+            {
+                m = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == user, ct) is { } person ? await access.MembershipAsync(person, ct) : null;
+                memberships[user] = m;
+            }
+            return m;
+        }
         for (var i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
             if (row.UserId is not { } user)
             {
+                continue;
+            }
+            // Named nothing: the key's project, else the one put on the person.
+            if (chatIds[i] is null && projectIds[i] is null)
+            {
+                if (row.KeyHash is { } hash && keyProjects.TryGetValue(hash, out var kp))
+                {
+                    row.ProjectId = kp;
+                }
+                else
+                {
+                    if (!forced.TryGetValue(user, out var put))
+                    {
+                        put = await MembershipAsync(user) is { } who ? (await ProjectAccess.ForcedAsync(db, user, who, ct)).Cast<Guid?>().FirstOrDefault() : null;
+                        forced[user] = put;
+                    }
+                    row.ProjectId = put;
+                }
                 continue;
             }
             if (chatIds[i] is { } chat && chats.TryGetValue(chat, out var c) && (c.UserId == user || (c.Kind == Core.Chat.RoomMember.Room && roomPeople.Contains((chat, user)))))
@@ -72,11 +102,7 @@ public static class ProjectTags
             {
                 if (!roles.TryGetValue((pid, user), out var may))
                 {
-                    if (!memberships.TryGetValue(user, out var m))
-                    {
-                        m = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == user, ct) is { } person ? await access.MembershipAsync(person, ct) : null;
-                        memberships[user] = m;
-                    }
+                    var m = await MembershipAsync(user);
                     may = m is not null && ProjectAccess.Holds(await ProjectAccess.RoleAsync(db, project, user, m, ct), ProjectMember.Contributor);
                     roles[(pid, user)] = may;
                 }

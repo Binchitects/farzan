@@ -401,7 +401,7 @@ public static class MeetingEndpoints
     /// A chat about the meeting: its minutes and transcript (with who said what, and when) as a file of its first question,
     /// read as any document is; the page sends the question in it.
     /// </summary>
-    private static async Task<IResult> AskAsync(Guid id, MeetingQuestion body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, IOptionsMonitor<ChatOptions> chat,
+    private static async Task<IResult> AskAsync(Guid id, MeetingQuestion body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, Llm.Api.Access.AccessService access, IOptionsMonitor<ChatOptions> chat,
         CancellationToken ct)
     {
         var me = await Me(p, users);
@@ -423,7 +423,7 @@ public static class MeetingEndpoints
             Size = Encoding.UTF8.GetByteCount(all), Text = all.Length > most ? all[..most] : all, Truncated = all.Length > most,
         };
         db.ChatAttachments.Add(attachment);
-        var c = new Conversation { UserId = me.Id, Title = ChatService.TitleFrom($"About: {m.Title}") };
+        var c = new Conversation { UserId = me.Id, Title = ChatService.TitleFrom($"About: {m.Title}"), WorkProjectId = await Projects.ProjectChats.StartAsync(db, access, me, ct) };
         db.Conversations.Add(c);
         await db.SaveChangesAsync(ct);
         var question = body.Question?.Trim() is { Length: > 0 } q ? q : "What did we decide, and who does what next?";

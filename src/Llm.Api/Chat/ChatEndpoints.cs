@@ -238,7 +238,9 @@ public static partial class ChatEndpoints
                 UseCodeIntel = false,
             };
         }
-        var c = new Conversation { UserId = me.Id, AssistantId = assistant?.Id, Kind = field is null ? null : Conversation.Lab, LabField = field?.Id };
+        var c = new Conversation { UserId = me.Id, AssistantId = assistant?.Id, Kind = field is null ? null : Conversation.Lab, LabField = field?.Id,
+            // In the project an admin put on the person, if one.
+            WorkProjectId = (await Projects.ProjectAccess.ForcedAsync(db, me.Id, membership, ct)).Cast<Guid?>().FirstOrDefault() };
         if (await ApplyAsync(c, new ConversationChange(null, body.Thinking, null, body.Model, body.SystemPrompt, body.Temperature, body.TopP, body.MaxTokens), chat.CurrentValue, models, me, policy, small) is { } problem)
         {
             return problem;

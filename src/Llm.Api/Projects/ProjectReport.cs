@@ -21,6 +21,12 @@ public sealed record ProjectPerson(Guid? Id, string Name, string? Email, long Re
 
 public sealed record ProjectUse(string Name, long Requests, long Tokens, decimal Cost);
 
+/// <summary>What one chat, room or Code Arena session of the project used in the time.</summary>
+public sealed record ProjectChatUse(Guid Chat, Guid? Owner, string Kind, string Title, long Requests, long Tokens, decimal Cost);
+
+/// <summary>What one API key used for the project outside any chat (a project's key, or one naming it), and whose it is.</summary>
+public sealed record ProjectKeyUse(string Key, string Name, Guid? Person, string? Email, bool ProjectKey, long Requests, long Tokens, decimal Cost);
+
 public sealed record ProjectProgress(int Goals, int GoalsDone, int Tasks, int TasksDone, int TasksDoneInRange, int Steps, int StepsDone, int Chats, int Rooms, int Sessions);
 
 /// <summary>
@@ -40,7 +46,14 @@ public sealed record ProjectHuman(int Estimated, int NotEstimated, double ByHand
 
 /// <summary>What a project used and did over a time: every number its page and its exports show.</summary>
 public sealed record ProjectNumbers(DateTimeOffset From, DateTimeOffset To, TimeSpan Interval, ProjectTotals Totals, List<ProjectBucket> Series, List<ProjectPerson> People,
-    List<ProjectUse> Models, List<ProjectUse> Surfaces, ProjectProgress Progress, decimal SpentThisMonth, ProjectHuman Human);
+    List<ProjectUse> Models, List<ProjectUse> Surfaces, ProjectProgress Progress, decimal SpentThisMonth, ProjectHuman Human)
+{
+    /// <summary>Each chat's, room's and session's use, the most costly first.</summary>
+    public List<ProjectChatUse> Chats { get; init; } = [];
+
+    /// <summary>Each API key's use outside chats, the most costly first.</summary>
+    public List<ProjectKeyUse> Keys { get; init; } = [];
+}
 
 /// <summary>
 /// A project's accounting over a time, from the ledger (gateway.requests tagged with it: tokens in and out, cost, requests,
@@ -83,6 +96,8 @@ public static class ProjectReport
             """, p, ct);
         var byModel = await sql.QueryAsync($"select r.model, count(*), coalesce(sum(r.total_tokens),0), coalesce(sum(r.cost),0) {Where} group by 1 order by 4 desc, 2 desc", p, ct);
         var bySurface = await sql.QueryAsync($"select r.surface, count(*), coalesce(sum(r.total_tokens),0), coalesce(sum(r.cost),0) {Where} group by 1 order by 4 desc, 2 desc", p, ct);
+        var byChat = await sql.QueryAsync($"select r.conversation_id::text, count(*), coalesce(sum(r.total_tokens),0), coalesce(sum(r.cost),0) {Where} and r.conversation_id is not null group by 1 order by 4 desc, 2 desc", p, ct);
+        var byKey = await sql.QueryAsync($"select r.key_hash, max(r.key_alias), max(r.user_id::text), max(r.person), count(*), coalesce(sum(r.total_tokens),0), coalesce(sum(r.cost),0) {Where} and r.conversation_id is null and r.key_hash is not null group by 1 order by 7 desc, 5 desc", p, ct);
         // The models' time: each request from its start to its end, those at once (sub-agents, steps side by side) counted
         // once: the islands of overlapping requests, per person and for the whole project.
         static string Busy(string who) => $"""
@@ -170,10 +185,25 @@ public static class ProjectReport
             doneTasks.Count(t => t.HumanHours is null) + doneGoals.Count(g => g.HumanHours is null),
             Math.Round(byHand, 2), Math.Round(peopleHours, 2), Math.Round(total.AgentSeconds / 3600, 2), hourly,
             Math.Round((decimal)byHand * hourly, 2), Math.Round(total.Cost + (decimal)peopleHours * hourly, 2));
+        // Each chat's use by its kind and title; each key's by its name (an own key's, else its alias) and whose it is.
+        var chatRows = byChat.Rows.Select(r => (Id: Guid.Parse((string)r[0]!), Requests: Num(r[1]), Tokens: Num(r[2]), Cost: Dec(r[3]))).ToList();
+        var chatIdsUsed = chatRows.Select(c => c.Id).ToList();
+        var chatInfo = await db.Conversations.AsNoTracking().IgnoreQueryFilters().Where(c => chatIdsUsed.Contains(c.Id))
+            .Select(c => new { c.Id, c.UserId, c.Title, c.Kind, c.Origin }).ToDictionaryAsync(c => c.Id, ct);
+        var hashes = byKey.Rows.Select(r => (string)r[0]!).ToList();
+        var keyRows = await db.ApiKeys.AsNoTracking().Where(k => hashes.Contains(k.Hash)).ToDictionaryAsync(k => k.Hash, ct);
         return new ProjectNumbers(from, to, interval, total, series, people,
             [.. byModel.Rows.Select(r => new ProjectUse((string?)r[0] ?? "", Num(r[1]), Num(r[2]), Dec(r[3])))],
             [.. bySurface.Rows.Select(r => new ProjectUse(Surface((string?)r[0]), Num(r[1]), Num(r[2]), Dec(r[3])))],
-            progress, month, human);
+            progress, month, human)
+        {
+            Chats = [.. chatRows.Select(c => chatInfo.TryGetValue(c.Id, out var i)
+                ? new ProjectChatUse(c.Id, i.UserId, i.Kind == Core.Chat.RoomMember.Room ? "room" : i.Origin == Chat.CodeArenaSync.Origin ? "session" : "chat", i.Title, c.Requests, c.Tokens, c.Cost)
+                : new ProjectChatUse(c.Id, null, "chat", "(a deleted chat)", c.Requests, c.Tokens, c.Cost))],
+            Keys = [.. byKey.Rows.Select(r => (string)r[0]! is var h && keyRows.GetValueOrDefault(h) is var k
+                ? new ProjectKeyUse(h, k?.Name ?? (string?)r[1] ?? "a key", Id(r[2]), (string?)r[3], k?.ProjectId == project.Id, Num(r[4]), Num(r[5]), Dec(r[6]))
+                : null)],
+        };
     }
 
     /// <summary>Where requests came from, as people say it.</summary>

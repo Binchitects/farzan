@@ -22,9 +22,10 @@ namespace Llm.Api.Projects;
 public sealed record ProjectRequest(string? Name = null, string? Description = null, bool? Global = null, string? Status = null, string? StartsOn = null, string? DueOn = null,
     decimal? MonthlyBudget = null, int? AlertPercent = null, bool? StopAtBudget = null, string[]? Tags = null);
 
-public sealed record ProjectMembersRequest(Guid[]? UserIds = null, Guid[]? GroupIds = null, string? Role = null);
+/// <param name="Forced">Put the project on them (projects.manage only): their new chats, sessions and API requests go in it, and nothing of theirs leaves it.</param>
+public sealed record ProjectMembersRequest(Guid[]? UserIds = null, Guid[]? GroupIds = null, string? Role = null, bool? Forced = null);
 
-public sealed record ProjectRoleRequest(string Role);
+public sealed record ProjectRoleRequest(string Role, bool? Forced = null);
 
 public sealed record ProjectRepositoryRequest(string Path, string? Host = null);
 
@@ -300,7 +301,7 @@ public static class ProjectEndpoints
         var groupNames = await db.Groups.AsNoTracking().Where(x => groupIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Name, ct);
         var members = rows.Select(r => new
         {
-            r.Id, r.Role, r.UserId, r.GroupId, r.AddedAt,
+            r.Id, r.Role, r.UserId, r.GroupId, r.AddedAt, r.Forced,
             name = r.UserId is { } u ? (people.TryGetValue(u, out var person) ? Name(person) : "(a former person)") : groupNames.GetValueOrDefault(r.GroupId!.Value) ?? "(a deleted group)",
             email = r.UserId is { } e && people.TryGetValue(e, out var withEmail) ? withEmail.Email : null,
         });
@@ -411,6 +412,10 @@ public static class ProjectEndpoints
         {
             return AuthEndpoints.Problem(400, "role", "A role is owner, contributor or viewer.");
         }
+        if (body.Forced is not null && !m.Has(Core.Access.Permissions.ProjectsManage))
+        {
+            return AuthEndpoints.Problem(403, "forced", "Only an admin (projects.manage) puts a project on people.");
+        }
         var userIds = (body.UserIds ?? []).Distinct().ToList();
         var groupIds = (body.GroupIds ?? []).Distinct().ToList();
         if (userIds.Count + groupIds.Count == 0)
@@ -436,10 +441,11 @@ public static class ProjectEndpoints
             if (rows.FirstOrDefault(x => x.UserId == u) is { } had)
             {
                 had.Role = role;
+                had.Forced = body.Forced ?? had.Forced;
             }
             else
             {
-                db.ProjectMembers.Add(new ProjectMember { ProjectId = id, UserId = u, Role = role, AddedById = me.Id });
+                db.ProjectMembers.Add(new ProjectMember { ProjectId = id, UserId = u, Role = role, AddedById = me.Id, Forced = body.Forced ?? false });
             }
         }
         foreach (var gid in groupIds)
@@ -447,15 +453,16 @@ public static class ProjectEndpoints
             if (rows.FirstOrDefault(x => x.GroupId == gid) is { } had)
             {
                 had.Role = role;
+                had.Forced = body.Forced ?? had.Forced;
             }
             else
             {
-                db.ProjectMembers.Add(new ProjectMember { ProjectId = id, GroupId = gid, Role = role, AddedById = me.Id });
+                db.ProjectMembers.Add(new ProjectMember { ProjectId = id, GroupId = gid, Role = role, AddedById = me.Id, Forced = body.Forced ?? false });
             }
         }
         p.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
-        await audit.WriteAsync("project.members", id.ToString(), detail: $"{userIds.Count} people, {groupIds.Count} groups as {role}");
+        await audit.WriteAsync("project.members", id.ToString(), detail: $"{userIds.Count} people, {groupIds.Count} groups as {role}{(body.Forced == true ? ", put on them" : body.Forced == false ? ", no longer put on them" : "")}");
         return Results.NoContent();
     }
 
@@ -463,10 +470,15 @@ public static class ProjectEndpoints
         AccessService access, Audit audit, CancellationToken ct)
     {
         var me = await Me(principal, users);
-        var (p, _, refused) = await FindAsync(db, id, me, await access.MembershipAsync(me, ct), ProjectMember.Owner, ct);
+        var m = await access.MembershipAsync(me, ct);
+        var (p, _, refused) = await FindAsync(db, id, me, m, ProjectMember.Owner, ct);
         if (p is null)
         {
             return refused!;
+        }
+        if (body.Forced is not null && !m.Has(Core.Access.Permissions.ProjectsManage))
+        {
+            return AuthEndpoints.Problem(403, "forced", "Only an admin (projects.manage) puts a project on people.");
         }
         if (!ProjectMember.Roles.Contains(body.Role))
         {
@@ -477,8 +489,9 @@ public static class ProjectEndpoints
             return Results.NotFound();
         }
         row.Role = body.Role;
+        row.Forced = body.Forced ?? row.Forced;
         await db.SaveChangesAsync(ct);
-        await audit.WriteAsync("project.members", id.ToString(), detail: $"{(row.UserId is not null ? "a person" : "a group")} now {body.Role}");
+        await audit.WriteAsync("project.members", id.ToString(), detail: $"{(row.UserId is not null ? "a person" : "a group")} now {body.Role}{(row.Forced ? ", put on them" : "")}");
         return Results.NoContent();
     }
 
@@ -500,6 +513,10 @@ public static class ProjectEndpoints
         if (role != ProjectMember.Owner && row.UserId != me.Id)
         {
             return NotYours();
+        }
+        if (row.Forced && !m.Has(Core.Access.Permissions.ProjectsManage))
+        {
+            return AuthEndpoints.Problem(403, "forced", "An admin put this project on them: only an admin (projects.manage) takes it off.");
         }
         db.ProjectMembers.Remove(row);
         await db.SaveChangesAsync(ct);
@@ -658,6 +675,13 @@ public static class ProjectEndpoints
             {
                 return refused!;
             }
+        }
+        // Work put in a project by an admin stays in one of those put on the person.
+        var forced = await ProjectAccess.ForcedAsync(db, me.Id, await access.MembershipAsync(me, ct), ct);
+        if (forced.Count > 0 && c.WorkProjectId != projectId && (projectId is not { } to || !forced.Contains(to)))
+        {
+            var names = await db.Projects.AsNoTracking().Where(x => forced.Contains(x.Id)).OrderBy(x => x.Name).Select(x => x.Name).ToListAsync(ct);
+            return AuthEndpoints.Problem(403, "forced", $"An admin put your work in {string.Join(" or ", names)}: it goes only there.");
         }
         if (c.WorkProjectId != projectId)
         {
@@ -973,11 +997,22 @@ public static class ProjectEndpoints
         }
         var (merged, mergedError) = await MergedAsync(db, codeIntel, me, p.Id, from, to, ct);
         var everyone = role == ProjectMember.Owner;
+        var rooms = await RoomAccess.RoomsOfAsync(db, me, ct);
+        var owners = n.Chats.Select(c => c.Owner).OfType<Guid>().Distinct().ToList();
+        var ownerNames = (await db.Users.AsNoTracking().Where(u => owners.Contains(u.Id)).ToListAsync(ct)).ToDictionary(u => u.Id, Name);
+        string Whose(Guid? who) => who is { } w ? ownerNames.GetValueOrDefault(w) ?? "a former person" : "someone";
         return Results.Ok(new
         {
             from = n.From, to = n.To, intervalMs = (long)n.Interval.TotalMilliseconds, n.Totals, n.Progress, n.Models, n.Surfaces,
             human = new { n.Human.Estimated, n.Human.NotEstimated, n.Human.ByHandHours, n.Human.PeopleHours, n.Human.ModelHours, n.Human.HourlyRate, n.Human.ByHandCost, n.Human.ActualCost, n.Human.Faster, n.Human.SavedHours, n.Human.SavedCost },
             series = n.Series, people = everyone ? n.People : [.. n.People.Where(x => x.Id == me.Id)], peopleHidden = !everyone,
+            // Each chat's and session's use: its title for whoever may open it, else whose it is; a viewer sees their own.
+            chats = n.Chats.Where(c => everyone || c.Owner == me.Id).Select(c => new
+            {
+                c.Chat, c.Kind, title = c.Owner == me.Id || rooms.Contains(c.Chat) ? c.Title : $"A {(c.Kind == "session" ? "Code Arena session" : c.Kind)} of {Whose(c.Owner)}",
+                mine = c.Owner == me.Id, c.Requests, c.Tokens, c.Cost,
+            }),
+            keys = n.Keys.Where(k => everyone || k.Person == me.Id).Select(k => new { name = k.Name, person = k.Email, k.ProjectKey, k.Requests, k.Tokens, k.Cost }),
             budget = p.MonthlyBudget is { } b ? new { monthly = b, spent = n.SpentThisMonth, percent = b > 0 ? Math.Round(100 * n.SpentThisMonth / b, 1) : 0, p.AlertPercent, p.StopAtBudget } : null,
             merged = merged.Select(x => new { repository = x.Repository, iid = x.Iid, title = x.Title, author = x.Author, mergedAt = x.MergedAt, url = x.Url }), mergedError,
         });

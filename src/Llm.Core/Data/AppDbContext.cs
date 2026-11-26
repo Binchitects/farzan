@@ -954,6 +954,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
         {
             e.ToTable("work_project_members", t => t.HasCheckConstraint("CK_work_project_members_one", "(\"UserId\" IS NULL) <> (\"GroupId\" IS NULL)"));
             e.Property(x => x.Role).HasMaxLength(12);
+            e.Property(x => x.Forced).HasDefaultValue(false);
             e.HasIndex(x => new { x.ProjectId, x.UserId }).IsUnique().HasFilter("\"UserId\" IS NOT NULL");
             e.HasIndex(x => new { x.ProjectId, x.GroupId }).IsUnique().HasFilter("\"GroupId\" IS NOT NULL");
             e.HasIndex(x => x.UserId);
@@ -1142,6 +1143,9 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.HasIndex(x => x.UserId);
             e.HasOne<Identity.AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Code.StudioWorkspace>().WithMany().HasForeignKey(x => x.WorkspaceId).OnDelete(DeleteBehavior.Cascade);
+            // The project gone: the key stays its maker's, no longer a project's.
+            e.HasIndex(x => x.ProjectId);
+            e.HasOne<Projects.Project>().WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.SetNull);
             Snake(e.Metadata);
         });
         builder.Entity<Code.StudioWorkspace>(e =>

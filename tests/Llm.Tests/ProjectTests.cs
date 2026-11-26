@@ -502,6 +502,81 @@ public sealed class ProjectTests(AppFixture app)
         Assert.Equal(("session", session), (task.GetProperty("from").GetProperty("kind").GetString(), task.GetProperty("from").GetProperty("id").GetGuid()));
     }
 
+    private async Task<GatewayRequest> AskWithKeyAsync(string key, string text)
+    {
+        var client = app.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri($"https://gateway.{AppFixture.Domain}"), HandleCookies = false });
+        using var req = new HttpRequestMessage(HttpMethod.Post, new Uri("/v1/chat/completions", UriKind.Relative))
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new { model = "Qwen3.8-Flash-Next", messages = new[] { new { role = "user", content = text } } }), System.Text.Encoding.UTF8, "application/json"),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
+        using var res = await client.SendAsync(req);
+        await StatusAssert.Is(HttpStatusCode.OK, res);
+        await app.Factory.Services.GetRequiredService<ModelGateway>().FlushAsync(default);
+        await using var scope = app.Factory.Services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().GatewayRequests.AsNoTracking()
+            .Where(r => r.KeyHash == Llm.Api.Gateway.AnswerCache.HashOf(key)).OrderByDescending(r => r.StartedAt).FirstAsync();
+    }
+
+    [Fact]
+    public async Task A_project_an_admin_puts_on_a_group_takes_its_peoples_new_chats_sessions_and_api_use_and_keeps_them()
+    {
+        var admin = await AdminAsync();
+        var (annId, ann, _, annKey) = await PersonAsync(admin);
+        var (benId, ben, _, _) = await PersonAsync(admin);
+        var id = await ProjectAsync(admin, new { name = "Billing " + Guid.NewGuid().ToString("N")[..6] });
+        var other = await ProjectAsync(ann, new { name = "Ann's own " + Guid.NewGuid().ToString("N")[..6] });
+        var group = (await admin.JsonAsync(await admin.PostAsync("/api/admin/groups", new { name = "Billing team " + Guid.NewGuid().ToString("N")[..6] }))).GetProperty("id").GetGuid();
+        await StatusAssert.Is(HttpStatusCode.NoContent, await admin.PostAsync($"/api/admin/groups/{group}/members", new { userIds = new[] { annId } }));
+        // Only an admin puts a project on people: Ann, owner of her own, may not.
+        await StatusAssert.Is(HttpStatusCode.Forbidden, await ann.PostAsync($"/api/projects/{other}/members", new { userIds = new[] { benId }, forced = true }));
+        await StatusAssert.Is(HttpStatusCode.NoContent, await admin.PostAsync($"/api/projects/{id}/members", new { groupIds = new[] { group }, forced = true }));
+        var member = (await admin.JsonAsync(await admin.GetAsync($"/api/projects/{id}"))).GetProperty("members").EnumerateArray().Single();
+        Assert.True(member.GetProperty("forced").GetBoolean());
+
+        // Her new chat is in it, and stays: not out, not into her own project.
+        var chat = await ChatAsync(ann);
+        Assert.Equal(id, (await ann.JsonAsync(await ann.GetAsync($"/api/chat/conversations/{chat}"))).GetProperty("projectId").GetGuid());
+        await StatusAssert.Is(HttpStatusCode.Forbidden, await PutAsync(ann, $"/api/chat/conversations/{chat}/project", new { projectId = (Guid?)null }));
+        await StatusAssert.Is(HttpStatusCode.Forbidden, await PutAsync(ann, $"/api/chat/conversations/{chat}/project", new { projectId = other }));
+        // Her Code Arena session goes in it, though it asks for her own.
+        var arena = CodeArena(annKey);
+        var made = JsonDocument.Parse(await (await arena.PostAsJsonAsync("/api/code-arena/chats", new { @ref = "s-" + Guid.NewGuid().ToString("N")[..6], place = "/w/billing", projectId = other }))
+            .Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal(id, made.GetProperty("projectId").GetGuid());
+        // Her API request that names no project counts to it; Ben's (not in the group) to none.
+        Assert.Equal(id, (await AskWithKeyAsync(annKey, "a question")).ProjectId);
+        var benKey = (await ben.JsonAsync(await ben.PostAsync("/api/account/keys/own", new { name = "laptop" }))).GetProperty("apiKey").GetString()!;
+        Assert.Null((await AskWithKeyAsync(benKey, "a question")).ProjectId);
+
+        // Out of the group: her next chat is in no project, and she moves it as she likes.
+        await StatusAssert.Is(HttpStatusCode.NoContent, await admin.Http.DeleteAsync(new Uri($"/api/admin/groups/{group}/members/{annId}", UriKind.Relative)));
+        var later = await ChatAsync(ann);
+        Assert.Equal(JsonValueKind.Null, (await ann.JsonAsync(await ann.GetAsync($"/api/chat/conversations/{later}"))).GetProperty("projectId").ValueKind);
+        await StatusAssert.Is(HttpStatusCode.OK, await PutAsync(ann, $"/api/chat/conversations/{later}/project", new { projectId = other }));
+    }
+
+    [Fact]
+    public async Task A_projects_own_key_counts_its_use_there_and_the_page_shows_each_key_and_chat()
+    {
+        var admin = await AdminAsync();
+        var (_, ann, annEmail, _) = await PersonAsync(admin);
+        var (_, ben, _, _) = await PersonAsync(admin);
+        var id = await ProjectAsync(ann, new { name = "Reports " + Guid.NewGuid().ToString("N")[..6] });
+        // A key for it, by someone who may add to it; not by someone who may not.
+        await StatusAssert.Is(HttpStatusCode.Forbidden, await ben.PostAsync("/api/account/keys/own", new { name = "ci", projectId = id }));
+        var made = await ann.JsonAsync(await ann.PostAsync("/api/account/keys/own", new { name = "reports-ci", projectId = id }));
+        var key = made.GetProperty("apiKey").GetString()!;
+        var row = await AskWithKeyAsync(key, "the monthly numbers");
+        Assert.Equal((id, (Guid?)null), (row.ProjectId!.Value, row.ConversationId));
+        var listed = (await ann.JsonAsync(await ann.GetAsync("/api/account/keys/own"))).GetProperty("keys").EnumerateArray().Single(k => k.GetProperty("name").GetString() == "reports-ci");
+        Assert.Equal(id, listed.GetProperty("projectId").GetGuid());
+        // The project's page: the key's use, with whose it is.
+        var report = await ann.JsonAsync(await ann.GetAsync($"/api/projects/{id}/report?{Window(DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow.AddMinutes(1))}"));
+        var used = report.GetProperty("keys").EnumerateArray().Single();
+        Assert.Equal(("reports-ci", annEmail, true, 1L), (used.GetProperty("name").GetString(), used.GetProperty("person").GetString(), used.GetProperty("projectKey").GetBoolean(), used.GetProperty("requests").GetInt64()));
+    }
+
     private HttpClient CodeArena(string key)
     {
         var http = app.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri($"https://{AppFixture.Domain}"), AllowAutoRedirect = false, HandleCookies = false });

@@ -186,7 +186,7 @@ public static partial class RoomEndpoints
         return null;
     }
 
-    private static async Task<IResult> CreateAsync(NewRoom body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, IOptionsMonitor<ChatOptions> chat,
+    private static async Task<IResult> CreateAsync(NewRoom body, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, Llm.Api.Access.AccessService access, IOptionsMonitor<ChatOptions> chat,
         Notifications.Notifier notifier, Audit audit, CancellationToken ct)
     {
         var me = await Me(p, users);
@@ -210,7 +210,11 @@ public static partial class RoomEndpoints
         }
         else
         {
-            c = new Conversation { UserId = me.Id, Title = string.IsNullOrWhiteSpace(body.Title) ? "New room" : body.Title.Trim()[..Math.Min(200, body.Title.Trim().Length)] };
+            c = new Conversation
+            {
+                UserId = me.Id, Title = string.IsNullOrWhiteSpace(body.Title) ? "New room" : body.Title.Trim()[..Math.Min(200, body.Title.Trim().Length)],
+                WorkProjectId = await Projects.ProjectChats.StartAsync(db, access, me, ct),
+            };
             db.Conversations.Add(c);
         }
         if (body.Title is { Length: > 0 } title && body.From is not null)

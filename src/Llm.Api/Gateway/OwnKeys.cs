@@ -11,13 +11,16 @@ namespace Llm.Api.Gateway;
 /// <param name="Kind">"own" (made here, with a name and limits), "main" (the key Rotate replaces), "studio" (a Code Studio workspace's, which it revokes itself) or "other".</param>
 /// <param name="Limits">The limits set on the key itself (own keys); null for another kind.</param>
 /// <param name="Effective">What the gateway holds the key to: the tighter of the person's limits and the key's own.</param>
-public sealed record KeyView(string Id, string Name, string Kind, string? Preview, decimal Spend, bool Blocked, DateTimeOffset? CreatedAt, KeyLimitsSet? Limits, KeyLimitsSet Effective);
+/// <param name="ProjectId">A project's key: the project its requests count to (those naming no other).</param>
+public sealed record KeyView(string Id, string Name, string Kind, string? Preview, decimal Spend, bool Blocked, DateTimeOffset? CreatedAt, KeyLimitsSet? Limits, KeyLimitsSet Effective,
+    Guid? ProjectId = null);
 
 /// <summary>A key's limits: requests and tokens a minute, requests at once, and spend in 30 days (dollars); null: none of its own.</summary>
 public sealed record KeyLimitsSet(int? RequestsPerMinute, int? TokensPerMinute, int? Parallel, decimal? MonthlyBudget);
 
 /// <summary>A key asked for, or changed: its name and its own limits (each null: as many as the person may).</summary>
-public sealed record KeyRequest(string? Name, int? RequestsPerMinute, int? TokensPerMinute, int? Parallel, decimal? MonthlyBudget);
+/// <param name="ProjectId">For a new key: a project the person may add to, whose key it is (its requests count there).</param>
+public sealed record KeyRequest(string? Name, int? RequestsPerMinute, int? TokensPerMinute, int? Parallel, decimal? MonthlyBudget, Guid? ProjectId = null);
 
 /// <summary>Why a key could not be made, changed or revoked: said to the person as it is.</summary>
 public sealed class OwnKeyException(int status, string code, string message) : Exception(message)
@@ -73,7 +76,7 @@ public sealed class OwnKeys(AppDbContext db, ApiKeys keys, RateLimits rateLimits
         var effective = Tighter(rate, own);
         return new KeyView(k.Token, name, kind, k.Preview, k.Spend, k.Blocked, k.CreatedAt,
             own is null ? null : new KeyLimitsSet(own.RequestsPerMinute, own.TokensPerMinute, own.Parallel, own.MonthlyBudget),
-            new KeyLimitsSet(effective.RequestsPerMinute, effective.TokensPerMinute, TighterParallel(keyAccess.AtOnce, own?.Parallel), own?.MonthlyBudget));
+            new KeyLimitsSet(effective.RequestsPerMinute, effective.TokensPerMinute, TighterParallel(keyAccess.AtOnce, own?.Parallel), own?.MonthlyBudget), own?.ProjectId);
     }
 
     /// <summary>A new key with its name and own limits: the key itself (shown once), and how it is listed.</summary>
@@ -103,12 +106,27 @@ public sealed class OwnKeys(AppDbContext db, ApiKeys keys, RateLimits rateLimits
             throw new OwnKeyException(429, "too_many_keys",
                 $"You made {PeopleService.OwnKeysPerHour} new keys in the last hour, the most there may be. Make the next in {minutes} minute{(minutes == 1 ? "" : "s")}.");
         }
+        // A project's key: of a project the person may add to, active.
+        if (request.ProjectId is { } project)
+        {
+            var membership = await access.MembershipAsync(user, ct);
+            if (await db.Projects.AsNoTracking().SingleOrDefaultAsync(x => x.Id == project && x.Status == Llm.Core.Projects.Project.Active, ct) is not { } p
+                || !Projects.ProjectAccess.Holds(await Projects.ProjectAccess.RoleAsync(db, p, user.Id, membership, ct), Llm.Core.Projects.ProjectMember.Contributor))
+            {
+                throw new OwnKeyException(403, "project", "That project is not one you may add to.");
+            }
+        }
         var limits = new OwnLimits(request.RequestsPerMinute, request.TokensPerMinute, request.Parallel, request.MonthlyBudget);
         var person = (await rateLimits.ForAsync(user, ct)).Key;
         var rate = new KeyRate(Tighter(person.RequestsPerMinute, limits.RequestsPerMinute), Tighter(person.TokensPerMinute, limits.TokensPerMinute));
         // A unique alias at the gateway: the person's name, the key's, and a few random letters.
         var alias = $"{PeopleService.KeyAlias(user)}-own-{Guid.NewGuid().ToString("N")[..8]}";
         var (key, own) = await keys.MakeAsync(user, ApiKey.Own, alias, name, own: limits, ct: ct);
+        if (request.ProjectId is { } projectId)
+        {
+            own.ProjectId = projectId;
+            await db.ApiKeys.Where(k => k.Hash == own.Hash).ExecuteUpdateAsync(u => u.SetProperty(k => k.ProjectId, projectId), ct);
+        }
         places.Forget(own.Hash);
         // Counted with Rotate's new keys an hour (PeopleService.OwnKeyWaitAsync).
         await audit.WriteAsync(Made, user.UserName, detail: $"{name}: {Describe(own)}", actor: user);

@@ -35,10 +35,24 @@ public static class ProjectChats
         return hits.Count > 0 ? hits[0].Id : null;
     }
 
-    /// <summary>The project a new session goes in: <paramref name="asked"/> when the person may add to it, else its repository's; null for none.</summary>
+    /// <summary>The project a new chat, room or meeting of the person goes in: the first an admin put on them, else none.</summary>
+    public static async Task<Guid?> StartAsync(AppDbContext db, AccessService access, AppUser me, CancellationToken ct) =>
+        (await ProjectAccess.ForcedAsync(db, me.Id, await access.MembershipAsync(me, ct), ct)).Cast<Guid?>().FirstOrDefault();
+
+    /// <summary>
+    /// The project a new session goes in: <paramref name="asked"/> when the person may add to it, else its repository's; null
+    /// for none. With projects an admin put on the person, one of those: the one asked or its repository's when it is one, else the first.
+    /// </summary>
     public static async Task<Guid?> ForNewSessionAsync(AppDbContext db, AccessService access, AppUser me, Guid? asked, string? repositoryKey, CancellationToken ct)
     {
         var m = await access.MembershipAsync(me, ct);
+        var forced = await ProjectAccess.ForcedAsync(db, me.Id, m, ct);
+        if (forced.Count > 0)
+        {
+            return asked is { } a && forced.Contains(a) ? a
+                : repositoryKey is { Length: > 0 } repo && await OfRepositoryAsync(db, forced, repo, ct) is { } of ? of
+                : forced[0];
+        }
         if (asked is { } id && await db.Projects.AsNoTracking().SingleOrDefaultAsync(p => p.Id == id && p.Status == Project.Active, ct) is { } chosen
             && ProjectAccess.Holds(await ProjectAccess.RoleAsync(db, chosen, me.Id, m, ct), ProjectMember.Contributor))
         {
