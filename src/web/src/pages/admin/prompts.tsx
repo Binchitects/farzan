@@ -22,6 +22,7 @@ import { allTime, reportPresets } from '@/lib/time'
 import { useTimeWindow } from '@/lib/use-time-window'
 import { cn } from '@/lib/utils'
 import { Markdown } from '@/pages/chat/markdown'
+import { PromptDetail } from './prompt-detail'
 
 type State = 'waiting' | 'running' | 'done' | 'failed' | 'stopped' | 'refused'
 
@@ -44,6 +45,8 @@ interface Logged {
   state: State
   error: string | null
   durationMs: number | null
+  /** The run it is a step of: an API request's chat or Code Arena session (its chat:ID tag), a chat question's chat. */
+  run?: string | null
   /** What went with the question (pictures, documents), and what the answer's tools made (pictures, files). */
   files?: LoggedFile[]
   made?: LoggedFile[]
@@ -194,6 +197,7 @@ export function PromptLogPage() {
 
 function Entry({ item: i }: { item: Logged }) {
   const [tagging, setTagging] = useState(false)
+  const [whole, setWhole] = useState(false)
   const queryClient = useQueryClient()
   const s = states[i.state] ?? states.done
   const name = i.person ? (i.person.displayName ?? i.person.userName) : 'someone removed'
@@ -231,12 +235,18 @@ function Entry({ item: i }: { item: Logged }) {
             {when(i.at)}
           </time>
           {i.id && (
+            <Button variant="ghost" size="sm" onClick={() => setWhole(true)}>
+              <FileText /> {i.source === 'api' && i.run ? 'The whole run' : 'All of it'}
+            </Button>
+          )}
+          {i.id && (
             <Button variant="ghost" size="icon-sm" aria-label="Tags and summary" title={i.source === 'chat' ? 'Tags and summary of its chat' : 'Tags and summary'} onClick={() => setTagging(true)}>
               <Tag />
             </Button>
           )}
         </div>
       </header>
+      {whole && i.id && <PromptDetail source={i.source} id={i.id} run={i.run ?? null} onClose={() => setWhole(false)} />}
       {i.id && (
         <TagsDialog
           open={tagging}

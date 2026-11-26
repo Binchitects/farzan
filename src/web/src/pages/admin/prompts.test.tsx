@@ -13,6 +13,51 @@ const row = (n: number, source: 'chat' | 'api') => ({
 })
 
 describe('prompt log', () => {
+  it('opens a step whole, its tool call with its arguments and the result it got, and its run by thread', async () => {
+    const step = (id: string, more: object) => ({
+      source: 'api', id, at: '2026-11-26T10:00:00Z', model: 'Qwen3-4B', state: 'done', error: null, durationMs: 900, promptTokens: 2000, completionTokens: 40, chat: 'r1',
+      kept: true, from: 2, total: 4, tools: ['read_file'], settings: { temperature: 0.2 },
+      messages: [
+        { role: 'assistant', content: '', toolCalls: [{ id: 'call_1', name: 'read_file', arguments: '{"path":"src/a.cs"}' }] },
+        { role: 'tool', content: 'class A { int x = ; }', toolCallId: 'call_1' },
+      ],
+      answer: { finish: 'stop', reasoning: 'The semicolon is misplaced.', content: 'Fixed: `int x = 0;`', toolCalls: null },
+      ...more,
+    })
+    fakeApi(admin, {
+      'GET /api/admin/prompts': () => ({ json: { items: [{ ...row(0, 'api'), id: 's2', run: 'r1' }], next: null } }),
+      'GET /api/admin/prompts/api/s2/detail': () => ({ json: step('s2', {}) }),
+      'GET /api/admin/prompts/api/s3/detail': () => ({ json: step('s3', { from: 0, total: 2, messages: [{ role: 'user', content: 'Find where A is used.' }], answer: { finish: 'stop', reasoning: null, content: 'In B.', toolCalls: null } }) }),
+      'GET /api/admin/prompts/runs/r1': () => ({
+        json: {
+          chat: 'r1', title: 'Fix the build', kind: 'session', threads: [{ id: 't1', name: 'Main' }, { id: 't2', name: 'Sub-agent 1' }], questions: [],
+          steps: [
+            { id: 's1', at: '2026-11-26T09:59:00Z', thread: 't1', model: 'Qwen3-4B', state: 'done', error: null, durationMs: 800, tokens: 1900, said: 'Called read_file' },
+            { id: 's2', at: '2026-11-26T10:00:00Z', thread: 't1', model: 'Qwen3-4B', state: 'done', error: null, durationMs: 900, tokens: 2040, said: 'Fixed' },
+            { id: 's3', at: '2026-11-26T10:00:30Z', thread: 't2', model: 'Qwen3-4B', state: 'done', error: null, durationMs: 400, tokens: 300, said: 'In B.' },
+          ],
+        },
+      }),
+    })
+    renderApp('/admin/prompts')
+    await userEvent.click(await screen.findByRole('button', { name: /The whole run/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'The request, whole' })
+    const sent = await within(dialog).findByRole('region', { name: 'What it sent' })
+    expect(within(sent).getByText(/messages 3 to 4/)).toBeInTheDocument()
+    expect(within(sent).getByLabelText('Arguments of read_file')).toHaveTextContent('"path": "src/a.cs"')
+    // The tool's result is folded until opened; the thinking too.
+    await userEvent.click(within(sent).getByRole('button', { name: /Result of a tool/ }))
+    expect(within(sent).getByText('class A { int x = ; }')).toBeInTheDocument()
+    const got = within(dialog).getByRole('region', { name: 'What it got' })
+    await userEvent.click(within(got).getByRole('button', { name: /Thinking/ }))
+    expect(within(got).getByText('The semicolon is misplaced.')).toBeInTheDocument()
+    // Its run: each thread's steps; the sub-agent's step opens whole.
+    await userEvent.click(within(dialog).getByRole('tab', { name: 'Its run' }))
+    const sub = await within(dialog).findByRole('region', { name: 'Sub-agent 1' })
+    await userEvent.click(within(sub).getByRole('button', { name: /In B\./ }))
+    expect(await within(dialog).findByText('Find where A is used.')).toBeInTheDocument()
+  })
+
   it("shows a question's pictures and the files its answer made, each read from the log's own address", async () => {
     const file = (id: string, name: string, kind: string, contentType: string) => ({ id, name, kind, contentType, size: 2048, url: `/api/admin/prompts/files/chat/${id}` })
     fakeApi(admin, {
