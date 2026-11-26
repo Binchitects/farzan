@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { fakeApi, member, renderApp } from '@/test/utils'
+import { admin, fakeApi, member, renderApp } from '@/test/utils'
 
 const summary = (id: string, name: string, more: object = {}) => ({
   id, name, description: '', global: false, status: 'active', startsOn: null, dueOn: null, monthlyBudget: null, role: 'owner', owner: 'Mo Member',
@@ -34,6 +34,33 @@ const report = {
 }
 
 describe('projects', () => {
+  it('shows each chat’s and key’s use, and an admin puts the project on people, which the page says', async () => {
+    const withUse = {
+      ...report,
+      chats: [{ chat: 'c1', kind: 'session', title: 'Refund API', mine: true, requests: 30, tokens: 30_000, cost: 2 }],
+      keys: [{ name: 'billing-ci', person: 'mo@example.test', projectKey: true, requests: 12, tokens: 15_000, cost: 1.25 }],
+    }
+    const owned = project({
+      role: 'owner',
+      members: [{ id: 'x2', role: 'contributor', userId: null, groupId: 'g1', name: 'Billing team', email: null, addedAt: '2026-10-01T10:00:00Z', forced: true }],
+    })
+    const calls = fakeApi(admin, {
+      'GET /api/projects/p1': () => ({ json: owned }),
+      'GET /api/projects/p1/report': () => ({ json: withUse }),
+      'PATCH /api/projects/p1/members/x2': () => ({ status: 204 }),
+      'GET /api/admin/groups': () => ({ json: [] }),
+    })
+    renderApp('/projects/p1')
+    const chats = await screen.findByRole('table', { name: 'Chats and sessions' })
+    expect(within(chats).getByText('Code Arena session: Refund API')).toBeInTheDocument()
+    expect(within(screen.getByRole('table', { name: 'API keys' })).getByText('billing-ci (mo@example.test) · the project’s key')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'People' }))
+    expect(await screen.findByText('Put on them by an admin')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Put the project on them/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Take it off them' }))
+    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ role: 'contributor', forced: false }))
+  })
+
   it('lists the person’s projects and the global ones, and makes a new one', async () => {
     const calls = fakeApi(member, {
       'GET /api/projects': () => ({ json: [summary('p1', 'Payments'), summary('p2', 'Company wiki', { global: true, mine: false, role: 'contributor' })] }),

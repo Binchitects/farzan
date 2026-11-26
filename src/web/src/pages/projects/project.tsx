@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from '@/components/ui/toaster'
-import { api, errorMessage } from '@/lib/api'
+import { api, errorMessage, meQuery } from '@/lib/api'
 import { formatValue, money } from '@/lib/format'
 import { skillsQuery } from '@/lib/skills'
 import { liveFallback, useUsageLive } from '@/lib/usage-live'
@@ -70,6 +70,9 @@ const usageColumns = (what: string): ColumnDef<ProjectUse>[] => [
 ]
 const modelColumns = usageColumns('Model')
 const surfaceColumns = usageColumns('From')
+const chatColumns = usageColumns('Chat or session')
+const keyColumns = usageColumns('Key')
+const kindNames = { chat: 'Chat', room: 'Room', session: 'Code Arena session' } as const
 
 /**
  * What differs where a project is shown: Arena's page (links to its chats, back to Projects when deleted) or Code Arena's
@@ -311,6 +314,40 @@ function Overview({ project: p, time }: { project: Project; time: TimeWindowStat
               </CardHeader>
               <CardContent>
                 <DataTable columns={surfaceColumns} data={r.surfaces} noun="sources" label="Where it came from" compact getRowId={(m) => m.name} />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Chats and sessions</CardTitle>
+                <CardDescription>What each of the project&apos;s chats, rooms and Code Arena sessions used in the time.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  columns={chatColumns}
+                  data={(r.chats ?? []).map((c) => ({ name: `${kindNames[c.kind]}: ${c.title}`, requests: c.requests, tokens: c.tokens, cost: c.cost }))}
+                  noun="chats"
+                  label="Chats and sessions"
+                  compact
+                  getRowId={(m) => m.name}
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>API keys</CardTitle>
+                <CardDescription>Requests outside chats: the project&apos;s own keys, and keys that name it (Code Arena&apos;s, scripts&apos;).</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  columns={keyColumns}
+                  data={(r.keys ?? []).map((k) => ({ name: `${k.name}${k.person ? ` (${k.person})` : ''}${k.projectKey ? ' · the project’s key' : ''}`, requests: k.requests, tokens: k.tokens, cost: k.cost }))}
+                  noun="keys"
+                  label="API keys"
+                  compact
+                  getRowId={(m) => m.name}
+                />
               </CardContent>
             </Card>
           </div>
@@ -804,6 +841,10 @@ function People({ project: p }: { project: Project }) {
   const [people, setPeople] = useState<Person[]>([])
   const [groups, setGroups] = useState<string[]>([])
   const [role, setRole] = useState<ProjectRole>('contributor')
+  const [forced, setForced] = useState(false)
+  const me = useQuery(meQuery)
+  // Only an admin (projects.manage) puts a project on people.
+  const mayForce = !!me.data && (me.data.isAdmin || !!me.data.permissions?.includes('projects.manage'))
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_24rem]">
       <Card>
@@ -823,6 +864,20 @@ function People({ project: p }: { project: Project }) {
                   <bdi className="text-sm font-medium">{m.name}</bdi>
                   {m.email && <p className="truncate text-xs text-muted-foreground">{m.email}</p>}
                 </div>
+                {m.forced && (
+                  <Badge variant="secondary" title="Their new chats, sessions and API use go in it, and their work stays in it.">
+                    Put on them by an admin
+                  </Badge>
+                )}
+                {mayForce && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => change.mutate({ path: `/members/${m.id}`, method: 'PATCH', body: { role: m.role, forced: !m.forced } })}
+                  >
+                    {m.forced ? 'Take it off them' : 'Put it on them'}
+                  </Button>
+                )}
                 {owner ? (
                   <Select value={m.role} onValueChange={(v) => change.mutate({ path: `/members/${m.id}`, method: 'PATCH', body: { role: v } })}>
                     <SelectTrigger className="h-8 w-36" aria-label={`Role of ${m.name}`}>
@@ -882,11 +937,20 @@ function People({ project: p }: { project: Project }) {
                 </SelectContent>
               </Select>
             </Field>
+            {mayForce && (
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" className="mt-1" checked={forced} onChange={(e) => setForced(e.target.checked)} />
+                <span>
+                  Put the project on them
+                  <span className="block text-xs text-muted-foreground">Their new chats, Code Arena sessions and API use go in it, and their work stays in it.</span>
+                </span>
+              </label>
+            )}
             <Button
               disabled={people.length + groups.length === 0 || change.isPending}
               onClick={() =>
                 change.mutate(
-                  { path: '/members', body: { userIds: people.map((x) => x.id), groupIds: groups, role } },
+                  { path: '/members', body: { userIds: people.map((x) => x.id), groupIds: groups, role, ...(mayForce && forced ? { forced: true } : {}) } },
                   {
                     onSuccess: () => {
                       setPeople([])

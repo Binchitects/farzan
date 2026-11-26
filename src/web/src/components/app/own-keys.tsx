@@ -13,7 +13,9 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from '@/components/ui/toaster'
 import { Tooltip } from '@/components/ui/tooltip'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api, errorMessage } from '@/lib/api'
+import { projectsQuery } from '@/pages/projects/api'
 import { money, when } from '@/lib/format'
 
 /** A key's limits: requests and tokens a minute, requests at once, dollars in 30 days; null: none. */
@@ -37,6 +39,8 @@ export interface OwnKey {
   limits: KeyLimits | null
   /** What the gateway holds it to: the tighter of yours and its own. */
   effective: KeyLimits
+  /** A project's key: its requests that name no other project count there. */
+  projectId?: string | null
 }
 
 const ownKeysKey = ['account', 'keys', 'own'] as const
@@ -55,8 +59,14 @@ function limitsText(l: KeyLimits): string {
 const number = (s: string) => (s.trim() === '' ? null : Number(s))
 
 /** The form for a key's name and limits (each empty: as many as you may). */
-function KeyDialog({ title, start, onClose, onSave, saving }: { title: string; start?: OwnKey; onClose: () => void; onSave: (body: { name: string } & KeyLimits) => void; saving: boolean }) {
+function KeyDialog({ title, start, onClose, onSave, saving }: {
+  title: string; start?: OwnKey; onClose: () => void; onSave: (body: { name: string; projectId?: string } & KeyLimits) => void; saving: boolean
+}) {
   const own = start?.limits
+  // A new key may be a project's: one of those the person adds to.
+  const projects = useQuery({ ...projectsQuery, enabled: !start })
+  const open = (projects.data ?? []).filter((p) => p.status === 'active' && (p.role === 'owner' || p.role === 'contributor'))
+  const [project, setProject] = useState('none')
   const [form, setForm] = useState({
     name: start?.name ?? '',
     requestsPerMinute: own?.requestsPerMinute?.toString() ?? '',
@@ -73,6 +83,7 @@ function KeyDialog({ title, start, onClose, onSave, saving }: { title: string; s
       tokensPerMinute: number(form.tokensPerMinute),
       parallel: number(form.parallel),
       monthlyBudget: number(form.monthlyBudget),
+      ...(project !== 'none' ? { projectId: project } : {}),
     })
   }
   return (
@@ -86,6 +97,23 @@ function KeyDialog({ title, start, onClose, onSave, saving }: { title: string; s
           <Field label="Name" hint="What uses it: CI, laptop, a script.">
             <Input value={form.name} onChange={set('name')} maxLength={80} required autoFocus />
           </Field>
+          {!start && open.length > 0 && (
+            <Field label="For a project" hint="Its requests count to the project (those that name no other), as Code Arena's sessions do.">
+              <Select value={project} onValueChange={setProject}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None: yours</SelectItem>
+                  {open.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Requests a minute">
               <Input type="number" min={1} inputMode="numeric" value={form.requestsPerMinute} onChange={set('requestsPerMinute')} />
@@ -122,7 +150,7 @@ export function OwnKeys() {
   const [editing, setEditing] = useState<OwnKey | 'new' | null>(null)
   const refresh = () => Promise.all([queryClient.invalidateQueries({ queryKey: ownKeysKey }), queryClient.invalidateQueries({ queryKey: ['account', 'keys'] })])
   const make = useMutation({
-    mutationFn: (body: { name: string } & KeyLimits) => api<{ apiKey: string; key: OwnKey }>('/api/account/keys/own', { body }),
+    mutationFn: (body: { name: string; projectId?: string } & KeyLimits) => api<{ apiKey: string; key: OwnKey }>('/api/account/keys/own', { body }),
     onSuccess: async () => {
       setEditing(null)
       await refresh()
@@ -168,6 +196,7 @@ export function OwnKeys() {
                 {k.kind === 'main' && <Badge variant="secondary">main</Badge>}
                 {k.kind === 'studio' && <Badge variant="secondary">Code Studio</Badge>}
                 {k.blocked && <Badge variant="destructive">Blocked</Badge>}
+                {k.projectId && <Badge variant="outline">A project&apos;s key</Badge>}
                 <span className="ml-auto flex shrink-0 items-center gap-1">
                   {k.kind !== 'studio' && (
                     <Tooltip content="Name and limits">

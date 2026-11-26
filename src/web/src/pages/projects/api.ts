@@ -34,6 +34,8 @@ export interface ProjectMemberRow {
   name: string
   email: string | null
   addedAt: string
+  /** Put on them by an admin: their new chats, sessions and API use go in it, and their work stays in it. */
+  forced?: boolean
 }
 
 export type GoalStatus = 'planned' | 'doing' | 'done' | 'dropped'
@@ -125,6 +127,10 @@ export interface ProjectReport {
   progress: { goals: number; goalsDone: number; tasks: number; tasksDone: number; tasksDoneInRange: number; steps: number; stepsDone: number; chats: number; rooms: number; sessions: number }
   models: ProjectUse[]
   surfaces: ProjectUse[]
+  /** Each chat's, room's and Code Arena session's use (a viewer's own); a title for whoever may open it. */
+  chats?: { chat: string; kind: 'chat' | 'room' | 'session'; title: string; mine: boolean; requests: number; tokens: number; cost: number }[]
+  /** Each API key's use outside chats (a viewer's own): the project's own keys, and keys naming it. */
+  keys?: { name: string; person: string | null; projectKey: boolean; requests: number; tokens: number; cost: number }[]
   series: { at: string; input: number; output: number; cost: number }[]
   people: ProjectPerson[]
   /** Each person's share is for the owners: the others get their own row. */
