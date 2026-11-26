@@ -353,6 +353,10 @@ public static class IdentityWiring
         services.AddScoped<Chat.Tools.Browser.BrowserTool>();
         // Ask your data: one question to the model as a person (apps use it too), the databases admins connect, the boards' refresher.
         services.AddScoped<Chat.OneQuestion>();
+        // The admin assistant: Arena's own API as the person (the app's pipeline, kept as it is built), its changes waiting for a yes.
+        services.AddSingleton<AdminHelp.AppPipeline>();
+        services.AddTransient<IStartupFilter, AdminHelp.AppPipeline.Filter>();
+        services.AddSingleton<AdminHelp.AssistantChanges>();
         services.AddScoped<Insights.DataQuestions>();
         services.AddScoped<Decks.DeckMaker>();
         services.AddScoped<Decks.SlideCanvases>();
@@ -699,6 +703,7 @@ public static class IdentityWiring
         Quality.ProductFeedbackEndpoints.MapProductFeedback(app);
         Notifications.BroadcastEndpoints.MapBroadcasts(app);
         Quality.PromptLogEndpoints.MapPromptLog(app);
+        AdminHelp.AdminAssistant.MapAdminAssistant(app);
         Tags.TagEndpoints.MapTags(app);
         Quality.PromptLogReport.MapPromptLogReport(app);
         Chat.ChecklistEndpoints.MapChecklists(app);

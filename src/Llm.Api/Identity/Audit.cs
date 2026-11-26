@@ -19,6 +19,11 @@ public sealed class Audit(Microsoft.EntityFrameworkCore.DbContextOptions<AppDbCo
         await using var db = new AppDbContext(options);
         var ctx = http.HttpContext;
         var principal = ctx?.User;
+        // Done through the admin assistant (as the person, on their yes for a change): said so.
+        if (ctx?.Request.Headers.ContainsKey(AdminHelp.AppPipeline.Header) == true)
+        {
+            detail = detail is { Length: > 0 } ? detail + " (through the assistant)" : "through the assistant";
+        }
         // One writer at a time across replicas: the entry takes the next id and is sealed onto the chain before the lock is let go.
         await using var tx = await db.Database.BeginTransactionAsync();
         await db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_xact_lock({AuditChain.Lock})");

@@ -148,6 +148,8 @@ What a person may do comes from roles (built in, or made by the company) held di
 
 **Proved by**
 
+- `Llm.Tests/AdminAssistantTests.It_reads_as_the_person_proposes_a_change_and_makes_it_only_on_their_yes_audited_through_the_assistant`
+- `Llm.Tests/AdminAssistantTests.It_cannot_do_through_the_assistant_what_the_person_may_not_do_and_a_no_leaves_it_undone`
 - `Llm.Tests/EndpointAccessTests.A_role_reaches_the_reads_of_its_permissions_and_no_others`
 - `Llm.Tests/EndpointAccessTests.Each_built_in_role_holds_exactly_its_permissions`
 - `Llm.Tests/AccessEndpointsTests.A_rule_takes_a_feature_from_a_group_and_the_checker_says_why`
