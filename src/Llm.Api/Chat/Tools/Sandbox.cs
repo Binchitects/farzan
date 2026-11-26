@@ -70,6 +70,14 @@ public abstract class JobRunner(Func<string> dir, string name, string howToStart
     /// <summary>A runner silent this long while it has a job has stopped: the job is not waited for any more.</summary>
     public static readonly TimeSpan SilentLimit = TimeSpan.FromSeconds(30);
 
+    /// <summary>How often a waiting job looks at the runner (its heartbeat, its place in line).</summary>
+    public TimeSpan LookEvery { get; init; } = TimeSpan.FromSeconds(1);
+
+    private int _looks;
+
+    /// <summary>The looks at the runner so far, by every job of this client: what has been seen since a change.</summary>
+    public int Looks => Volatile.Read(ref _looks);
+
     /// <summary>An admin's reset (Admin → Monitoring), in its folder: there until the runner has done it.</summary>
     public const string ResetFile = "reset";
 
@@ -219,7 +227,7 @@ public abstract class JobRunner(Func<string> dir, string name, string howToStart
                 {
                     throw new SandboxException("The sandbox did not answer in time: it may be busy. Try again in a minute.");
                 }
-                if (Environment.TickCount64 - looked >= 1000)
+                if (Environment.TickCount64 - looked >= (long)LookEvery.TotalMilliseconds)
                 {
                     looked = Environment.TickCount64;
                     if (waiting is not null)
@@ -251,6 +259,7 @@ public abstract class JobRunner(Func<string> dir, string name, string howToStart
                             throw new SandboxException($"{name} started again while it ran this job, which was lost with it: run it again.");
                         }
                     }
+                    Interlocked.Increment(ref _looks);
                 }
                 if (calls is not null)
                 {

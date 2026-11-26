@@ -116,7 +116,12 @@ public sealed class BrowserTests(AppFixture app)
 
         // The agent waits while the person has it, and goes on when they hand it back.
         var waiting = SendAsync(b, chat, """[call browser_scroll {"direction":"down"}]""");
-        await Task.Delay(1500);
+        var session = f.Services.GetRequiredService<Llm.Api.Chat.Tools.Browser.BrowserSessions>().Find(chat)!;
+        for (var i = 0; session.WaitingForPerson == 0; i++)
+        {
+            Assert.True(i < 2000, "the agent's step never came to wait for the person");
+            await Task.Delay(10);
+        }
         Assert.False(waiting.IsCompleted);
         await StatusAssert.Is(HttpStatusCode.NoContent, await b.PostAsync($"/api/chat/browser/{chat}/give"));
         Assert.Contains("handed it back", Result(await waiting).GetProperty("text").GetString(), StringComparison.Ordinal);

@@ -132,6 +132,11 @@ public sealed partial class MediaControl : BackgroundService
     /// <summary>Looks at every model again now.</summary>
     public void Wake() => WakeHere();
 
+    private int _rounds;
+
+    /// <summary>The rounds it has gone through (each done or failed): what it has seen since a change.</summary>
+    public int Rounds => Volatile.Read(ref _rounds);
+
     private void WakeHere()
     {
         if (_wake.CurrentCount == 0)
@@ -503,6 +508,7 @@ public sealed partial class MediaControl : BackgroundService
             {
                 LogFailed(logger, ex.Message);
             }
+            Interlocked.Increment(ref _rounds);
             try
             {
                 await _wake.WaitAsync(TimeSpan.FromSeconds(10), stoppingToken);

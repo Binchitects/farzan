@@ -35,7 +35,21 @@ public sealed class JobRunnerTests : IDisposable
     private void Beat(double started) => File.WriteAllText(Path.Combine(_dir, "heartbeat"),
         new JsonObject { ["at"] = _clock.GetUtcNow().ToUnixTimeMilliseconds() / 1000.0, ["slots"] = 1, ["busy"] = 1, ["started"] = started }.ToJsonString());
 
-    private SandboxClient Client() => new(new Monitor(new SandboxOptions { Dir = _dir }), _clock);
+    private SandboxClient? _client;
+
+    /// <summary>The test's client (one, so its looks are counted together), looking at the runner every 20 ms.</summary>
+    private SandboxClient Client() => _client ??= new(new Monitor(new SandboxOptions { Dir = _dir }), _clock) { LookEvery = TimeSpan.FromMilliseconds(20) };
+
+    /// <summary>Until each job waiting has looked at the runner again since now (twice: a look going on may have read before the change).</summary>
+    private async Task SeenAsync(int jobs = 1)
+    {
+        var at = Client().Looks;
+        for (var i = 0; Client().Looks < at + 3 * jobs; i++)
+        {
+            Assert.True(i < 1000, "the waiting job stopped looking at the runner");
+            await Task.Delay(10);
+        }
+    }
 
     /// <summary>The job the runner was handed, once it is there.</summary>
     private async Task<string> QueuedAsync()
@@ -60,7 +74,7 @@ public sealed class JobRunnerTests : IDisposable
         Directory.Move(job, Path.Combine(_dir, "run", Path.GetFileName(job)));
         // Its heartbeat stays as it was: silent past 20 s, then past the limit.
         _clock.Now += TimeSpan.FromSeconds(25);
-        await Task.Delay(1500);
+        await SeenAsync();
         Assert.False(running.IsCompleted, "a moment of silence is not yet a stop");
         _clock.Now += JobRunner.SilentLimit + TimeSpan.FromSeconds(1);
         var error = await Assert.ThrowsAsync<SandboxException>(() => running.WaitAsync(TimeSpan.FromSeconds(10)));
@@ -115,19 +129,19 @@ public sealed class JobRunnerTests : IDisposable
         {
             _clock.Now += TimeSpan.FromMinutes(1);
             Beat(started: 1);
-            await Task.Delay(150);
+            await SeenAsync();
         }
-        await Task.Delay(1200);
+        await SeenAsync();
         Assert.False(running.IsCompleted, "a job in line is not given up while its sandbox answers");
         Directory.Delete(Path.Combine(_dir, "in", "00000000000000000000000000000001"));
-        await Task.Delay(1500);
+        await SeenAsync();
         // Taken: from now on, its own time.
         Directory.Delete(Path.Combine(_dir, "in", "00000000000000000000000000000002"));
         Directory.Move(job, Path.Combine(_dir, "run", Path.GetFileName(job)));
-        await Task.Delay(1500);
+        await SeenAsync();
         _clock.Now += TimeSpan.FromSeconds(30);
         Beat(started: 1);
-        await Task.Delay(1500);
+        await SeenAsync();
         Assert.False(running.IsCompleted, "within its own time once it runs");
         _clock.Now += TimeSpan.FromSeconds(61);
         Beat(started: 1);
@@ -181,7 +195,7 @@ public sealed class JobRunnerTests : IDisposable
         // The admin asks: the sandbox says so to the tools meanwhile.
         await File.WriteAllTextAsync(Path.Combine(_dir, JobRunner.ResetFile), "gen=1\naction=reset\nby=ada\nat=1\n");
         Assert.Equal("The Python sandbox is being reset by an admin: try again in a minute.", Client().Unavailable());
-        await Task.Delay(1500);
+        await SeenAsync(jobs: 2);
         Assert.False(running.IsCompleted, "nothing happens before the runner does it");
 
         // The runner answers both, then starts again: each caller is told why, not that its job was lost.
@@ -204,13 +218,13 @@ public sealed class JobRunnerTests : IDisposable
         var running = Client().RunAsync("print(1)", [], timeoutSeconds: 600, CancellationToken.None);
         var job = await QueuedAsync();
         Beat(started: 2);
-        await Task.Delay(2500);
+        await SeenAsync();
         Assert.False(running.IsCompleted, "the job waits in in/ for the new runner");
         // The new runner takes it: the runner that runs it is the one that took it, so it is not lost.
         var id = Path.GetFileName(job);
         Directory.Move(job, Path.Combine(_dir, "run", id));
         job = Path.Combine(_dir, "run", id);
-        await Task.Delay(1500);
+        await SeenAsync();
         Assert.False(running.IsCompleted, "a job the new runner took is not lost with the one before it");
         // It answers.
         var draft = Path.Combine(_dir, "out", ".tmp-" + id);

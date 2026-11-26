@@ -122,6 +122,24 @@ public sealed partial class GpuShare : IDisposable
     /// <summary>The GPU memory a server running its model needs free to compute as it goes, in MB.</summary>
     public const int RunningMb = 2 * ReserveMb;
 
+    private int _inLine;
+
+    /// <summary>The jobs waiting for their turn now (one has the GPU meanwhile).</summary>
+    public int InLine => Volatile.Read(ref _inLine);
+
+    private async Task TurnAsync(CancellationToken ct)
+    {
+        Interlocked.Increment(ref _inLine);
+        try
+        {
+            await _one.WaitAsync(ct);
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _inLine);
+        }
+    }
+
     /// <summary>
     /// The GPU for a job of <paramref name="model"/> (a picture or video model): its turn, then room when it is short. Dispose
     /// it when the job ends (the next job's turn, and the room given back). A speech model, or one whose server is not this
@@ -133,7 +151,7 @@ public sealed partial class GpuShare : IDisposable
         {
             return new Hold(null, model);
         }
-        await _one.WaitAsync(ct);
+        await TurnAsync(ct);
         var hold = new Hold(this, model);
         try
         {
@@ -159,7 +177,7 @@ public sealed partial class GpuShare : IDisposable
     public async Task<Hold> HoldStudioAsync(string name, int needMb, Func<CancellationToken, Task<long?>> freeMb, Func<Task> release, CancellationToken ct)
     {
         var model = new MediaControl.Model(name, StudioMode, StudioMode, null, new MediaModel { Name = name, Mode = StudioMode });
-        await _one.WaitAsync(ct);
+        await TurnAsync(ct);
         var hold = new Hold(this, model) { Free = freeMb, Release = release };
         try
         {

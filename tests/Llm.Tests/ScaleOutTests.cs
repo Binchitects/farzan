@@ -259,7 +259,14 @@ public sealed class ScaleOutTests(AppFixture app)
         var highWaits = gate.EnterAsync(high, 5, "m", Tell(high), default);
         await Task.Delay(50);
         var high2Waits = gate.EnterAsync(high2, 5, "m", Tell(high2), default);
-        await Task.Delay(1500);
+        bool Settled()
+        {
+            lock (lines)
+            {
+                return lines[high].LastOrDefault()?.Ahead == 0 && lines[high2].LastOrDefault()?.Ahead == 1 && lines[low].LastOrDefault()?.Ahead == 2;
+            }
+        }
+        await UntilAsync(() => Task.FromResult(Settled()), "each waiter told its place");
         lock (lines)
         {
             // The later, higher priority is ahead of the one who came first; within priority 5, first come first.

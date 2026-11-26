@@ -918,11 +918,12 @@ public sealed class LdapTests(AppFixture app, LdapServer ldap) : IClassFixture<L
         var bob = await new TestBrowser(f).SignedInAsync("bob", "bob-directory-pw");
 
         // Saving wakes the background check at once, as well as the one run here.
+        var seen = f.Services.GetRequiredService<Llm.Api.Ldap.LdapSync>().Rounds;
         await SaveAsync(admin, new() { ["Ldap:GroupBaseDn"] = "ou=grups," + LdapServer.Base });
         var sync = await admin.PostAsync("/api/admin/ldap/sync");
         await StatusAssert.Is(HttpStatusCode.ServiceUnavailable, sync);
         Assert.Contains("\"ou=grups,dc=example,dc=test\" (where groups are) does not exist", (await admin.JsonAsync(sync)).GetProperty("error").GetString(), StringComparison.Ordinal);
-        await Task.Delay(TimeSpan.FromSeconds(3));
+        await LoopRounds.AtAsync(() => f.Services.GetRequiredService<Llm.Api.Ldap.LdapSync>().Rounds, seen + 1, "the directory check, woken by saving");
         var people = await admin.JsonAsync(await admin.GetAsync("/api/admin/people"));
         Assert.False(people.GetProperty("people").EnumerateArray().Single(p => p.GetProperty("userName").GetString() == "bob").GetProperty("disabled").GetBoolean());
         await StatusAssert.Is(HttpStatusCode.OK, await bob.GetAsync("/api/auth/me"));
@@ -1039,12 +1040,13 @@ public sealed class LdapTests(AppFixture app, LdapServer ldap) : IClassFixture<L
         var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
         var bob = await new TestBrowser(f).SignedInAsync("bob", "bob-directory-pw");
 
+        var seen = f.Services.GetRequiredService<Llm.Api.Ldap.LdapSync>().Rounds;
         await SaveAsync(admin, new() { ["Ldap:RequiredGroup"] = "llm-user" });
         var sync = await admin.PostAsync("/api/admin/ldap/sync");
         await StatusAssert.Is(HttpStatusCode.ServiceUnavailable, sync);
         Assert.Contains("no required group \"llm-user\" is found below \"ou=groups,dc=example,dc=test\", so nobody is disabled for not being in it",
             (await admin.JsonAsync(sync)).GetProperty("error").GetString(), StringComparison.Ordinal);
-        await Task.Delay(TimeSpan.FromSeconds(3)); // the background check, woken by saving, did the same
+        await LoopRounds.AtAsync(() => f.Services.GetRequiredService<Llm.Api.Ldap.LdapSync>().Rounds, seen + 1, "the directory check, woken by saving");
         var people = await admin.JsonAsync(await admin.GetAsync("/api/admin/people"));
         Assert.False(people.GetProperty("people").EnumerateArray().Single(p => p.GetProperty("userName").GetString() == "bob").GetProperty("disabled").GetBoolean());
         await StatusAssert.Is(HttpStatusCode.OK, await bob.GetAsync("/api/auth/me"));
@@ -1105,23 +1107,25 @@ public sealed class LdapTests(AppFixture app, LdapServer ldap) : IClassFixture<L
                 new Dictionary<string, string?>(Settings(ldap.Url)) { ["Auth:DataKey"] = "ldap-settings-data-key" });
             var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
             var bob = await new TestBrowser(f).SignedInAsync("bob", "bob-directory-pw");
-            async Task NobodyChangedAsync(string why)
+            async Task NobodyChangedAsync(int seen, string why)
             {
                 var sync = await admin.PostAsync("/api/admin/ldap/sync");
                 await StatusAssert.Is(HttpStatusCode.ServiceUnavailable, sync);
                 Assert.Contains(why, (await admin.JsonAsync(sync)).GetProperty("error").GetString(), StringComparison.Ordinal);
-                await Task.Delay(TimeSpan.FromSeconds(3)); // the background check, woken by saving, did the same
+                await LoopRounds.AtAsync(() => f.Services.GetRequiredService<Llm.Api.Ldap.LdapSync>().Rounds, seen + 1, "the directory check, woken by saving"); // it did the same
                 var people = await admin.JsonAsync(await admin.GetAsync("/api/admin/people"));
                 Assert.False(people.GetProperty("people").EnumerateArray().Single(p => p.GetProperty("userName").GetString() == "bob").GetProperty("disabled").GetBoolean());
                 await StatusAssert.Is(HttpStatusCode.OK, await bob.GetAsync("/api/auth/me"));
                 Assert.All(await AppFixture.GatewayKeysAsync(f, "bob@example.test"), k => Assert.False(k.Blocked));
             }
 
+            var seen = f.Services.GetRequiredService<Llm.Api.Ldap.LdapSync>().Rounds;
             await SaveAsync(admin, new() { ["Ldap:GroupBaseDn"] = "" });
-            await NobodyChangedAsync("the required group cn=llm-users,ou=groups,dc=example,dc=test is there, but its members do not show it in their memberOf");
+            await NobodyChangedAsync(seen, "the required group cn=llm-users,ou=groups,dc=example,dc=test is there, but its members do not show it in their memberOf");
 
+            seen = f.Services.GetRequiredService<Llm.Api.Ldap.LdapSync>().Rounds;
             await SaveAsync(admin, new() { ["Ldap:GroupBaseDn"] = "ou=groups," + LdapServer.Base, ["Ldap:RequiredGroup"] = "cn=llm-outside,ou=other," + LdapServer.Base });
-            await NobodyChangedAsync("the required group cn=llm-outside,ou=other,dc=example,dc=test is not below \"ou=groups,dc=example,dc=test\" (where groups are)");
+            await NobodyChangedAsync(seen, "the required group cn=llm-outside,ou=other,dc=example,dc=test is not below \"ou=groups,dc=example,dc=test\" (where groups are)");
 
             // Set right again: the check runs, and bob, in the group, stays.
             await SaveAsync(admin, new() { ["Ldap:RequiredGroup"] = "llm-users" });
@@ -1178,12 +1182,13 @@ public sealed class LdapTests(AppFixture app, LdapServer ldap) : IClassFixture<L
             Assert.Contains("warn: Admin group: " + Posix + ", so nobody from the directory will be an admin here.", Says(asAdmin), StringComparison.Ordinal);
 
             // Saved anyway: the check changes nobody, and says why.
+            var seen = f.Services.GetRequiredService<Llm.Api.Ldap.LdapSync>().Rounds;
             await SaveAsync(admin, new() { ["Ldap:RequiredGroup"] = "llm-posix" });
             var sync = await admin.PostAsync("/api/admin/ldap/sync");
             await StatusAssert.Is(HttpStatusCode.ServiceUnavailable, sync);
             Assert.Contains("no required group \"llm-posix\" is found below \"ou=groups,dc=example,dc=test\", so nobody is disabled for not being in it",
                 (await admin.JsonAsync(sync)).GetProperty("error").GetString(), StringComparison.Ordinal);
-            await Task.Delay(TimeSpan.FromSeconds(3)); // the background check, woken by saving, did the same
+            await LoopRounds.AtAsync(() => f.Services.GetRequiredService<Llm.Api.Ldap.LdapSync>().Rounds, seen + 1, "the directory check, woken by saving");
             var people = await admin.JsonAsync(await admin.GetAsync("/api/admin/people"));
             Assert.False(people.GetProperty("people").EnumerateArray().Single(p => p.GetProperty("userName").GetString() == "bob").GetProperty("disabled").GetBoolean());
             await StatusAssert.Is(HttpStatusCode.OK, await bob.GetAsync("/api/auth/me"));
@@ -1240,12 +1245,13 @@ public sealed class LdapTests(AppFixture app, LdapServer ldap) : IClassFixture<L
         Assert.StartsWith("Required group: \"ou=groups,dc=example,dc=test\" names ou=groups,dc=example,dc=test, which is not a group (its objectClass: organizationalUnit)",
             ou.GetProperty("message").GetString(), StringComparison.Ordinal);
         Assert.Contains("warn: Admin group: \"ou=groups,dc=example,dc=test\" names", Says(await TestAsync(admin, Form(null, ("AdminGroup", "ou=groups," + LdapServer.Base)))), StringComparison.Ordinal);
+        var seen = f.Services.GetRequiredService<Llm.Api.Ldap.LdapSync>().Rounds;
         await SaveAsync(admin, new() { ["Ldap:RequiredGroup"] = "ou=groups," + LdapServer.Base });
         var sync = await admin.PostAsync("/api/admin/ldap/sync");
         await StatusAssert.Is(HttpStatusCode.ServiceUnavailable, sync);
         Assert.Contains("no required group \"ou=groups,dc=example,dc=test\" is found (no group has that DN, or the service account cannot see it)",
             (await admin.JsonAsync(sync)).GetProperty("error").GetString(), StringComparison.Ordinal);
-        await Task.Delay(TimeSpan.FromSeconds(3));
+        await LoopRounds.AtAsync(() => f.Services.GetRequiredService<Llm.Api.Ldap.LdapSync>().Rounds, seen + 1, "the directory check, woken by saving");
         await StatusAssert.Is(HttpStatusCode.OK, await bob.GetAsync("/api/auth/me"));
         Assert.All(await AppFixture.GatewayKeysAsync(f, "bob@example.test"), k => Assert.False(k.Blocked));
     }

@@ -54,6 +54,15 @@ public sealed class ConcurrencyTests(AppFixture app) : IDisposable
             return Task.CompletedTask;
         }
 
+        /// <summary>The last line it was told, or null.</summary>
+        public AnswerGate.Line? Last()
+        {
+            lock (_lines)
+            {
+                return _lines.Count > 0 ? _lines[^1] : null;
+            }
+        }
+
         public async Task<AnswerGate.Line> LastAsync()
         {
             for (var i = 0; i < 50; i++)
@@ -143,8 +152,8 @@ public sealed class ConcurrencyTests(AppFixture app) : IDisposable
         await lowTold.LastAsync();
         var other = gate.EnterAsync(Guid.NewGuid(), 0, "other", otherTold.Add, default);
         var high = gate.EnterAsync(Guid.NewGuid(), 5, "big", highTold.Add, default);
-        await Task.Delay(1500);
-        // The later, higher priority goes first; the other model's waiter is not in this line.
+        // Each told its place as the line settles: the later, higher priority goes first; the other model's waiter is not in this line.
+        await EventuallyAsync(() => highTold.Last()?.Ahead == 0 && lowTold.Last()?.Ahead == 1 && otherTold.Last()?.Ahead == 0, "each waiter told its place");
         Assert.Equal(0, (await highTold.LastAsync()).Ahead);
         Assert.Equal(1, (await lowTold.LastAsync()).Ahead);
         Assert.Equal(0, (await otherTold.LastAsync()).Ahead);

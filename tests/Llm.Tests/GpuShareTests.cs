@@ -460,7 +460,7 @@ public sealed class GpuShareTests(AppFixture app) : IDisposable
         Assert.Null(s.State.Lent);
         // A video waits for the picture to be done.
         var video = s.Gpu.HoldAsync(media.Find(Video)!, deadline.Token);
-        await Task.Delay(1500);
+        await UntilAsync(() => s.Gpu.InLine == 1, "the video waits for its turn");
         Assert.False(video.IsCompleted, "a video took the GPU while a picture was being made");
         Assert.Equal("loaded", app.Engine.StatusOf(Chat));
 
@@ -478,8 +478,7 @@ public sealed class GpuShareTests(AppFixture app) : IDisposable
         }
         await media.ChangedAsync(CancellationToken.None);
         await media.SetKeptAsync("FLUX-8", true);
-        media.Wake();
-        await Task.Delay(1500);
+        await LoopRounds.SeenAsync(media);
         Assert.Contains($"model={Picture}", await File.ReadAllTextAsync(Path.Combine(_dir, "config", "imagegen.conf")));
 
         await picture.DisposeAsync();

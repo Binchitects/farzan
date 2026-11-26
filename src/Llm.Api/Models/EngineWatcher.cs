@@ -48,6 +48,11 @@ public sealed partial class EngineWatcher : BackgroundService
         });
     }
 
+    private int _rounds;
+
+    /// <summary>The rounds it has gone through (each done or failed): what it has seen since a change.</summary>
+    public int Rounds => Volatile.Read(ref _rounds);
+
     /// <summary>Check now (after an admin loads or unloads a model), on whichever replica leads.</summary>
     public void Wake()
     {
@@ -245,6 +250,7 @@ public sealed partial class EngineWatcher : BackgroundService
                 // Whatever went wrong, the app keeps running: a background failure must never stop it.
                 LogFailed(logger, ex);
             }
+            Interlocked.Increment(ref _rounds);
             try
             {
                 await _wake.WaitAsync(loading ? TimeSpan.FromSeconds(3) : TimeSpan.FromSeconds(10), stoppingToken);

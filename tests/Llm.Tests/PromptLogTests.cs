@@ -440,7 +440,8 @@ public sealed class PromptLogTests(AppFixture app)
         var name = "po" + Guid.NewGuid().ToString("N")[..8];
         var made = await admin.JsonAsync(await admin.PostAsync("/api/admin/people", new { userName = name, email = $"{name}@example.test" }));
         await StatusAssert.Is(HttpStatusCode.OK, await AskAsync(f, made.GetProperty("apiKey").GetString()!, "Not to be kept."));
-        await Task.Delay(500);
+        // What would be written is: nothing.
+        await f.Services.GetRequiredService<Llm.Api.Gateway.PromptLogWriter>().FlushAsync();
         Assert.Empty((await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts?person={name}&source=api"))).GetProperty("items").EnumerateArray());
     }
 }

@@ -136,10 +136,14 @@ public sealed partial class BrowserTool(BrowserSessions sessions, BrowserProxy p
         // The person has it: the agent waits until they hand it back.
         var waited = false;
         var until = DateTimeOffset.UtcNow + TakenOverWait;
-        while (s.TakenOver && DateTimeOffset.UtcNow < until)
+        if (s.TakenOver)
         {
-            waited = true;
-            await Task.Delay(1000, ct);
+            using var _ = s.WaitForPerson();
+            while (s.TakenOver && DateTimeOffset.UtcNow < until)
+            {
+                waited = true;
+                await Task.Delay(1000, ct);
+            }
         }
         if (s.TakenOver)
         {
