@@ -61,6 +61,10 @@ has its test, Accounting narrows to one person, group, project or model, and
   had two info series. Each panel reads the info one series a GPU.
 - **Automations' sweep of abandoned runs threw** on every look and never ended
   a run left running: it orders what it takes.
+- **A story's shot whose picture or clip was taken out elsewhere** (the
+  studio's Remove) was shown as a broken link, and the media pages asked for
+  it in vain; it reads as not made, to be made again. Retention keeps the files
+  a story uses.
 
 ### :boom: Breaking changes & Deprecations
 
