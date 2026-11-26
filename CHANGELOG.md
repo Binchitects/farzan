@@ -15,6 +15,28 @@ Sections used:
   makes weaker (gone, a clause or a check dropped, fewer tests), by its id,
   and why ([compliance](docs/compliance/README.md#when-a-change-weakens-a-control))
 
+## v8.2.4 (2026-11-26)
+
+The chat's tools are easier to call from code, an answer that ends without a
+word after its tools is asked again, and the browser tests pass on the live
+stack.
+
+### :bug: Bugs fixed
+
+- **A program run with run_code** called the chat's tools by keyword only:
+  `arena.web.web_search("asyncio")` failed, and models write it so (on live a
+  search took four tries). A tool takes its required arguments by position
+  too, in order, and `arena.tools.web` is the group as `arena.web` is. A
+  run_code's row says which tools it called ("called Web search, Fetch page").
+- **An answer could end with its thinking alone** after its tools' results,
+  the person given nothing. Such a round is asked once more, without
+  thinking, to answer from what came back.
+- **arenactl publish** stopped when its `--work-dir` was not there yet: it
+  makes it.
+- **The browser tests** read a tool as used from its row or a program's call
+  of it, turn on the tools they need for their chat, and find the Logs page's
+  Containers button and the lab's drawn molecule by their names as they are.
+
 ## v8.2.3 (2026-11-26)
 
 The dashboards' exports answer in under 2 s on a million requests, every model
