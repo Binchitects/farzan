@@ -466,7 +466,7 @@ services:
     profiles: [speech]
     # speaches' own image with its vulnerable packages brought up to date (services/speaches/Dockerfile).
     build: ./services/speaches
-    image: arena-speaches
+    image: arena-audio
     container_name: audio
     # Plain HTTPS downloads: Hugging Face's Xet transfer stalls on flaky links. Its models stay loaded until the app
     # unloads them (unused for a while, Admin -> Models), not on a timer of its own.

@@ -113,7 +113,7 @@ from `arenactl`, and the logo: the A with its eyes.
   the same labels and parsing, through the engine's API.
 - **A speech image without its known vulnerabilities**: speaches 0.9.0-rc.3
   with Pillow, urllib3, cryptography, starlette, python-multipart, protobuf
-  and Ubuntu's OpenSSL raised to their fixed versions (`arena-speaches`).
+  and Ubuntu's OpenSSL raised to their fixed versions (`arena-audio`).
 - **`arenactl backup schedule`**: when backups run, through systemd's timer,
   saved in `.env`: `03:30`, `hourly`, `"every 6h"`, `"Mon,Thu 02:00"`,
   `weekly` or any systemd calendar (checked); with `--keep N` and

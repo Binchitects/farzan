@@ -1,4 +1,4 @@
-# arena-speaches: speaches (speech to text and text to speech, on the CPU) with what its image carries brought up to
+# arena-audio: speaches (speech to text and text to speech, on the CPU) with what its image carries brought up to
 # date. Its newest release (0.9.0-rc.3) ships packages with known vulnerabilities (Pillow, urllib3, cryptography,
 # starlette, python-multipart, protobuf; Ubuntu's OpenSSL and apt): each is raised to at least the version that fixes
 # them, then checked: pip check finds nothing its image did not have already (onnxruntime-gpu stands for onnxruntime,
@@ -35,5 +35,5 @@ RUN --mount=type=cache,target=/home/ubuntu/.cache/pip,uid=1000 \
 # API; speaches imports Gradio only for that page).
 ENV ENABLE_UI=false
 
-LABEL org.opencontainers.image.title="arena-speaches" \
+LABEL org.opencontainers.image.title="arena-audio" \
       org.opencontainers.image.description="speaches on the CPU with its vulnerable packages brought up to date"

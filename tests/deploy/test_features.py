@@ -51,6 +51,13 @@ class Features(unittest.TestCase):
             for s in f["services"]:
                 self.assertIn(s, self.compose, f"{f['id']} runs {s}, which docker-compose.yml does not have")
 
+    def test_A_service_compose_builds_is_named_arena_SERVICE_as_the_bundle_finds_it(self):
+        # make-installer.sh tags each built image arena-SERVICE:VERSION from the arena-SERVICE compose made.
+        for name, service in self.compose.items():
+            if "build" in service and "image" in service:
+                with self.subTest(name):
+                    self.assertEqual(f"arena-{name}", service["image"])
+
     def test_The_ids_are_profile_names_and_what_a_feature_requires_is_listed(self):
         ids = [f["id"] for f in self.features]
         self.assertEqual(len(ids), len(set(ids)))
