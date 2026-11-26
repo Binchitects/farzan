@@ -277,16 +277,17 @@ compose or the bundle changed) the offline scenarios, before 8.2.0.
 
 Left of v8.2 (released 2026-11-26), each to do:
 
-- **Item 2.** Exports of every dashboard under 2 s on a million-request ledger (measured on live's small data only:
-  0.03–1.3 s); the truth audit run on live once it is upgraded (its new pair, the stack's tokens a second two ways).
-- **Item 1.** Coverage per test, to find single tests whose lines others cover: coverlet instruments the app for ten
-  minutes a run, so it needs a collector that keeps its instrumented build or resets its counts between tests.
-- **Item 4.** Goals' contribution checked by hand on live data; **item 5** speed proved on a large log, and
-  prompt_log_bodies in the data export; **item 6** filters on Accounting and the other reports, and speed on a
-  million-row log; **item 8** Playwright on a v8.2 stack, and with a real model.
-- **Code's workspaces' tables** (studio_workspaces and their rows, the workspaces folder under DATA_DIR): kept by the
-  upgrade; dropped only on the user's word.
-- **Playwright** on a v8.2 stack: the Automations schedule spec has not run against one yet.
+- **Item 2.** Exports of Hardware, LLM and users and Usage by person past 2 s on a million-request ledger (1.9 to 3.2
+  s; every other export, Accounting, the usage exports and the prompt log are under it:
+  [million-rows.md](measurements/million-rows.md)): an hourly rollup of the ledger for their panels (sums and distinct
+  people by hour, person, model and source; percentiles stay on the rows).
+- **Item 1.** Coverage per test, to find single tests whose lines others cover (dotnet-coverage's server mode, a
+  snapshot reset between tests).
+- **Item 8.** Playwright on a v8.2 stack with a real model, and the Automations schedule spec against it.
+- Done since 8.2.2: the truth audit on live (and the 60 GPU queries it found failing), goals' contribution checked
+  by hand on live ([projects.md](measurements/projects.md); no goal on live yet), the prompt log's requests whole in
+  the data export, Accounting narrowed by person, group, project, model, source and kind, the usage exports by model,
+  source and project.
 
 ## Next
 

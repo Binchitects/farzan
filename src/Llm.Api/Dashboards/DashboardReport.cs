@@ -31,6 +31,9 @@ public static class DashboardReport
     }
 
     /// <summary>The dashboard's parts; with <paramref name="prefix"/> each title starts with it (a dashboard inside Accounting's report).</summary>
+    /// <summary>How many panels' queries an export asks at once.</summary>
+    public const int AtOnce = 8;
+
     public static async Task<DashboardParts> PartsAsync(Dashboard d, PanelQuery q, PanelSources src, string? prefix, CancellationToken ct)
     {
         var figures = new List<ReportFigure>();
@@ -39,7 +42,23 @@ public static class DashboardReport
         var unread = new List<object?[]>();
         string Named(string title) => prefix is null ? title : $"{prefix}: {title}";
         string? section = null;
-        foreach (var panel in d.Panels.OrderBy(p => Y(p)).ThenBy(p => X(p)))
+        var ordered = d.Panels.OrderBy(p => Y(p)).ThenBy(p => X(p)).ToList();
+        // Every panel's queries asked at once, a few at a time (each its own connection), as the page asks them; the
+        // document is still made in the panels' order.
+        using var room = new SemaphoreSlim(AtOnce);
+        var asked = ordered.Where(p => p.Type is not ("row" or "text") && DashboardEndpoints.Supported(p)).ToDictionary(p => p, async p =>
+        {
+            await room.WaitAsync(ct);
+            try
+            {
+                return await DashboardEndpoints.RunAsync(d, p, q, src, ct);
+            }
+            finally
+            {
+                room.Release();
+            }
+        });
+        foreach (var panel in ordered)
         {
             if (panel.Type == "row")
             {
@@ -55,7 +74,7 @@ public static class DashboardReport
             TimeSpan bucket;
             try
             {
-                (bucket, results) = await DashboardEndpoints.RunAsync(d, panel, q, src, ct);
+                (bucket, results) = await asked[panel];
             }
             catch (Exception ex) when (ex is DatasourceException or HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
             {

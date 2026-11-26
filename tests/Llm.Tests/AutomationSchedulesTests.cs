@@ -243,4 +243,39 @@ public sealed class AutomationSchedulesTests(AppFixture app)
         Assert.Equal(("webhook", "done"), (run.Trigger, ended.GetProperty("status").GetString()));
         Assert.Contains("disk full", ended.GetProperty("steps")[0].GetProperty("output").GetString(), StringComparison.Ordinal);
     }
+    [Fact]
+    public async Task A_run_left_running_hours_after_its_last_step_is_ended_saying_why_and_one_still_stepping_is_not()
+    {
+        await using var f = NewApp();
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        Guid stale, busy;
+        using (var scope = f.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var owner = await db.Users.Where(u => u.UserName == "admin").Select(u => u.Id).SingleAsync();
+            var w = new Llm.Core.Studio.Workflow
+            {
+                OwnerId = owner, Name = "Long", Enabled = true,
+                Flow = FlowModel.Write(new Flow { Trigger = new FlowTrigger { Kind = "manual" }, Steps = [new FlowStep { Id = "say", Kind = "text", Text = "hi" }] }),
+            };
+            db.Workflows.Add(w);
+            var hoursAgo = DateTimeOffset.UtcNow.AddHours(-3);
+            var a = new Llm.Core.Studio.WorkflowRun { WorkflowId = w.Id, Flow = w.Flow, Status = Llm.Core.Studio.WorkflowRun.Running, StartedAt = hoursAgo };
+            var b = new Llm.Core.Studio.WorkflowRun { WorkflowId = w.Id, Flow = w.Flow, Status = Llm.Core.Studio.WorkflowRun.Running, StartedAt = hoursAgo };
+            db.WorkflowRuns.AddRange(a, b);
+            // The second's step began ten minutes ago: it is still at work.
+            db.WorkflowRunSteps.Add(new Llm.Core.Studio.WorkflowRunStep { RunId = b.Id, Order = 0, Path = "say", StepId = "say", Kind = "text", StartedAt = DateTimeOffset.UtcNow.AddMinutes(-10) });
+            await db.SaveChangesAsync();
+            (stale, busy) = (a.Id, b.Id);
+        }
+        await f.Services.GetRequiredService<StudioRuns>().AbandonedAsync(CancellationToken.None);
+        using (var scope = f.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var a = await db.WorkflowRuns.AsNoTracking().SingleAsync(r => r.Id == stale);
+            Assert.Equal((Llm.Core.Studio.WorkflowRun.Failed, true), (a.Status, a.Error!.Contains("stopped", StringComparison.Ordinal)));
+            Assert.NotNull(a.FinishedAt);
+            Assert.Equal(Llm.Core.Studio.WorkflowRun.Running, (await db.WorkflowRuns.AsNoTracking().SingleAsync(r => r.Id == busy)).Status);
+        }
+    }
 }
