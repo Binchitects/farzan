@@ -9,9 +9,10 @@ The commands: [scripts.md](scripts.md).
 With compose: one host, one way in. Only Traefik publishes ports:
 `HTTP_PORT` and `HTTPS_PORT`, 80 and 443 by default (8080 and 8443 on
 rootless Podman, where ports below 1024 need root). Every other service is
-reached by its name inside the stack, except the four with no network: the
+reached by its name inside the stack, except those with no network: the
 app hands `sandbox`, `blender` and `lean` their jobs through a volume each,
-and nothing reaches `power-limits`.
+reaches `plugins` through its socket on the plugin-runtime volume, and nothing
+reaches `power-limits`.
 
 ```
  browsers       API clients, agents      Code Arena on people's machines
@@ -35,6 +36,7 @@ and nothing reaches `power-limits`.
          ┌────────────────────────┘    │    └────────┐            │ read only
 ┌────────▼──────────┐ ┌────────────────▼──┐ ┌────────▼──────────┐ ▼
 │ llamacpp          │ │ sandbox [n]       │ │ prometheus        │ your GitLab
+│                   │ │ plugins [n]       │ │                   │
 │ vllm, sglang,     │ │ blender [n]       │ │ alertmanager      │
 │ lmdeploy, strata  │ │ lean [n]          │ │ loki, alloy       │
 │ imagegen          │ │ browser [b]       │ │ node-exporter     │
@@ -180,6 +182,7 @@ features it requires.
 | `pictures`, `video` | yes | `imagegen`, `videogen` | pictures and video on the GPU |
 | `speech` | yes | `audio` | speech to text and text to speech |
 | `sandbox` | yes | `sandbox` | Python and commands for the chat's tools |
+| `plugins` | yes | `plugins` | plugins' own server code, each plugin a worker of its own, with no network (docs/plugins.md) |
 | `web-search` | yes | `searxng` | the chat's web search |
 | `browser` | no | `browser` | the browser agent (Chromium) |
 | `3d` | no | `blender` | 3D models |
