@@ -49,7 +49,25 @@ The web suite had flaky tests under load (a lazy page's code loaded after the te
 advice missing a field, an element replaced while clicked): fixed at their cause (each test file preloads the
 pages it draws, full fakes, waiting for the element the test acts on), and each passed 10 runs in a row.
 
+## What a test covers that no other does
+
+Cutting by name or by feel drops checks; cutting by coverage alone does too. Measured instead: the suite run with
+coverage twice on the same code, whole and without a group of candidates (`tools/test-shards.py --exclude`), and the
+lines and branches only the group covers counted.
+
+- **Llm.Tests.** The candidates: the 396 tests over 3 s, leaving out the control-tagged ones, the upgrade tests and the
+  real-engine, concurrency, LDAP and scale-out classes (38 of the 65 summed minutes). Without them the wall time with
+  coverage is 24.4 min (38.5 whole, beside other work): but they alone cover **18,519 lines and 11,089 branches in 323
+  files** (Code Arena's sync, downloads, knowledge connectors, media and vector jobs, Automations' runner, the data
+  sources, plugins, meetings). They are the features' whole-path tests; no smaller test walks those paths.
+- **Web.** The 176 tests over 3 s alone cover 2,401 statements and 2,651 branches. Each measured alone: 23 cover nothing
+  the rest do not (2.2 of their 14.9 minutes), but each pins what coverage cannot see (a price as shown, a refusal, where
+  focus goes, a search asked once typing pauses, a permission's absence), so none was cut.
+- **Made faster instead.** A fresh app's database is a copy of one migrated once a run (56 s → 46 s on four classes);
+  the fixed sleeps wait for a sign (JobRunnerTests 16 s → 5 s; the engine watcher's, media loop's and LDAP check's rounds,
+  the GPU's line, the browser's hand-back); the manual's anchor test checks each page's Markdown (60 s → 8 s).
+
 ## Not done yet
 
-Cutting tests that prove nothing another does not: none was cut yet. The candidates are tests that only repeat a
-broader one's path (by coverage per test) and real waits that a test clock would make instant.
+Each of the 396 server candidates measured alone (about 1.5 hours of runs: each starts its own app), to find any whose
+lines another covers too, and then check its assertions are made elsewhere before it goes.
