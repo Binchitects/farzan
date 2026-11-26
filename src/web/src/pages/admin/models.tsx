@@ -24,6 +24,7 @@ import { EngineProblems, MoveState } from './engine-fields'
 import { engineSlot } from './engine-slot'
 import { ModelDialog, type ModelDialogOpen } from './model-dialog'
 import { ModelBenchDialog } from './model-bench'
+import { testable } from './model-bench-kinds'
 import { EngineActions } from './runtimes'
 import { OnDiskCard } from './model-disk'
 import { type SavedModel } from './model-form'
@@ -795,7 +796,7 @@ function ModelCard({
               <Trash2 /> Remove
             </Button>
           )}
-          {!media && mayEdit && (
+          {may.editMedia && testable(m.mode) && (
             <Button size="sm" variant="outline" onClick={() => setTesting(true)} aria-label={`Test ${m.name}`}>
               <FlaskConical /> Test
             </Button>
@@ -803,7 +804,7 @@ function ModelCard({
           <Button size="sm" variant="ghost" onClick={() => setDetails(true)} aria-label={`Details of ${m.name}`}>
             <Info /> Details
           </Button>
-          {testing && <ModelBenchDialog model={m.name} open={testing} onOpenChange={setTesting} />}
+          {testing && <ModelBenchDialog model={m.name} mode={m.mode} open={testing} onOpenChange={setTesting} />}
         </div>
       </CardContent>
       <Dialog open={detailsOpen} onOpenChange={setDetails}>

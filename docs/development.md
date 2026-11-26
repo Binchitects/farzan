@@ -212,10 +212,27 @@ A release is a tag, `vX.Y.Z`, on a commit of `main` whose suites all pass.
    `sh dist/arena-VERSION-offline.run verify`, and
    `sh dist/arena-VERSION-offline.run upgrade --dir DIR --dry-run` against
    an installation of the oldest release it upgrades.
-8. Tag the commit and push the tag (`release.yml` publishes the Farzan Graph image),
-   make the GitHub release (`gh release create`), and attach the `.run`, its
-   `.sha256`, the SBOM (`dist/arena-VERSION.cdx.json`) and Code Arena's
-   packages to it.
+8. Tag the commit and push the tag, make the GitHub release (`gh release
+   create vX.Y.Z --title "Farzan Arena X.Y.Z" --notes-file NOTES --latest`),
+   and attach the SBOM (`dist/arena-VERSION.cdx.json` and its `.sha256`).
+   The `.run` is too big for a release's assets: it is handed over as a file.
+9. The images on GitHub Packages: `./arenactl publish --release` pushes
+   every image the stack builds, by service, to
+   `ghcr.io/binchitects/farzan/SERVICE:VERSION` (and `:latest` for a final
+   release; a pre-release never moves it). The images are the bundle's own,
+   `arena-SERVICE:VERSION` as step 7 tagged them. It writes their digests to
+   `dist/arena-VERSION-images.txt`, attaches that to the release and lists
+   the images in its notes. Each image goes as the engine saves it, so its
+   digest on the registry is the one it has here and in the bundle. It is sent
+   by arenactl itself, in chunks of 4 MiB one after another, not by the
+   engine's push: over a slow link the engine sends every layer at once and
+   times out. A chunk the network breaks is sent again (`--retries`), a layer
+   the registry has is skipped, and a run that stops goes on from there when
+   run again. It needs a token that may write packages: `gh auth refresh -s
+   write:packages` (it asks `gh auth token` for it), or `ARENA_REGISTRY_TOKEN`;
+   the token is never printed. Each image is saved first, in
+   `ARENA_PUBLISH_TMP` or `--work-dir` (vLLM's needs about 40 GB). A new
+   package starts private: make it public once, in its settings on GitHub.
 
 When a release can no longer upgrade from 5.2.0 (a migration or a file that
 needs a release in between), raise `UPGRADES_FROM` in
@@ -227,8 +244,8 @@ and says which release to upgrade to first.
 `.github/workflows/ci.yml` runs on every push: the API, Farzan Graph and Code Arena tests (and Code Arena's Linux package), both web
 apps, each in a browser (the platform's images behind Traefik with no model,
 Farzan Graph with its fakes), the deployment tooling's tests, and every env sample
-resolving into a complete compose file. `release.yml` publishes the Farzan Graph image
-on a `v*` tag.
+resolving into a complete compose file. Nothing publishes from CI: the release's images are
+pushed by `./arenactl publish` (step 9 above), the same images the bundle carries.
 
 ## Conventions
 

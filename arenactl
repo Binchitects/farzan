@@ -8,6 +8,7 @@
     ./arenactl build [--with A,B] [--without A,B] [--all]   the stack's images (built and pulled)
     ./arenactl deps [--arch amd64|arm64]                    Docker, Compose and NVIDIA's toolkit, for a bundle
     ./arenactl bundle [--with-deps] [--models] [--packs]    the offline installer: dist/arena-VERSION-offline.run
+    ./arenactl publish [--release]       the release's own images on GitHub Packages (ghcr.io/binchitects/farzan/SERVICE)
     ./arenactl cert|sign|backup|restore|hosts|kube [args]   the operator's scripts, for an installation
     ./arenactl check NAME [args]          the live checks (functional, compliance, recovery, gpu, ...)
     ./arenactl test [SUITE ...]           the test suites (app, code-intel, web, deploy)
@@ -650,6 +651,318 @@ def cmd_bundle(a) -> int:
     return run(cmd, check=False)
 
 
+# ----------------------------------------------------------------------------- publish (GitHub Packages)
+REGISTRY = "ghcr.io/binchitects/farzan"
+# The images built by a compose file of their own: each feature's engine image, and point-in-time recovery's Postgres.
+OWN_BUILD_FILES = ("lmdeploy-build.yml", "sglang-build.yml", "pitr.yml")
+IMAGES_MARK = ("<!-- images -->", "<!-- /images -->")
+
+
+def own_images(engine: Engine) -> list[tuple[str, str]]:
+    """(service, the image compose names for it) for every image the stack builds itself, every feature's."""
+    profiles = choose_features(None, None, all_=True)
+    compose = Compose(engine, profiles)
+    try:
+        rows: dict[str, str] = {}
+        for extra in ((),) + tuple((f,) for f in OWN_BUILD_FILES if (DEPLOY / f).exists()):
+            out = output(compose.cmd("config", "--format", "json", extra=extra), cwd=DEPLOY,
+                         env={**compose.env(), "COMPOSE_PROFILES": ",".join(profiles + ["sglang", "lmdeploy"])})
+            if out is None:
+                raise Stop("compose could not read deploy/docker-compose.yml" + (f" with {extra[0]}" if extra else ""))
+            for name, svc in json.loads(out).get("services", {}).items():
+                if svc.get("build") and (not extra or name not in rows):
+                    rows[name] = svc.get("image") or f"arena-{name}"
+        return sorted(rows.items())
+    finally:
+        compose.close()
+
+
+class Registry:
+    """An OCI registry's push API (the distribution spec), from Python alone: each blob sent in chunks, one after
+    another, a chunk the network broke sent again from where the registry says it got to, and a blob it has already
+    skipped. A slow or lossy link that times an engine's push out (all layers at once, each in one request) gets
+    the image there this way."""
+
+    CHUNK = 4 << 20       # ghcr.io takes at most 4 MiB a request
+
+    def __init__(self, host: str, token: str, proxy_url: str | None = None, retries: int = 5, sleep=time.sleep):
+        self.host, self.token, self.retries, self.sleep = host, token, retries, sleep
+        handlers: list = [urllib.request.ProxyHandler({"https": proxy_url, "http": proxy_url} if proxy_url else {})]
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, *a, **k):
+                return None
+
+        self.opener = urllib.request.build_opener(*handlers, NoRedirect)
+        self.bearer: dict[str, str] = {}
+        self.base = f"https://{host}" if not host.startswith(("http://", "https://")) else host
+
+    class Answer:
+        def __init__(self, code: int, headers, body: bytes):
+            self.code, self.status, self.headers, self.body = code, code, headers, body
+
+        def read(self) -> bytes:
+            return self.body
+
+    def _open(self, method: str, url: str, body: bytes | None = None, headers: dict | None = None, timeout: int = 600):
+        """The answer read whole and its connection closed: every one, an error's too."""
+        rq = urllib.request.Request(url, data=body, method=method, headers=headers or {})
+        try:
+            r = self.opener.open(rq, timeout=timeout)
+        except urllib.error.HTTPError as e:
+            r = e
+        with r:
+            return self.Answer(getattr(r, "status", None) or r.code, r.headers, r.read())
+
+    def _auth(self, repo: str) -> dict:
+        """Bearer token for push and pull on repo, from the registry's own challenge (GET /v2/)."""
+        if repo not in self.bearer:
+            r = self._open("GET", f"{self.base}/v2/", timeout=60)
+            challenge = r.headers.get("WWW-Authenticate", "") if r.code == 401 else ""
+            m = dict(re.findall(r'(\w+)="([^"]*)"', challenge))
+            if not m.get("realm"):
+                self.bearer[repo] = ""
+            else:
+                url = f"{m['realm']}?service={m.get('service', self.host)}&scope=repository:{repo}:push,pull"
+                basic = __import__("base64").b64encode(f"token:{self.token}".encode()).decode()
+                t = self._open("GET", url, headers={"Authorization": f"Basic {basic}"}, timeout=60)
+                if t.code != 200:
+                    raise Stop(f"{self.host} gave no token to push {repo} (HTTP {t.code}): a token that may write packages is "
+                               "needed (gh auth refresh -s write:packages, or ARENA_REGISTRY_TOKEN)", 3)
+                body = json.loads(t.body)
+                self.bearer[repo] = body.get("token") or body.get("access_token") or ""
+        return {"Authorization": f"Bearer {self.bearer[repo]}"} if self.bearer[repo] else {}
+
+    def call(self, repo: str, method: str, url: str, body: bytes | None = None, headers: dict | None = None, ok=(200, 201, 202, 204)):
+        """One request, tried again on a network error or a registry's 5xx; a 401 asks for a new token once."""
+        if not url.startswith("http"):
+            url = self.base + url
+        for attempt in range(1, self.retries + 2):
+            try:
+                r = self._open(method, url, body, {**self._auth(repo), **(headers or {})})
+                code = r.code
+            except (urllib.error.URLError, OSError, TimeoutError) as e:
+                code, r = None, e
+            if code in ok or code == 404 and method == "HEAD":
+                return r
+            if code == 401 and attempt == 1:
+                self.bearer.pop(repo, None)
+                continue
+            if code is not None and code < 500 and code != 429:
+                detail = r.read()[:300].decode("utf-8", "replace") if hasattr(r, "read") else ""
+                raise Stop(f"{self.host}: {method} {url.split('?')[0]} answered {code} {detail}".strip())
+            if attempt > self.retries:
+                raise Stop(f"{self.host}: {method} {url.split('?')[0]} failed {attempt} times ({code or r}): run it again to go on")
+            self.sleep(min(60, 5 * attempt))
+        raise Stop(f"{self.host}: {method} {url.split('?')[0]} failed")
+
+    def has_blob(self, repo: str, digest: str) -> bool:
+        r = self.call(repo, "HEAD", f"/v2/{repo}/blobs/{digest}")
+        return (getattr(r, "status", None) or r.code) == 200
+
+    def push_blob(self, repo: str, digest: str, f, size: int, progress=None) -> None:
+        def where(r) -> str:
+            loc = r.headers["Location"]
+            return loc if loc.startswith("http") else self.base + loc
+        loc = where(self.call(repo, "POST", f"/v2/{repo}/blobs/uploads/", b"", {"Content-Length": "0"}))
+        off, resumed = 0, 0
+        while off < size:
+            f.seek(off)
+            part = f.read(min(self.CHUNK, size - off))
+            try:
+                r = self.call(repo, "PATCH", loc, part, {"Content-Type": "application/octet-stream", "Content-Length": str(len(part)),
+                                                          "Content-Range": f"{off}-{off + len(part) - 1}"})
+            except Stop as e:
+                resumed += 1
+                say(f"    {digest[7:19]}: {e}; going on from where the registry got to")
+                if resumed > self.retries:
+                    raise
+                # Where the registry got to: the next chunk starts there. A registry that does not say (ghcr.io answers
+                # 303) gets the blob from its start, in an upload of its own.
+                try:
+                    r = self.call(repo, "GET", loc, ok=(204,))
+                    off = int(r.headers.get("Range", "0-0").split("-")[1]) + 1 if r.headers.get("Range") else 0
+                    loc = where(r)
+                except Stop:
+                    loc, off = where(self.call(repo, "POST", f"/v2/{repo}/blobs/uploads/", b"", {"Content-Length": "0"})), 0
+                continue
+            loc = where(r)
+            off += len(part)
+            if progress:
+                progress(off, size)
+        self.call(repo, "PUT", loc + ("&" if "?" in loc else "?") + f"digest={digest}", b"",
+                  {"Content-Type": "application/octet-stream", "Content-Length": "0"}, ok=(201, 204))
+
+    def put_manifest(self, repo: str, ref: str, body: bytes, media_type: str) -> None:
+        self.call(repo, "PUT", f"/v2/{repo}/manifests/{ref}", body, {"Content-Type": media_type}, ok=(201, 204))
+
+
+def push_saved_image(reg: Registry, archive: Path, repo: str, tags: list[str]) -> str:
+    """The image an engine saved (its OCI index.json and blobs/) onto repo, with every tag; returns its digest."""
+    with tarfile.open(archive) as t:
+        members = {m.name: m for m in t.getmembers() if m.isfile()}
+
+        def blob(digest: str) -> tarfile.TarInfo:
+            name = "blobs/" + digest.replace(":", "/")
+            if name not in members:
+                raise Stop(f"{archive.name}: the saved image has no {digest}")
+            return members[name]
+
+        def read(digest: str) -> bytes:
+            return t.extractfile(blob(digest)).read()
+
+        top = json.loads(t.extractfile(members["index.json"]).read())["manifests"]
+        # Beside the image, a save can hold an attestation that names it as its subject: not an image of its own.
+        top = [d for d in top if "artifactType" not in d and "io.containerd.manifest.subject" not in d.get("annotations", {})] or top
+        if len(top) != 1:
+            raise Stop(f"{archive.name}: one image expected, {len(top)} saved")
+        root = top[0]
+        manifests: list[dict] = []          # children before their index: the order they are put in
+
+        def walk(desc: dict) -> None:
+            body = json.loads(read(desc["digest"]))
+            if "manifests" in body:
+                for child in body["manifests"]:
+                    walk(child)
+            manifests.append(desc)
+        walk(root)
+        blobs: dict[str, int] = {}
+        for desc in manifests:
+            body = json.loads(read(desc["digest"]))
+            for b in ([body["config"]] if "config" in body else []) + body.get("layers", []):
+                blobs[b["digest"]] = b["size"]
+        total = sum(blobs.values())
+        sent = 0
+        for digest, size in blobs.items():
+            if reg.has_blob(repo, digest):
+                sent += size
+                continue
+            say(f"    {digest[7:19]}  {human(size)}")
+            reg.push_blob(repo, digest, t.extractfile(blob(digest)), size)
+            sent += size
+        say(f"    {human(total)} in {len(blobs)} blob(s): on the registry")
+        for desc in manifests[:-1]:
+            reg.put_manifest(repo, desc["digest"], read(desc["digest"]), desc["mediaType"])
+        for tag in tags:
+            reg.put_manifest(repo, tag, read(root["digest"]), root["mediaType"])
+        return root["digest"]
+
+
+def registry_token(host: str) -> str:
+    """ARENA_REGISTRY_TOKEN, else GitHub's gh for ghcr.io: never printed."""
+    token = os.environ.get("ARENA_REGISTRY_TOKEN")
+    if token:
+        return token
+    if host == "ghcr.io" and shutil.which("gh"):
+        out = output(["gh", "auth", "token"])
+        if out and out.strip():
+            return out.strip()
+    raise Stop(f"no token to push to {host}: ARENA_REGISTRY_TOKEN, or for ghcr.io GitHub's gh signed in with a token that may write "
+               "packages (gh auth refresh -s write:packages)", 3)
+
+
+def release_notes_with_images(body: str, table: str) -> str:
+    """The release's notes with its images section put in (or put in again, in place)."""
+    start, end = IMAGES_MARK
+    block = f"{start}\n{table}\n{end}"
+    if start in body and end in body:
+        return body[:body.index(start)] + block + body[body.index(end) + len(end):]
+    return body.rstrip() + ("\n\n" if body.strip() else "") + block + "\n"
+
+
+def released_versions() -> list[str]:
+    """The final releases tagged here (vX.Y.Z), as X.Y.Z."""
+    tags = output(["git", "-C", str(ROOT), "tag", "-l", "v*"]) if shutil.which("git") else None
+    return [t[1:] for t in (tags or "").split() if re.fullmatch(r"v\d+\.\d+\.\d+", t)]
+
+
+def cmd_publish(a) -> int:
+    """The release's own images on GitHub Packages, as REGISTRY/SERVICE:VERSION (and :latest for a final release)."""
+    engine = Engine(a.engine)
+    engine.need()
+    version = a.version or VERSION
+    final = re.fullmatch(r"\d+\.\d+\.\d+", version) is not None
+    # :latest is the newest final release's: an older one published after it (8.2.2 after 8.2.3) leaves it there.
+    newer = [t for t in released_versions() if version_of(t) > version_of(version)] if final else []
+    if newer and not a.no_latest:
+        say(f"  :latest stays with {max(newer, key=version_of)}, newer than {version}")
+        a.no_latest = True
+    registry = (a.registry or os.environ.get("ARENA_REGISTRY") or REGISTRY).rstrip("/")
+    wanted = set(a.services.split(",")) if a.services else None
+    plan, missing = [], []
+    for svc, image in own_images(engine):
+        if wanted is not None and svc not in wanted:
+            continue
+        repo = image.split(":")[0] if ":" in image.rsplit("/", 1)[-1] else image
+        own_tag = image.rsplit(":", 1)[1] if ":" in image.rsplit("/", 1)[-1] else None
+        # The release's image is the one the bundle carries, arena-SERVICE:VERSION; one built by a compose file of its
+        # own (an engine's) keeps that file's tag; --from-build takes what compose built here last.
+        candidates = [f"{repo}:{version}"] + ([image] if own_tag else []) + ([f"{repo}:latest", image] if a.from_build else [])
+        src = next((c for c in candidates if engine.has_image(c)), None)
+        if src is None:
+            missing.append(svc)
+            continue
+        tags = [version] + ([own_tag] if own_tag and own_tag not in (version, "latest") else []) + (["latest"] if final and not a.no_latest else [])
+        plan.append((svc, src, [f"{registry}/{svc}:{t}" for t in tags]))
+    if wanted is not None and wanted - {p[0] for p in plan} - set(missing):
+        raise Stop(f"--services: the stack builds no {', '.join(sorted(wanted - {p[0] for p in plan} - set(missing)))}", 2)
+    if not plan:
+        raise Stop(f"none of the release's images is here as arena-SERVICE:{version} (installed or bundled from it? "
+                   "--from-build takes the images built here last)", 3)
+    say(f"{PRODUCT} {version}: {len(plan)} image(s) to {registry}" + (f"; not here, left out: {', '.join(missing)}" if missing else ""))
+    for svc, src, refs in plan:
+        say(f"  {src} -> {', '.join(r.rsplit('/', 1)[1] for r in refs)}")
+    if a.dry_run:
+        return 0
+    host, _, base = registry.partition("/")
+    reg = Registry(host, registry_token(host), proxy(), retries=a.retries)
+    work = Path(a.work_dir or os.environ.get("ARENA_PUBLISH_TMP") or tempfile.gettempdir())
+    work.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for svc, src, refs in plan:
+        step(f"{svc}: {src}")
+        need = int(output([engine.need(), "image", "inspect", "-f", "{{.Size}}", src]) or 0) + (1 << 30)
+        if free_bytes(work) < need:
+            raise Stop(f"{work} has {human(free_bytes(work))} free, {human(need)} needed to save {src} (--work-dir elsewhere)")
+        archive = Path(tempfile.mkdtemp(prefix="arenactl-publish-", dir=work)) / "image.tar"
+        try:
+            run([engine.need(), "save", *(["--format", "oci-archive"] if engine.name == "podman" else []), "-o", str(archive), src], quiet=True)
+            digest = push_saved_image(reg, archive, f"{base}/{svc}" if base else svc, [r.rsplit(":", 1)[1] for r in refs])
+        finally:
+            shutil.rmtree(archive.parent, ignore_errors=True)
+        for ref in refs:
+            say(f"  pushed {ref}")
+        rows.append((svc, refs, digest))
+    DIST.mkdir(exist_ok=True)
+    listing = DIST / f"arena-{version}-images.txt"
+    # A run for some services keeps the others' lines: the file is the release's, whole.
+    lines = {l.split("\t", 1)[0]: l for l in (listing.read_text(encoding="utf-8").splitlines() if listing.exists() else []) if l.strip()}
+    for svc, refs, d in rows:
+        lines[svc] = f"{svc}\t{refs[0].rsplit(':', 1)[0]}@{d}\t{' '.join(r.rsplit(':', 1)[1] for r in refs)}"
+    listing.write_text("".join(lines[k] + "\n" for k in sorted(lines)), encoding="utf-8")
+    rows = [(k, [l.split("\t")[1].split("@")[0] + ":" + t for t in l.split("\t")[2].split()], l.split("\t")[1].split("@")[1])
+            for k, l in sorted(lines.items())]
+    say(f"\n{len(plan)} image(s) pushed to {registry}; the release's {len(rows)} with their digests: {listing}")
+    if a.release:
+        tag = f"v{version}"
+        if shutil.which("gh") is None:
+            raise Stop("--release needs GitHub's gh, signed in (https://cli.github.com)", 3)
+        step(f"the GitHub release {tag}: the images' list and their section in its notes")
+        table = "\n".join(["## Images", "", f"Pull them from GitHub Packages (`{engine.name} pull REF`), or use the offline bundle.", "",
+                           "| service | image | digest |", "|---|---|---|"] +
+                          [f"| {svc} | `{refs[0]}` | `{d}` |" for svc, refs, d in rows])
+        body = output(["gh", "release", "view", tag, "--json", "body", "--jq", ".body"], cwd=ROOT)
+        if body is None:
+            raise Stop(f"gh found no release {tag} (made with gh release create first?)", 3)
+        notes = Path(tempfile.mkdtemp(prefix="arenactl-")) / "notes.md"
+        notes.write_text(release_notes_with_images(body, table), encoding="utf-8")
+        run(["gh", "release", "edit", tag, "--notes-file", str(notes)], cwd=ROOT, quiet=True)
+        run(["gh", "release", "upload", tag, str(listing), "--clobber"], cwd=ROOT, quiet=True)
+        shutil.rmtree(notes.parent, ignore_errors=True)
+        say(f"  {tag}: {listing.name} attached, its notes list the images")
+    return 0
+
+
 # ----------------------------------------------------------------------------- the installer, from this checkout
 INSTALLER_COMMANDS = ("install", "upgrade", "repair", "remove", "status", "verify", "features", "requirements", "stop", "start", "maintenance")
 
@@ -971,6 +1284,19 @@ def main(argv: list[str]) -> int:
     s.add_argument("--engine", choices=["docker", "podman"])
     s.add_argument("--dry-run", action="store_true")
     s.set_defaults(func=cmd_bundle)
+
+    s = sub.add_parser("publish", help=f"the release's own images on GitHub Packages ({REGISTRY}/SERVICE:VERSION)")
+    s.add_argument("--version", help="the release (default VERSION): its images are arena-SERVICE:VERSION here")
+    s.add_argument("--registry", help=f"where they go (default ARENA_REGISTRY, else {REGISTRY})")
+    s.add_argument("--services", help="only these services")
+    s.add_argument("--from-build", action="store_true", help="an image not tagged for the release: the one built here last")
+    s.add_argument("--no-latest", action="store_true", help="leave :latest where it is")
+    s.add_argument("--retries", type=int, default=5, help="a request the network broke is tried again, up to this many times (default 5)")
+    s.add_argument("--work-dir", help="where each image is saved before it is sent (default ARENA_PUBLISH_TMP, else the system's temporary folder)")
+    s.add_argument("--release", action="store_true", help="also the GitHub release vVERSION: the images' list attached, and listed in its notes")
+    s.add_argument("--engine", choices=["docker", "podman"])
+    s.add_argument("--dry-run", action="store_true", help="what would go where, nothing pushed")
+    s.set_defaults(func=cmd_publish)
 
     for c in INSTALLER_COMMANDS:
         s = sub.add_parser(c, help=f"the installer's {c} (deploy/scripts/installer.sh {c} --help)", add_help=False)

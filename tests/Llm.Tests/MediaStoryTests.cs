@@ -173,4 +173,46 @@ public sealed class MediaStoryTests(AppFixture app)
         Assert.Equal((shot.Picture, (Guid?)null, shot.Speech), (shot.Changed("A", "B", 4).Picture, shot.Changed("A", "B", 4).Clip, shot.Changed("A", "B", 4).Speech));
         Assert.Equal(((Guid?)null, (Guid?)null), (shot.Changed("X", "B", 3).Picture, shot.Changed("X", "B", 3).Clip));
     }
+    [Fact]
+    public async Task A_shot_whose_file_was_taken_out_elsewhere_reads_as_not_made_and_retention_keeps_a_storys_files()
+    {
+        await using var f = app.Create(app.ConnectionStringFor("story_gone_" + Guid.NewGuid().ToString("N")[..8]), new FakeGateway(),
+            new Dictionary<string, string?> { ["Retention:Days"] = "30" });
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        Guid owner, picture, clip, speech, story;
+        using (var scope = f.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<Llm.Core.Data.AppDbContext>();
+            owner = (await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.SingleAsync(db.Users, u => u.UserName == "admin")).Id;
+            Llm.Core.Chat.ChatAttachment File(string name, string type) => new()
+            {
+                UserId = owner, FileName = name, ContentType = type, Text = "", Data = [1, 2, 3], CreatedAt = DateTimeOffset.UtcNow.AddDays(-90),
+            };
+            var (p, c, sp) = (File("shot.png", "image/png"), File("shot.mp4", "video/mp4"), File("shot.mp3", "audio/mpeg"));
+            db.ChatAttachments.AddRange(p, c, sp);
+            var s = new Llm.Core.Media.MediaStory
+            {
+                OwnerId = owner, Title = "Lunch club", Brief = "a club",
+                Shots = StoryModel.Write([new StoryShot { Visual = "a door", Narration = "Welcome", Picture = p.Id, Clip = c.Id, Speech = sp.Id }]),
+            };
+            db.MediaStories.Add(s);
+            await db.SaveChangesAsync();
+            (picture, clip, speech, story) = (p.Id, c.Id, sp.Id, s.Id);
+        }
+        // Retention, at 30 days, keeps files a story uses, however old.
+        using (var scope = f.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<Llm.Api.Retention.Retention>().SweepAsync();
+            var db = scope.ServiceProvider.GetRequiredService<Llm.Core.Data.AppDbContext>();
+            Assert.Equal(3, await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(db.ChatAttachments, a => a.Id == picture || a.Id == clip || a.Id == speech));
+            // Its picture and clip taken out elsewhere (as the studio's Remove does): the shot reads as not made, its narration kept.
+            await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ExecuteDeleteAsync(db.ChatAttachments.Where(a => a.Id == picture || a.Id == clip));
+        }
+        var shot = (await admin.JsonAsync(await admin.GetAsync($"/api/media/stories/{story}"))).GetProperty("shots")[0];
+        Assert.Equal(JsonValueKind.Null, shot.GetProperty("picture").ValueKind);
+        Assert.Equal(JsonValueKind.Null, shot.GetProperty("clip").ValueKind);
+        Assert.Equal($"/api/chat/attachments/{speech}/content", shot.GetProperty("speech").GetString());
+        var listed = (await admin.JsonAsync(await admin.GetAsync("/api/media/stories"))).EnumerateArray().Single(x => x.GetProperty("id").GetGuid() == story);
+        Assert.Equal(JsonValueKind.Null, listed.GetProperty("shots")[0].GetProperty("picture").ValueKind);
+    }
 }

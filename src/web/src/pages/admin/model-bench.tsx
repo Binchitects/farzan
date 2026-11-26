@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { toast } from '@/components/ui/toaster'
 import { api, errorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { benchKinds as media } from './model-bench-kinds'
 
 interface BenchTestResult {
   id: string
@@ -19,10 +20,14 @@ interface BenchTestResult {
 
 interface BenchLevel {
   atOnce: number
-  tokensPerSecond: number
-  perAnswer: number
-  firstTokenP50: number
-  firstTokenP95: number
+  /** A chat model's. */
+  tokensPerSecond?: number
+  perAnswer?: number
+  firstTokenP50?: number
+  firstTokenP95?: number
+  /** A media model's: how many it made a minute, and each one's time. */
+  perMinute?: number
+  secondsEach?: number
   failed: number
   seconds: number
 }
@@ -35,7 +40,7 @@ export interface BenchRun {
   error: string | null
   startedAt: string
   finishedAt: string | null
-  results: { tests?: BenchTestResult[]; passed?: number; total?: number; levels?: BenchLevel[]; best?: { atOnce: number; tokensPerSecond: number } }
+  results: { tests?: BenchTestResult[]; passed?: number; total?: number; unit?: string; levels?: BenchLevel[]; best?: { atOnce: number; tokensPerSecond?: number; perMinute?: number } }
 }
 
 const runsKey = (model: string) => ['admin', 'models', model, 'bench'] as const
@@ -45,7 +50,8 @@ const runsKey = (model: string) => ['admin', 'models', model, 'bench'] as const
  * JSON, a tool call, a fact in a long text, Persian, code) and its capacity (answers at once, raised until more do not make
  * more), each run kept, the last of each shown.
  */
-export function ModelBenchDialog({ model, open, onOpenChange }: { model: string; open: boolean; onOpenChange: (open: boolean) => void }) {
+export function ModelBenchDialog({ model, mode = 'chat', open, onOpenChange }: { model: string; mode?: string; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const kind = media[mode]
   const queryClient = useQueryClient()
   const runs = useQuery({
     queryKey: runsKey(model),
@@ -67,7 +73,9 @@ export function ModelBenchDialog({ model, open, onOpenChange }: { model: string;
         <DialogHeader>
           <DialogTitle>Test {model}</DialogTitle>
           <DialogDescription>
-            What it can do (each test checked by a rule, no judge), and how much at once (answers at once raised until more do not make more). Through the gateway, as any request: it counts to you.
+            {kind
+              ? `${kind.capability} ${kind.capacity} As any request: it counts to you.`
+              : 'What it can do (each test checked by a rule, no judge), and how much at once (answers at once raised until more do not make more). Through the gateway, as any request: it counts to you.'}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap gap-2">
@@ -89,7 +97,7 @@ export function ModelBenchDialog({ model, open, onOpenChange }: { model: string;
                 <span key={r.id}>
                   {new Date(r.startedAt).toLocaleString()} · {r.kind} · {r.status}
                   {r.kind === 'capability' && r.results.total ? ` · ${r.results.passed}/${r.results.total} passed` : ''}
-                  {r.kind === 'capacity' && r.results.best ? ` · ${r.results.best.tokensPerSecond} tokens a second at ${r.results.best.atOnce} at once` : ''}
+                  {r.kind === 'capacity' && r.results.best ? ` · ${bestText(r)}` : ''}
                 </span>
               ))}
             </section>
@@ -116,7 +124,7 @@ function Capability({ run }: { run: BenchRun | undefined }) {
               {t.passed ? <CheckCircle2 className="size-4 text-success-ink" aria-label="passed" /> : <XCircle className="size-4 text-destructive-ink" aria-label="failed" />}
               <span className="flex-1 font-medium">{t.title}</span>
               <span className="text-xs tabular-nums text-muted-foreground">
-                {(t.ms / 1000).toFixed(1)} s · {t.tokens} tokens
+                {(t.ms / 1000).toFixed(1)} s{t.tokens > 0 ? ` · ${t.tokens} tokens` : ''}
               </span>
             </span>
             {!t.passed && t.why && <span className="text-xs text-muted-foreground">{t.why}</span>}
@@ -128,10 +136,47 @@ function Capability({ run }: { run: BenchRun | undefined }) {
   )
 }
 
+/** A capacity run's best, in words: tokens a second for a chat model, so many a minute for a media one. */
+function bestText(run: BenchRun) {
+  const best = run.results.best
+  if (!best || best.atOnce === 0) return ''
+  return run.results.unit ? `${best.perMinute} ${run.results.unit} a minute, ${best.atOnce} at once` : `${best.tokensPerSecond} tokens a second at ${best.atOnce} at once`
+}
+
 function Capacity({ run }: { run: BenchRun | undefined }) {
   if (!run) return null
   const levels = run.results.levels ?? []
   const best = run.results.best
+  const unit = run.results.unit
+  if (unit)
+    return (
+      <section aria-label="Capacity" className="grid gap-2">
+        <h3 className="text-sm font-semibold">
+          Capacity{bestText(run) ? `: ${bestText(run)}` : ''}
+          {run.status === 'failed' && <span className="ms-2 font-normal text-destructive-ink">{run.error}</span>}
+        </h3>
+        <table className="w-full text-sm" aria-label="At once">
+          <thead>
+            <tr className="text-left text-xs text-muted-foreground">
+              <th className="py-1 pr-3 font-medium">At once</th>
+              <th className="py-1 pr-3 text-right font-medium">{unit[0].toUpperCase() + unit.slice(1)} a minute</th>
+              <th className="py-1 pr-3 text-right font-medium">Each took</th>
+              <th className="py-1 pr-3 text-right font-medium">Failed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {levels.map((l) => (
+              <tr key={l.atOnce} className={cn('border-t tabular-nums', best?.atOnce === l.atOnce && 'font-medium')}>
+                <td className="py-1 pr-3">{l.atOnce}</td>
+                <td className="py-1 pr-3 text-right">{l.perMinute}</td>
+                <td className="py-1 pr-3 text-right">{l.secondsEach} s</td>
+                <td className={cn('py-1 pr-3 text-right', l.failed > 0 && 'text-destructive-ink')}>{l.failed}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    )
   return (
     <section aria-label="Capacity" className="grid gap-2">
       <h3 className="text-sm font-semibold">

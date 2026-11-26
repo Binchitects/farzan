@@ -85,7 +85,7 @@ test('logs: narrowed by container, level and text in the address, and live', asy
   await expect(lines.getByRole('listitem').first()).toBeVisible({ timeout: 30_000 })
 
   // The containers offered are those with lines in the range (Traefik, say, may have written none): the first of them.
-  await page.getByRole('button', { name: 'Containers' }).click()
+  await page.getByRole('button', { name: 'Containers', exact: true }).click()
   const offered = page.getByRole('menuitemcheckbox').filter({ hasNotText: 'All containers' }).first()
   const container = (await offered.textContent())!.trim()
   await offered.click()

@@ -34,6 +34,21 @@ def main() -> int:
     print("# Coverage per test\n")
     print(f"{len(tests)} tests ran {len(runs):,} lines of Llm.Api and Llm.Core. **{len(none)}** ran no line that no other test ran:")
     print("candidates to cut (a test may check what the others only pass through, which coverage cannot see).\n")
+    # The fewest tests that run every line the suite runs (greedily: the one that adds most, again and again): every other
+    # test runs only lines these do.
+    left = set(runs)
+    cover = []
+    pool = dict(tests)
+    while left:
+        name, lines = max(pool.items(), key=lambda kv: (len(kv[1] & left), kv[0]))
+        gain = lines & left
+        if not gain:
+            break
+        cover.append(name)
+        left -= gain
+        del pool[name]
+    print(f"**{len(cover)}** tests together run every one of those lines (chosen greedily); the other {len(tests) - len(cover)} run only lines")
+    print("they run too. A test outside them is a candidate, never more: the rule it checks is not a line.\n")
     print("| Test | Lines it ran | Lines only it ran |\n|---|---|---|")
     for own, total, name in rows:
         print(f"| {name.rsplit('.', 1)[0]} | {total:,} | {own:,} |")

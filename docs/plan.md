@@ -277,8 +277,8 @@ compose or the bundle changed) the offline scenarios, before 8.2.0.
 
 Left of v8.2 (released 2026-11-26), each to do:
 
-- **Item 1.** Coverage per test, to find single tests whose lines others cover (dotnet-coverage's server mode, a
-  snapshot reset between tests).
+- **Item 1.** The 745 tests coverage per test found running only lines others run
+  ([coverage-per-test.md](measurements/coverage-per-test.md)): each looked at, cut where no rule of its own is left.
 - **Item 8.** Playwright on a v8.2 stack with a real model, and the Automations schedule spec against it.
 - Done since 8.2.2: every export under 2 s on a million requests (the ledger's hourly rollup, `$__requests`, and its times' sketch, `$__spread`), the truth audit on live (and the 60 GPU queries it found failing), goals' contribution checked
   by hand on live ([projects.md](measurements/projects.md); no goal on live yet), the prompt log's requests whole in
