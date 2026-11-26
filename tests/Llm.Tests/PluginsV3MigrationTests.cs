@@ -15,6 +15,52 @@ namespace Llm.Tests;
 [Collection(nameof(AppCollection))]
 public sealed class PluginsV3MigrationTests(AppFixture app)
 {
+    /// <summary>
+    /// An 8.2.5 database upgraded: 8.2's migrations dated after 8.3's PluginsV3 (DropCodeWorkspaces, RequestsHourly,
+    /// RequestsSpread, SkillScans) are there and PluginsV3 is not, so the upgrade applies it after them, its v2 plugins
+    /// read as v3 as on any other path.
+    /// </summary>
+    [Fact]
+    public async Task A_database_of_8_2_5_upgrades_with_plugins_v3_applied_after_8_2s_later_migrations()
+    {
+        var cs = app.ConnectionStringFor("plugins825_" + Guid.NewGuid().ToString("N")[..8]);
+        var options = new DbContextOptionsBuilder<AppDbContext>();
+        options.UseNpgsql(cs);
+        options.UseOpenIddict<Guid>();
+        await using var db = new AppDbContext(options.Options);
+        var all = db.Database.GetMigrations().ToList();
+        var v3 = all.FindIndex(m => m.EndsWith("_PluginsV3", StringComparison.Ordinal));
+        Assert.True(v3 > 0 && v3 < all.Count - 1, "8.2 has migrations dated after PluginsV3");
+        var migrator = db.GetService<IMigrator>();
+        await migrator.MigrateAsync(all[v3 - 1]);
+        // Each of 8.2's later migrations on its own, as 8.2.5 applied them: PluginsV3 is left out.
+        await using (var conn = new NpgsqlConnection(cs))
+        {
+            await conn.OpenAsync();
+            for (var i = v3 + 1; i < all.Count; i++)
+            {
+                var script = migrator.GenerateScript(all[i - 1], all[i]);
+                await using var cmd = new NpgsqlCommand(script, conn);
+                await cmd.ExecuteNonQueryAsync();
+            }
+            await V61MigrationTests.InsertAsync(conn, "mcp_servers", new()
+            {
+                ["Id"] = Guid.NewGuid(), ["Name"] = "weather", ["Url"] = "https://x.example.test", ["Plugin"] = "weather", ["PluginVersion"] = "2",
+                ["Manifest"] = "name: weather\nversion: 2\ntools: { mcp: https://weather.example.test/mcp }\n",
+                ["PluginPermissions"] = Array.Empty<string>(), ["Writes"] = Array.Empty<string>(), ["Tls"] = 0, ["PluginPinned"] = false, ["CreatedAt"] = DateTimeOffset.UtcNow,
+            });
+        }
+        Assert.Equal([all[v3]], await db.Database.GetPendingMigrationsAsync());
+
+        await db.Database.MigrateAsync();
+        Assert.Empty(await db.Database.GetPendingMigrationsAsync());
+        var weather = await db.McpServers.AsNoTracking().SingleAsync(x => x.Plugin == "weather");
+        Assert.Equal("2.0.0", PluginManifest.Parse(weather.Manifest!).Version);
+        // Plugins v3's own tables are there, and 8.2's later ones as they were.
+        Assert.Empty(await db.PluginStates.ToListAsync());
+        Assert.Empty(await db.PluginEvents.ToListAsync());
+    }
+
     [Fact]
     public async Task Plugins_installed_before_8_3_read_as_v3_after_the_upgrade()
     {
