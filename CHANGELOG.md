@@ -15,6 +15,28 @@ Sections used:
   makes weaker (gone, a clause or a check dropped, fewer tests), by its id,
   and why ([compliance](docs/compliance/README.md#when-a-change-weakens-a-control))
 
+## Unreleased
+
+### :sparkles: New features & Enhancements
+
+- **Every image Arena builds is published on GitHub Packages.**
+  `./arenactl publish --release` pushes them by service to
+  `ghcr.io/binchitects/farzan/SERVICE:VERSION`, and `:latest` for a final
+  release. The images are the offline bundle's own. Their digests are
+  attached to the GitHub release and listed in its notes, so a host with
+  access to the registry can pull a release instead of copying the bundle.
+  Each image keeps the digest it has in the bundle. arenactl sends the
+  images itself, in 4 MiB chunks, one after another: a chunk the network
+  breaks is sent again, a layer already there is skipped, and a run that
+  stops goes on from where it was.
+
+### :boom: Breaking changes & Deprecations
+
+- **`ghcr.io/binchitects/code-intel` and `ghcr.io/binchitects/argus` are
+  gone.** Farzan Graph is `ghcr.io/binchitects/farzan/code-intel` now, with
+  the other images. `release.yml` is removed: CI publishes nothing, so a tag
+  no longer builds an image of its own beside the release's.
+
 ## v8.2.2 (2026-11-26)
 
 The prompt log shows each tool call with what it gave back.

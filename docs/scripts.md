@@ -19,6 +19,7 @@ offline installer is made on Linux (or WSL2).
 | know what this machine is missing, with what to do about each | `./arenactl doctor` (or `--for build`, `code-arena`, `bundle`, `install`) |
 | install Farzan Arena on this Linux host, from this checkout | `./arenactl install --domain chat.example.com --admin-email me@example.com` |
 | make one file that installs it on another host, even with no network | `./arenactl bundle --with-deps`, then on that host `sh arena-VERSION-offline.run install` |
+| publish the release's images on GitHub Packages | `./arenactl publish --release` (`ghcr.io/binchitects/farzan/SERVICE:VERSION`) |
 | give people Code Arena for their machines | `./arenactl code-arena` (packages for five systems in `dist/`) |
 | upgrade an installation to this checkout's release | `./arenactl upgrade` |
 | put an installation right | `./arenactl repair` |
