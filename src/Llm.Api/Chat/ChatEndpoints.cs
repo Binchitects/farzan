@@ -1193,6 +1193,8 @@ public static partial class ChatEndpoints
             };
             db.ChatAttachments.Add(a);
             await db.SaveChangesAsync();
+            await request.HttpContext.RequestServices.GetRequiredService<Plugins.PluginEvents>().EmitAsync("file.uploaded",
+                new System.Text.Json.Nodes.JsonObject { ["fileId"] = a.Id.ToString(), ["name"] = a.FileName, ["contentType"] = a.ContentType, ["size"] = a.Size }, me.Id, CancellationToken.None);
             return Results.Ok(new { a.Id, a.FileName, a.Size, a.Kind, a.ContentType, chars = text.Length, a.Truncated, original = a.Data is not null });
         }
         catch (AttachmentException ex)

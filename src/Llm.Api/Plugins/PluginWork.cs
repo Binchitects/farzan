@@ -10,7 +10,7 @@ namespace Llm.Api.Plugins;
 /// file, a person, a group's member, a plugin installed or set), each plugin on that listens to it, and holds the scope
 /// the event is about, gets an event kept in plugin_events until delivered (at least once: an id to drop repeats).
 /// </summary>
-public sealed class PluginEvents(AppDbContext db, TimeProvider clock)
+public sealed partial class PluginEvents(AppDbContext db, TimeProvider clock, ILogger<PluginEvents> log)
 {
     /// <summary>Keeps the event for every plugin that hears it; delivered by <see cref="PluginWork"/>.</summary>
     /// <param name="person">The person it is about; a plugin hears it only when it is allowed to them (checked at delivery).</param>
@@ -20,6 +20,22 @@ public sealed class PluginEvents(AppDbContext db, TimeProvider clock)
         {
             throw new ArgumentException($"{type} is not an event.", nameof(type));
         }
+        // What happened has happened: keeping it for the plugins never fails the flow it happened in.
+        try
+        {
+            await KeepAsync(type, data, person, need, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            NotKept(log, type, ex);
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "A plugin event ({Type}) was not kept")]
+    private static partial void NotKept(ILogger logger, string type, Exception ex);
+
+    private async Task KeepAsync(string type, JsonObject data, Guid? person, string? need, CancellationToken ct)
+    {
         var listening = await db.McpServers.AsNoTracking().Where(s => s.Plugin != null && s.Url.StartsWith(PluginManifest.PluginScheme)).ToListAsync(ct);
         var off = await db.PluginStates.AsNoTracking().Where(s => s.State != PluginStates.On).Select(s => s.ServerId).ToListAsync(ct);
         foreach (var s in listening.Where(s => !off.Contains(s.Id)))
@@ -39,7 +55,10 @@ public sealed class PluginEvents(AppDbContext db, TimeProvider clock)
             }
             db.PluginEvents.Add(new PluginEvent { ServerId = s.Id, Type = type, DataJson = data.ToJsonString(), PersonId = person, At = clock.GetUtcNow(), DueAt = clock.GetUtcNow() });
         }
-        await db.SaveChangesAsync(ct);
+        if (db.ChangeTracker.Entries<PluginEvent>().Any(e => e.State == EntityState.Added))
+        {
+            await db.SaveChangesAsync(ct);
+        }
     }
 }
 

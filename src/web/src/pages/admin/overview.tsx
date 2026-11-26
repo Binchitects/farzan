@@ -1,3 +1,4 @@
+import { PluginPanels } from '@/plugins/plugin-page'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, Coins, Copy, Database, HardDrive, ShieldCheck, Users, WalletCards } from 'lucide-react'
 import { Link } from 'react-router'
@@ -24,6 +25,7 @@ export function OverviewPage() {
     <>
       <PageHeader title="Overview" description={d.model ? `Serving ${d.model}. Refreshes every 30 seconds.` : 'The stack at a glance. Refreshes every 30 seconds.'} />
       <div className="grid gap-6">
+        <PluginPanels slot="admin.dashboard" />
         <StatGrid>
           <Stat icon={Activity} label="Services up" value={`${up}/${d.services.length}`} tone={up < d.services.length ? 'destructive' : undefined} hint={up < d.services.length ? `${d.services.length - up} down` : 'all healthy'} />
           <Stat icon={Users} label="People" value={d.people} hint={`${d.admins} admin${d.admins === 1 ? '' : 's'}`} />
