@@ -33,6 +33,9 @@ stack.
   thinking, to answer from what came back.
 - **arenactl publish** stopped when its `--work-dir` was not there yet: it
   makes it.
+- **The gateway's flush** (tests, and a replica stopping) gave up after 5
+  seconds of polling, so a slow batch could still be unsaved when it returned:
+  it waits for every line booked to be saved, counted.
 - **The browser tests** read a tool as used from its row or a program's call
   of it, turn on the tools they need for their chat, and find the Logs page's
   Containers button and the lab's drawn molecule by their names as they are.
