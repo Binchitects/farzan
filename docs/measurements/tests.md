@@ -69,5 +69,7 @@ lines and branches only the group covers counted.
 
 ## Not done yet
 
-Each of the 396 server candidates measured alone (about 1.5 hours of runs: each starts its own app), to find any whose
-lines another covers too, and then check its assertions are made elsewhere before it goes.
+Each of the 396 server candidates measured alone was tried and stopped: a run's coverage collector instruments Llm.Api
+and Llm.Core before the first test (about ten minutes, paid once a shard in the runs above), so 396 single runs would
+take some 66 hours. Coverage per test needs a collector that keeps its instrumented build between runs, or resets its
+counts between tests in one run; until then, the leave-out runs above are what decide.
