@@ -96,7 +96,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(*) AS \"Requests\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused'"
+          "rawSql": "SELECT coalesce(sum(requests), 0) AS \"Requests\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused'"
         }
       ],
       "fieldConfig": {
@@ -153,7 +153,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(sum(greatest(prompt_tokens - cached_tokens, 0)),0) AS \"In\", COALESCE(sum(cached_tokens),0) AS \"Cached\", COALESCE(sum(completion_tokens),0) AS \"Out\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model)"
+          "rawSql": "SELECT COALESCE(sum(greatest(prompt_tokens - cached_tokens, 0)),0) AS \"In\", COALESCE(sum(cached_tokens),0) AS \"Cached\", COALESCE(sum(completion_tokens),0) AS \"Out\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model)"
         }
       ],
       "fieldConfig": {
@@ -324,7 +324,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model)"
+          "rawSql": "SELECT COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model)"
         }
       ],
       "fieldConfig": {
@@ -382,7 +382,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(*) FILTER (WHERE status IN ('failed', 'stopped')) AS \"Failures\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused'"
+          "rawSql": "SELECT coalesce(sum(requests) FILTER (WHERE status IN ('failed', 'stopped')), 0) AS \"Failures\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused'"
         }
       ],
       "fieldConfig": {
@@ -444,7 +444,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, count(*) AS \"requests\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, coalesce(sum(requests), 0) AS \"requests\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -499,7 +499,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), (COALESCE(sum(greatest(coalesce(prompt_tokens,0) - cached_tokens,0)),0)) / ($__interval_ms / 1000.0) AS \"input, cache miss\", (COALESCE(sum(cached_tokens),0)) / ($__interval_ms / 1000.0) AS \"input, cache hit\", (COALESCE(sum(completion_tokens),0)) / ($__interval_ms / 1000.0) AS \"output\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), (COALESCE(sum(greatest(coalesce(prompt_tokens,0) - cached_tokens,0)),0)) / ($__interval_ms / 1000.0) AS \"input, cache miss\", (COALESCE(sum(cached_tokens),0)) / ($__interval_ms / 1000.0) AS \"input, cache hit\", (COALESCE(sum(completion_tokens),0)) / ($__interval_ms / 1000.0) AS \"output\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {

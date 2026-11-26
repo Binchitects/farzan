@@ -268,4 +268,48 @@ public sealed class V82MigrationTests(AppFixture app)
         // The workspace's key is still the person's, of its kind.
         Assert.Equal("studio", await db.ApiKeys.AsNoTracking().Where(k => k.UserId == person).Select(k => k.Kind).SingleAsync());
     }
+    [Fact]
+    public async Task The_ledger_before_the_upgrade_is_summed_by_hour_into_the_rollup()
+    {
+        var cs = app.ConnectionStringFor("v82h_" + Guid.NewGuid().ToString("N")[..8]);
+        var options = new DbContextOptionsBuilder<AppDbContext>();
+        options.UseNpgsql(cs);
+        options.UseOpenIddict<Guid>();
+        await using var db = new AppDbContext(options.Options);
+        var all = db.Database.GetMigrations().ToList();
+        await db.GetService<IMigrator>().MigrateAsync(all[all.FindIndex(m => m.EndsWith("_RequestsHourly", StringComparison.Ordinal)) - 1]);
+        await using (var conn = new NpgsqlConnection(cs))
+        {
+            await conn.OpenAsync();
+            // Three requests in one hour (two of one person and model, one of another), one in the next, one with no person.
+            await using var ledger = new NpgsqlCommand("""
+                insert into gateway.requests (id, started_at, ended_at, duration_ms, surface, call, protocol, credit_kind, person, model, prompt_tokens,
+                  cached_tokens, completion_tokens, usage_estimated, cost, status, http_status) values
+                  (gen_random_uuid(), '2026-10-01 10:05:00Z', '2026-10-01 10:05:01Z', 1000, 'api', 'chat', 'openai', 'api', 'a@x.test', 'qwen', 10, 2, 5, false, 0.5, 'done', 200),
+                  (gen_random_uuid(), '2026-10-01 10:59:59Z', '2026-10-01 11:00:01Z', 2000, 'api', 'chat', 'openai', 'api', 'a@x.test', 'qwen', 20, 0, 7, false, 0.25, 'done', 200),
+                  (gen_random_uuid(), '2026-10-01 10:30:00Z', '2026-10-01 10:30:01Z', 500, 'chat', 'chat', 'openai', 'chat', 'b@x.test', 'qwen', 1, 0, 1, false, 0, 'done', 200),
+                  (gen_random_uuid(), '2026-10-01 11:00:00Z', '2026-10-01 11:00:01Z', 100, 'api', 'chat', 'openai', 'api', 'a@x.test', 'qwen', 3, 0, 3, false, 0.125, 'done', 200),
+                  (gen_random_uuid(), '2026-10-01 11:10:00Z', '2026-10-01 11:10:01Z', 100, 'api', 'chat', 'openai', 'api', null, 'qwen', 4, 0, 4, false, 0, 'failed', 500)
+                """, conn);
+            await ledger.ExecuteNonQueryAsync();
+        }
+        await db.Database.MigrateAsync();
+        await using (var conn = new NpgsqlConnection(cs))
+        {
+            await conn.OpenAsync();
+            await using var rows = new NpgsqlCommand("""
+                select to_char(hour at time zone 'UTC', 'HH24'), coalesce(person, '-'), requests, prompt_tokens, cached_tokens, completion_tokens, total_tokens, cost, duration_ms
+                from gateway.requests_hourly order by 1, 2
+                """, conn);
+            var got = new List<string>();
+            await using (var r = await rows.ExecuteReaderAsync())
+            {
+                while (await r.ReadAsync())
+                {
+                    got.Add(string.Join(" ", Enumerable.Range(0, r.FieldCount).Select(i => Convert.ToString(r.GetValue(i), System.Globalization.CultureInfo.InvariantCulture))));
+                }
+            }
+            Assert.Equal(["10 a@x.test 2 30 2 12 42 0.750000000 3000", "10 b@x.test 1 1 0 1 2 0.000000000 500", "11 - 1 4 0 4 8 0.000000000 100", "11 a@x.test 1 3 0 3 6 0.125000000 100"], got);
+        }
+    }
 }

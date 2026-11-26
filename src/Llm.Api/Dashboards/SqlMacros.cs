@@ -24,9 +24,14 @@ public static partial class SqlMacros
     /// written into the SQL.
     /// </summary>
     public static string Expand(string sql, DateTimeOffset from, DateTimeOffset to, TimeSpan interval, IReadOnlyDictionary<string, VariableValue>? vars,
-        out Dictionary<string, object> parameters)
+        out Dictionary<string, object> parameters, bool rollup = true)
     {
         parameters = [];
+        // The ledger's rows as a panel sums them, before $__interval is read: whether its buckets are whole hours.
+        if (sql.Contains(Requests, StringComparison.Ordinal))
+        {
+            sql = sql.Replace(Requests, LedgerRows(sql, from, to, interval, rollup), StringComparison.Ordinal);
+        }
         // Plain variables first: $__interval can be an argument of a macro.
         sql = sql
             .Replace("$__interval_ms", ((long)interval.TotalMilliseconds).ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
@@ -56,6 +61,52 @@ public static partial class SqlMacros
         }
         sb.Append(sql, pos, sql.Length - pos);
         return sb.ToString();
+    }
+
+    /// <summary>The ledger as a panel sums it: <c>from $__requests s</c>.</summary>
+    public const string Requests = "$__requests";
+
+    /// <summary>The columns $__requests has: the ledger's own, and how many requests each row is.</summary>
+    public const string RequestColumns = "started_at, person, model, surface, credit_kind, key_alias, status, project_id, requests, prompt_tokens, cached_tokens, completion_tokens, total_tokens, cost, duration_ms";
+
+    private const string RawColumns = "started_at, person, model, surface, credit_kind, key_alias, status, project_id, 1::bigint as requests, prompt_tokens, cached_tokens, completion_tokens, total_tokens, cost, duration_ms";
+
+    /// <summary>
+    /// $__requests: the ledger's rows for sums and counts (count(*) is sum(requests)). Over a window with whole hours
+    /// in it, those hours from gateway.requests_hourly (an hour's row at its start) and the minutes either side from the
+    /// rows themselves, so every sum is the rows' own; the rows alone when the panel's buckets ($__interval) are not
+    /// whole hours, or <paramref name="rollup"/> is off.
+    /// </summary>
+    private static string LedgerRows(string sql, DateTimeOffset from, DateTimeOffset to, TimeSpan interval, bool rollup)
+    {
+        var hourly = interval >= TimeSpan.FromHours(1) && interval.Ticks % TimeSpan.TicksPerHour == 0;
+        return !rollup || (sql.Contains("$__interval", StringComparison.Ordinal) && !hourly) ? $"(select {RawColumns} from requests)" : Ledger(from, to);
+    }
+
+    /// <summary>
+    /// The ledger's rows from <paramref name="from"/> to <paramref name="to"/> as sums and counts read them (its columns:
+    /// <see cref="RequestColumns"/>; count(*) is sum(requests)): the whole hours from gateway.requests_hourly (an hour's
+    /// row at its start), the minutes either side from the rows themselves; the rows alone with no whole hour between.
+    /// The caller still filters by the window, its end in or out. <paramref name="schema"/>: "gateway." outside the
+    /// dashboards' own search path.
+    /// </summary>
+    public static string Ledger(DateTimeOffset from, DateTimeOffset to, string schema = "")
+    {
+        var raw = $"(select {RawColumns} from {schema}requests)";
+        var start = new DateTimeOffset(from.UtcTicks - from.UtcTicks % TimeSpan.TicksPerHour, TimeSpan.Zero);
+        if (start < from)
+        {
+            start = start.AddHours(1);
+        }
+        var end = new DateTimeOffset(to.UtcTicks - to.UtcTicks % TimeSpan.TicksPerHour, TimeSpan.Zero);
+        if (end <= start)
+        {
+            return raw;
+        }
+        var (f, t, a, b) = (Rfc3339(from), Rfc3339(to), Rfc3339(start), Rfc3339(end));
+        return $"(select hour as started_at, person, model, surface, credit_kind, key_alias, status, project_id, requests, prompt_tokens, cached_tokens, "
+            + $"completion_tokens, total_tokens, cost, duration_ms from {schema}requests_hourly where hour >= '{a}' and hour < '{b}' "
+            + $"union all select {RawColumns} from {schema}requests where (started_at >= '{f}' and started_at < '{a}') or (started_at >= '{b}' and started_at <= '{t}'))";
     }
 
     private static string Filter(List<string> args, IReadOnlyDictionary<string, VariableValue>? vars, Dictionary<string, object> parameters)

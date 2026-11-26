@@ -1948,7 +1948,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select to_char(started_at, 'Dy') as \"Day\", to_char(started_at, 'HH24') || ':00' as \"Hour\", count(*) as \"Requests\", coalesce(sum(total_tokens),0) as \"Tokens\", round(coalesce(sum(duration_ms),0) / 3600000.0, 2) as \"Answering, hours\", count(distinct person) as \"People\" from requests where $__timeFilter(started_at) AND $__filter(model, model) and status <> 'refused' group by extract(isodow from started_at), 1, 2 order by 4 desc limit 12"
+          "rawSql": "select to_char(started_at, 'Dy') as \"Day\", to_char(started_at, 'HH24') || ':00' as \"Hour\", coalesce(sum(requests), 0) as \"Requests\", coalesce(sum(total_tokens),0) as \"Tokens\", round(coalesce(sum(duration_ms),0) / 3600000.0, 2) as \"Answering, hours\", count(distinct person) as \"People\" from $__requests requests where $__timeFilter(started_at) AND $__filter(model, model) and status <> 'refused' group by extract(isodow from started_at), 1, 2 order by 4 desc limit 12"
         }
       ],
       "fieldConfig": {

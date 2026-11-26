@@ -101,7 +101,7 @@ public sealed class MillionRowMeasurements(AppFixture app, ITestOutputHelper out
                 slow.Add($"{name} ({warm.TotalMilliseconds:N0} ms)");
             }
         }
-        // A dashboard whose export took more than a second: each of its panels timed, the slowest first.
+        // A dashboard whose export took more than a second: each of its panels timed as the export asks it (400 points), the slowest first.
         var panels = new List<object>();
         foreach (var d in (await admin.JsonAsync(await admin.GetAsync("/api/dashboards"))).EnumerateArray().Select(d => d.GetProperty("uid").GetString()!))
         {
@@ -115,7 +115,7 @@ public sealed class MillionRowMeasurements(AppFixture app, ITestOutputHelper out
             {
                 var sw = Stopwatch.StartNew();
                 var res = await admin.PostAsync($"/api/dashboards/{d}/panels/{panel.GetProperty("key").GetInt32()}/query",
-                    new { from = End.AddDays(-30), to = End, maxDataPoints = 1000 });
+                    new { from = End.AddDays(-30), to = End, maxDataPoints = 400 });
                 await res.Content.ReadAsByteArrayAsync();
                 each.Add((panel.TryGetProperty("title", out var title) ? title.GetString() ?? "" : "", sw.Elapsed.TotalMilliseconds));
             }
@@ -143,7 +143,8 @@ public sealed class MillionRowMeasurements(AppFixture app, ITestOutputHelper out
     }
 
     /// <summary>
-    /// The rows, made in the database itself: requests spread over 30 days, 200 people, 6 models, 4 sources, 50 projects;
+    /// The rows, made in the database itself: requests spread over 30 days by 200 people, each with their own source, kind and
+    /// project and one or two of 6 models, as people work;
     /// prompt log lines of the 20 people, their questions from a few hundred words (for the trigram search), a tenth calling tools.
     /// </summary>
     private static async Task SeedAsync(string connection, List<(Guid Id, string Email)> people)
@@ -161,12 +162,12 @@ public sealed class MillionRowMeasurements(AppFixture app, ITestOutputHelper out
             insert into gateway.requests (id, started_at, first_token_at, ended_at, duration_ms, surface, call, protocol, credit_kind, person, model,
               prompt_tokens, cached_tokens, completion_tokens, usage_estimated, cost, status, http_status, project_id)
             select gen_random_uuid(), s.at, s.at + interval '200 ms', s.at + (s.ms || ' ms')::interval, s.ms,
-                   (array['chat','api','code','studio'])[1 + s.i % 4], 'chat', 'openai', (array['chat','api','pictures'])[1 + s.i % 3],
-                   case when s.i % 10 < 2 then (@emails)[1 + s.i % {emails.Length}] else 'person' || (s.i % 200) || '@example.test' end,
-                   'model-' || (s.i % 6), 500 + s.i % 4000, (s.i % 3) * 200, 50 + s.i % 900, false, ((s.i % 1000) / 100000.0)::numeric,
+                   (array['chat','api','code','studio'])[1 + s.p % 4], 'chat', 'openai', (array['chat','api','pictures'])[1 + s.p % 3],
+                   case when s.p < 20 then (@emails)[1 + s.p] else 'person' || s.p || '@example.test' end,
+                   'model-' || (s.p % 6 + s.i % 2), 500 + s.i % 4000, (s.i % 3) * 200, 50 + s.i % 900, false, ((s.i % 1000) / 100000.0)::numeric,
                    case when s.i % 50 = 0 then 'failed' else 'ok' end, case when s.i % 50 = 0 then 500 else 200 end,
-                   case when s.i % 3 = 0 then ('00000000-0000-4000-8000-' || lpad((s.i % 50)::text, 12, '0'))::uuid end
-            from (select g as i, @end - (g * (30 * 86400.0 / {Rows}) || ' seconds')::interval as at, 300 + g % 9000 as ms
+                   case when s.p % 3 = 0 then ('00000000-0000-4000-8000-' || lpad((s.p % 50)::text, 12, '0'))::uuid end
+            from (select g as i, ((g::bigint * 7919) % 200)::int as p, @end - (g * (30 * 86400.0 / {Rows}) || ' seconds')::interval as at, 300 + g % 9000 as ms
                   from generate_series(1, {Rows}) g) s
             """, c =>
         {

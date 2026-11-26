@@ -77,4 +77,18 @@ public sealed class SqlMacrosTests
         Assert.Equal("where TRUE", SqlMacros.Expand("where $__filter(model, other)", From, To, TimeSpan.FromMinutes(1), all, out _));
         Assert.Throws<FormatException>(() => SqlMacros.Expand("where $__filter(model, 1=1)", From, To, TimeSpan.FromMinutes(1), all, out _));
     }
+    [Fact]
+    public void The_ledger_as_panels_sum_it_reads_whole_hours_from_the_rollup_and_the_minutes_either_side_from_the_rows()
+    {
+        var from = new DateTimeOffset(2026, 11, 1, 10, 17, 0, TimeSpan.Zero);
+        var to = new DateTimeOffset(2026, 11, 3, 8, 5, 30, TimeSpan.Zero);
+        var sql = SqlMacros.Expand("select sum(s.requests) from $__requests s where $__timeFilter(s.started_at)", from, to, TimeSpan.FromHours(1));
+        Assert.Contains("from requests_hourly where hour >= '2026-11-01T11:00:00Z' and hour < '2026-11-03T08:00:00Z'", sql, StringComparison.Ordinal);
+        Assert.Contains("(started_at >= '2026-11-01T10:17:00Z' and started_at < '2026-11-01T11:00:00Z') or (started_at >= '2026-11-03T08:00:00Z' and started_at <= '2026-11-03T08:05:30Z')", sql, StringComparison.Ordinal);
+        // Buckets of half an hour, or a window with no whole hour in it: the rows alone; a panel with no buckets uses the rollup.
+        Assert.DoesNotContain("requests_hourly", SqlMacros.Expand("select $__timeGroup(s.started_at, $__interval), sum(s.requests) from $__requests s", from, to, TimeSpan.FromMinutes(30)), StringComparison.Ordinal);
+        Assert.Contains("requests_hourly", SqlMacros.Expand("select sum(s.requests) from $__requests s", from, to, TimeSpan.FromMinutes(30)), StringComparison.Ordinal);
+        Assert.DoesNotContain("requests_hourly", SqlMacros.Expand("select sum(s.requests) from $__requests s", from, from.AddMinutes(50), TimeSpan.FromHours(1)), StringComparison.Ordinal);
+        Assert.DoesNotContain("requests_hourly", SqlMacros.Expand("select sum(s.requests) from $__requests s", from, to, TimeSpan.FromHours(1), null, out _, rollup: false), StringComparison.Ordinal);
+    }
 }

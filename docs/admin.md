@@ -2165,6 +2165,13 @@ them itself. Each panel's query runs on the app's server:
   become series by Grafana's rule for the time-series format. Each query runs as
   a role that can only `SELECT`, in a read-only transaction, one statement, with
   a 15-second timeout and a 5,000-row cap.
+  A panel that sums or counts the ledger reads `from $__requests s` (count(*)
+  is `sum(s.requests)`): over a window with whole hours in it, those hours come
+  from `gateway.requests_hourly` (the ledger by hour, person, model, source,
+  kind, key, state and project, kept by triggers) and the minutes either side
+  from the rows, so its numbers are the rows' own; buckets shorter than an hour
+  read the rows alone. Percentiles, single requests and other columns read
+  `requests` itself.
 - **Prometheus and Loki**: the step Grafana would use (the panel's minimum
   interval, the scrape interval, Loki's 11,000-point limit), the range aligned to
   it, `$__rate_interval`, `$__auto` and the rest, the dashboard's variables

@@ -582,6 +582,11 @@ took, the tokens, the time to the first token, the time and the cost.
   a time limit and a row cap.
 - **Kept** for `Retention:GatewayLogDays`. Erasing a person clears their name
   from it; repricing changes it.
+- `gateway.requests_hourly` is the ledger summed by hour (UTC), person, model,
+  source, kind, key, state and project, kept exact by statement triggers on
+  `gateway.requests` (added, changed, deleted, emptied): the dashboards' sums
+  and counts and the usage exports read it for whole hours
+  ([million-rows.md](measurements/million-rows.md)).
 - `gateway.rate_windows` counts each key's and person's requests and tokens a
   minute, for the rate limits every replica shares; the views
   `gateway.key_owners` and `gateway.month_spend` are what the dashboards read

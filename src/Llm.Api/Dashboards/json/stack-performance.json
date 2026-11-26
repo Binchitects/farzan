@@ -2421,7 +2421,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, sum(completion_tokens) / ($__interval_ms / 1000.0) AS \"tokens a second\" FROM requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, sum(completion_tokens) / ($__interval_ms / 1000.0) AS \"tokens a second\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -2482,7 +2482,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, sum(completion_tokens) AS \"tokens\" FROM requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, sum(completion_tokens) AS \"tokens\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
         }
       ],
       "fieldConfig": {

@@ -24,7 +24,9 @@ public static class UsageReports
         app.MapGet("/api/admin/usage/export", EveryoneAsync).RequirePermission(Core.Access.Permissions.UsageRead);
     }
 
-    private const string Ledger = " from gateway.requests r where r.started_at >= @from and r.started_at < @to and r.status <> 'refused' ";
+    /// <summary>The window's requests, refusals left out: whole hours from the ledger's rollup, the minutes either side from its rows (count(*) is sum(requests)).</summary>
+    private static string Ledger(DateTimeOffset from, DateTimeOffset to) =>
+        $" from {Dashboards.SqlMacros.Ledger(from, to, "gateway.")} r where r.started_at >= @from and r.started_at < @to and r.status <> 'refused' ";
 
     private static IResult? Problem(DateTimeOffset from, DateTimeOffset to, string? format) =>
         Projects.ProjectEndpoints.RangeProblem(from, to)
@@ -75,16 +77,16 @@ public static class UsageReports
         Dictionary<string, object> p, DateTimeOffset from, DateTimeOffset to, CancellationToken ct)
     {
         var t = (await sql.QueryAsync($"""
-            select count(*), coalesce(sum(greatest(r.prompt_tokens - r.cached_tokens, 0)),0), coalesce(sum(r.cached_tokens),0), coalesce(sum(r.completion_tokens),0),
+            select coalesce(sum(r.requests),0), coalesce(sum(greatest(r.prompt_tokens - r.cached_tokens, 0)),0), coalesce(sum(r.cached_tokens),0), coalesce(sum(r.completion_tokens),0),
                    coalesce(sum(r.cost),0), count(distinct r.person), coalesce(sum(r.duration_ms),0)
-            {Ledger} {where}
+            {Ledger(from, to)} {where}
             """, p, ct)).Rows[0];
         var byTime = await sql.QueryAsync($"""
             select floor(extract(epoch from r.started_at)/@secs)*@secs, coalesce(sum(r.prompt_tokens),0), coalesce(sum(r.completion_tokens),0), coalesce(sum(r.cost),0)
-            {Ledger} {where} group by 1 order by 1
+            {Ledger(from, to)} {where} group by 1 order by 1
             """, p, ct);
-        var byModel = await sql.QueryAsync($"select r.model, count(*), coalesce(sum(r.total_tokens),0), coalesce(sum(r.cost),0) {Ledger} {where} group by 1 order by 4 desc, 2 desc", p, ct);
-        var bySurface = await sql.QueryAsync($"select r.surface, count(*), coalesce(sum(r.total_tokens),0), coalesce(sum(r.cost),0) {Ledger} {where} group by 1 order by 4 desc, 2 desc", p, ct);
+        var byModel = await sql.QueryAsync($"select r.model, coalesce(sum(r.requests),0), coalesce(sum(r.total_tokens),0), coalesce(sum(r.cost),0) {Ledger(from, to)} {where} group by 1 order by 4 desc, 2 desc", p, ct);
+        var bySurface = await sql.QueryAsync($"select r.surface, coalesce(sum(r.requests),0), coalesce(sum(r.total_tokens),0), coalesce(sum(r.cost),0) {Ledger(from, to)} {where} group by 1 order by 4 desc, 2 desc", p, ct);
         var step = (long)(double)p["secs"];
         var points = byTime.Rows.ToDictionary(r => (long)D(r[0]), r => (Input: D(r[1]), Output: D(r[2]), Cost: D(r[3])));
         var buckets = new List<(DateTimeOffset At, double In, double Out, double Cost)>();
@@ -178,9 +180,9 @@ public static class UsageReports
                 figures.Insert(0, new ReportFigure("Narrowed to", words));
             }
             var byPerson = await sql.QueryAsync($"""
-                select coalesce(r.person, '(no one)'), count(*), coalesce(sum(greatest(r.prompt_tokens - r.cached_tokens, 0)),0), coalesce(sum(r.cached_tokens),0),
+                select coalesce(r.person, '(no one)'), coalesce(sum(r.requests),0), coalesce(sum(greatest(r.prompt_tokens - r.cached_tokens, 0)),0), coalesce(sum(r.cached_tokens),0),
                        coalesce(sum(r.completion_tokens),0), coalesce(sum(r.cost),0), coalesce(sum(r.duration_ms),0)
-                {Ledger} {only} group by 1 order by 6 desc, 2 desc
+                {Ledger(from, to)} {only} group by 1 order by 6 desc, 2 desc
                 """, p, ct);
             var names = await Names(db, ct);
             tables.Insert(0, new ReportTable("People",
