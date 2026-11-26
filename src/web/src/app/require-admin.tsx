@@ -2,6 +2,7 @@ import { ShieldAlert } from 'lucide-react'
 import { Outlet, useOutletContext } from 'react-router'
 import { EmptyState } from '@/components/ui/empty-state'
 import type { Me } from '@/lib/api'
+import { AdminAssistant } from '@/pages/admin/assistant'
 
 /** Admin pages: others get a plain refusal (the API refuses them too). */
 export function RequireAdmin() {
@@ -16,5 +17,10 @@ export function RequireAdmin() {
       </div>
     )
   }
-  return <Outlet context={me} />
+  return (
+    <>
+      <Outlet context={me} />
+      <AdminAssistant />
+    </>
+  )
 }

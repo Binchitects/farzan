@@ -49,6 +49,24 @@ Indexing, Packs and Explore talk to Farzan Graph through the app's server with
 `CODE_INTEL_KEY`, which never reaches a browser. With Farzan Graph left out they say
 that it is not set up, and how to turn it on.
 
+### The admin assistant
+
+**Assistant**, at the bottom right of every admin page, opens a panel to ask
+how to do something, or to have it done: why a dashboard is empty, who used
+the most credit this week, add a person to a project. It is for whoever holds
+an admin permission, and it acts as them with their permissions and no more:
+it finds the routes of Arena's API they may call, reads with them (each read
+shows in the panel, with how it answered), and is refused what they would be
+refused. It never changes anything itself: a change shows as what it will do
+(its method, address and body), with **Yes, do it** and **No**. Only a yes
+makes it, as the person (their permissions checked again then); the audit
+log has `assistant.change.made` (what, and how it went) and the change's own
+entry says it came *through the assistant*; a no is `assistant.change.declined`.
+A proposal waits 30 minutes, and nobody else may answer it. The model hears
+only how a change went (its HTTP status), never what it answered: a new
+password or key stays the admin's. It asks your default model, with your
+credit and safeguards.
+
 ### Access: roles and rules
 
 **Admin → Access** has its tabs (the address keeps the tab:
