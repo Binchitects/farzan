@@ -115,6 +115,8 @@ public static class InstallSettings
         ["Oidc:LangfuseSecret"] = "Langfuse's client secret, made by the installer and shared with Langfuse",
         ["Plugins:Directory"] = "The plugins that come with the app, inside its image",
         ["Sandbox:Dir"] = "The sandbox-jobs volume as the app mounts it",
+        ["Skills:ScanEvery"] = "How often the app looks for skills made or changed since SkillSpector last checked them; each is checked as it changes, so only tests shorten it",
+        ["Skills:ScannerUrl"] = "The scanners on the stack's network (the scanners feature); empty when the feature is off",
         ["Stack:PrometheusUrl"] = "Prometheus on the stack's network",
         ["Storage:BackupDir"] = "The backups volume as the app mounts it (BACKUP_DIR is the installation's)",
         ["Storage:DockerDir"] = "Where Docker's own disk is mounted into the app",
