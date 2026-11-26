@@ -148,7 +148,7 @@ for _group, _module in _groups.items():
 
 
 class _Tools:
-    """What there is: arena.tools.list() every function, arena.tools.search("words") those whose words match."""
+    """What there is: arena.tools.list() every function, arena.tools.search("words") those whose words match (every one when none does)."""
 
     def list(self):
         return [f"{d['path']}: {(d.get('description') or '').splitlines()[0][:120]}" for d in _definitions]
@@ -161,6 +161,10 @@ class _Tools:
             score = sum(text.count(w) for w in asked)
             if score:
                 scored.append((score, f"{d['path']}: {(d.get('description') or '').splitlines()[0][:120]}"))
+        if not scored:
+            # No function's words match (asked by the task's topic, say, not by what a tool does): every function, so
+            # the program sees what there is.
+            return self.list()
         return [line for _, line in sorted(scored, key=lambda s: -s[0])[:most]]
 
     def __getattr__(self, group):

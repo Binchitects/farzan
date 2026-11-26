@@ -70,6 +70,11 @@ print(len(arena.tools.list()))
         self.assertEqual("Find where a symbol is defined.", lines[2])
         self.assertEqual("2", lines[3])
 
+    def test_A_search_that_matches_nothing_lists_every_function(self):
+        r, _ = run("import arena\nprint(len(arena.tools.search('asyncio gather TaskGroup')))", lambda n, a: {"ok": True, "result": ""})
+        self.assertEqual(0, r.returncode, r.stderr)
+        self.assertEqual("2", r.stdout.strip())
+
     def test_A_call_goes_to_the_chat_and_its_JSON_comes_back_parsed_and_a_refusal_raises_its_words(self):
         def answer(name, args):
             if name == "web_search":
