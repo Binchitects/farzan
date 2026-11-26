@@ -1,7 +1,7 @@
 # The plugin framework Arena is held to (tools/plugin-framework-sync.sh writes this).
 framework: Binchitects/farzan-arena-plugin-framework
-version: 0.1.0
-commit: ad7c745ff75ab34ec309ba26a7dd4e2f40e6e22d
+version: 0.1.0 (tag v0.1.0)
+commit: dd1be0e769b9df6d47795277833d7386e4b5aa7b
 files:
   keys/publisher.pub.pem: e5245f29fe530aa3c4260348d001afc0b3e88c2d5f8089eacbed8d5457d398f3
   manifests/bad-arena-range.yaml: 4c4dc6303cffbad7279c0ce1860c3253e0fc2cc1834190c7f4485a5ed2f954ca
