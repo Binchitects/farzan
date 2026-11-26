@@ -165,7 +165,7 @@ spec:
           env:
             - { name: PLUGINS_LISTEN, value: "tcp:0.0.0.0:7700" }
             - { name: PLUGINS_MOST_MEMORY_MB, value: {{ .Values.plugins.mostMemoryMb | quote }} }
-            {{- include "arena.secretEnv" (list $ "PLUGINS_KEY" "PLUGINS_KEY") | nindent 12 }}
+            - { name: PLUGINS_KEY, valueFrom: { secretKeyRef: { name: arena-plugins, key: PLUGINS_KEY } } }
           securityContext:
             runAsUser: 0
             readOnlyRootFilesystem: true

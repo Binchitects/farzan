@@ -528,6 +528,7 @@ how). **no**: missing, with the reason.
 | `imagegen`, `videogen` | yes, every GPU | yes, CDI | differs: whole GPUs each; `videogen` off by default |
 | `sandbox` | yes | yes | differs: no network by a NetworkPolicy (the CNI must enforce it); no `pids_limit` (the node's pod PID limit) |
 | `laya` | off (the `laya` feature) | the same | off (`laya.enabled`); a NetworkPolicy for compose's internal network |
+| `plugins` | yes: no network, the app by its socket on the `plugin-runtime` volume | yes | differs: TCP with a key the chart makes (the `arena-plugins` Secret); a NetworkPolicy lets only the app in and nothing out |
 | `prometheus`, `alertmanager`, `loki` | yes | yes | yes |
 | `valkey` (LMCache's shared store) | off (the `valkey` feature) | the same | off (`valkey.enabled`) |
 | `dcgm-exporter` | off (the `dcgm` feature) | the same, CDI | no: the cluster's (GPU Operator) |

@@ -55,7 +55,7 @@ spec:
             {{- if .Values.plugins.enabled }}
             # The plugin runtime, over TCP with the app's key (compose: its socket on the plugin-runtime volume).
             - { name: PluginRuntime__Tcp, value: "plugins:7700" }
-            {{- include "arena.secretEnv" (list $ "PluginRuntime__Key" "PLUGINS_KEY") | nindent 12 }}
+            - { name: PluginRuntime__Key, valueFrom: { secretKeyRef: { name: arena-plugins, key: PLUGINS_KEY } } }
             {{- end }}
             - { name: CodeIntel__GitlabUrl, value: {{ .Values.gitlab.url | quote }} }
             - { name: CodeIntel__Host, value: {{ .Values.codeIntel.host | quote }} }
