@@ -178,7 +178,7 @@ public sealed class PluginTests(AppFixture app)
                 using var w = new StreamWriter(zip.CreateEntry(name).Open());
                 w.Write(text);
             }
-            Add("pets/plugin.yaml", "name: pets\nversion: 2.0.0\ntitle: Pets\ntools: { openapi: openapi.yaml, url: \"https://pets.test/v1\" }\nauth: { per_person: api_key, header: X-Api-Key, value: \"{token}\", help: Your pet store key. }\n");
+            Add("pets/plugin.yaml", "apiVersion: arena.plugins/v3\nname: pets\nversion: 2.0.0\ntitle: Pets\ntools: { openapi: openapi.yaml, url: \"https://pets.test/v1\" }\nauth: { per_person: api_key, header: X-Api-Key, value: \"{token}\", help: Your pet store key. }\n");
             Add("pets/openapi.yaml", FakeMcp.PetsSpec);
         }
         var made = await admin.JsonAsync(await admin.PostAsync("/api/admin/plugins/install", new { accept = true, zip = Convert.ToBase64String(buffer.ToArray()) }));
@@ -207,7 +207,7 @@ public sealed class PluginTests(AppFixture app)
                 using var w = new StreamWriter(zip.CreateEntry(name).Open());
                 w.Write(text);
             }
-            Add("shared-pets/plugin.yaml", "name: shared-pets\nversion: 1.0.0\ntitle: Shared pets\ntools: { openapi: openapi.yaml, url: \"https://pets.test/v1\" }\n" +
+            Add("shared-pets/plugin.yaml", "apiVersion: arena.plugins/v3\nname: shared-pets\nversion: 1.0.0\ntitle: Shared pets\ntools: { openapi: openapi.yaml, url: \"https://pets.test/v1\" }\n" +
                 "auth: { header: X-Api-Key, value: \"{token}\" }\nsettings:\n  - { key: token, title: Key, type: secret, required: true }\n");
             Add("shared-pets/openapi.yaml", FakeMcp.PetsSpec);
         }
@@ -262,7 +262,7 @@ public sealed class PluginTests(AppFixture app)
                 using var w = new StreamWriter(zip.CreateEntry(name).Open());
                 w.Write(text);
             }
-            Add("vet/plugin.yaml", "name: vet\nversion: 1.0.0\ntitle: Vet\ntools: { openapi: openapi.yaml, url: \"https://pets.test/v1\" }\n" +
+            Add("vet/plugin.yaml", "apiVersion: arena.plugins/v3\nname: vet\nversion: 1.0.0\ntitle: Vet\ntools: { openapi: openapi.yaml, url: \"https://pets.test/v1\" }\n" +
                 "tasks:\n  - { name: Morning pets, description: The pets to see today., prompt: List today's pets., cron: \"0 8 * * 1-5\" }\n" +
                 "skills: [skills/pet-care]\n");
             Add("vet/openapi.yaml", FakeMcp.PetsSpec);
@@ -333,7 +333,7 @@ public sealed class PluginTests(AppFixture app)
             }
             return buffer.ToArray();
         }
-        const string manifest = "name: units\nversion: 1.0.0\ntitle: Units\ntools: { sandbox: mcp }\nsettings:\n  - { key: precision, title: Digits, type: text }\n";
+        const string manifest = "apiVersion: arena.plugins/v3\nname: units\nversion: 1.0.0\ntitle: Units\ntools: { sandbox: mcp }\nsettings:\n  - { key: precision, title: Digits, type: text }\n";
         // A server is a folder with its server.py.
         await StatusAssert.Is(HttpStatusCode.BadRequest, await admin.PostAsync("/api/admin/plugins/install",
             new { accept = true, zip = Convert.ToBase64String(Zip(("units/plugin.yaml", manifest), ("units/mcp/other.py", "x = 1\n"))) }));

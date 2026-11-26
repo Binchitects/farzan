@@ -2168,6 +2168,49 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("person_credentials", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.PluginEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DataJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("DueAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid?>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Tries")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DueAt");
+
+                    b.HasIndex("ServerId");
+
+                    b.ToTable("plugin_events", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.PluginGroupSetting", b =>
                 {
                     b.Property<Guid>("ServerId")
@@ -2188,6 +2231,107 @@ namespace Llm.Core.Data.Migrations
                     b.HasIndex("GroupId");
 
                     b.ToTable("plugin_group_settings", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PluginJob", b =>
+                {
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("LastAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("NextAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ServerId", "Name");
+
+                    b.HasIndex("NextAt");
+
+                    b.ToTable("plugin_jobs", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PluginManager", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ServerId", "UserId", "GroupId")
+                        .IsUnique();
+
+                    b.ToTable("plugin_managers", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PluginPackageBlob", b =>
+                {
+                    b.Property<Guid>("ReleaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Bytes")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("ReleaseId");
+
+                    b.ToTable("plugin_package_blobs", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PluginPublisher", b =>
+                {
+                    b.Property<string>("Fingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AddedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PublicKeyPem")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.HasKey("Fingerprint");
+
+                    b.HasIndex("AddedById");
+
+                    b.ToTable("plugin_publishers", (string)null);
                 });
 
             modelBuilder.Entity("Llm.Core.Chat.PluginRelease", b =>
@@ -2225,6 +2369,70 @@ namespace Llm.Core.Data.Migrations
                     b.HasIndex("ServerId", "InstalledAt");
 
                     b.ToTable("plugin_releases", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PluginState", b =>
+                {
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ChangedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DevOwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Signer")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("UntrustedSigner")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("ServerId");
+
+                    b.HasIndex("ChangedById");
+
+                    b.HasIndex("DevOwnerId");
+
+                    b.ToTable("plugin_states", (string)null);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PluginStoreEntry", b =>
+                {
+                    b.Property<Guid>("ServerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Key")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ValueJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("ServerId", "OwnerId", "Key");
+
+                    b.ToTable("plugin_store", (string)null);
                 });
 
             modelBuilder.Entity("Llm.Core.Chat.ProductFeedback", b =>
@@ -8874,6 +9082,15 @@ namespace Llm.Core.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.PluginEvent", b =>
+                {
+                    b.HasOne("Llm.Core.Chat.McpServer", null)
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.PluginGroupSetting", b =>
                 {
                     b.HasOne("Llm.Core.Access.Group", null)
@@ -8889,6 +9106,51 @@ namespace Llm.Core.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.PluginJob", b =>
+                {
+                    b.HasOne("Llm.Core.Chat.McpServer", null)
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PluginManager", b =>
+                {
+                    b.HasOne("Llm.Core.Access.Group", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Llm.Core.Chat.McpServer", null)
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PluginPackageBlob", b =>
+                {
+                    b.HasOne("Llm.Core.Chat.PluginRelease", null)
+                        .WithOne()
+                        .HasForeignKey("Llm.Core.Chat.PluginPackageBlob", "ReleaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PluginPublisher", b =>
+                {
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("AddedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.PluginRelease", b =>
                 {
                     b.HasOne("Llm.Core.Identity.AppUser", null)
@@ -8896,6 +9158,34 @@ namespace Llm.Core.Data.Migrations
                         .HasForeignKey("InstalledById")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Llm.Core.Chat.McpServer", null)
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PluginState", b =>
+                {
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("ChangedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Llm.Core.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("DevOwnerId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Llm.Core.Chat.McpServer", null)
+                        .WithMany()
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PluginStoreEntry", b =>
+                {
                     b.HasOne("Llm.Core.Chat.McpServer", null)
                         .WithMany()
                         .HasForeignKey("ServerId")

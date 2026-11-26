@@ -460,7 +460,7 @@ public sealed class ArenaMcpTests(AppFixture app)
         using (var zip = new System.IO.Compression.ZipArchive(buffer, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         await using (var w = new StreamWriter(zip.CreateEntry("desk/plugin.yaml").Open()))
         {
-            await w.WriteAsync("name: desk\nversion: 1.0.0\ntitle: Desk\ntools: { mcp: \"https://tools.example.test/mcp\" }\nauth: { per_person: api_key, header: X-Api-Key, value: \"{token}\" }\n");
+            await w.WriteAsync("apiVersion: arena.plugins/v3\nname: desk\nversion: 1.0.0\ntitle: Desk\ntools: { mcp: \"https://tools.example.test/mcp\" }\nauth: { per_person: api_key, header: X-Api-Key, value: \"{token}\" }\n");
         }
         var installed = await admin.JsonAsync(await admin.PostAsync("/api/admin/plugins/install", new { accept = true, zip = Convert.ToBase64String(buffer.ToArray()) }));
         var toolId = installed.GetProperty("toolId").GetString()!;

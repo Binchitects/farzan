@@ -1,3 +1,4 @@
+apiVersion: arena.plugins/v3
 name: gitlab-issues
 version: 1.2.0
 title: GitLab issues

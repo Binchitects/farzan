@@ -61,6 +61,13 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<CustomTool> CustomTools => Set<CustomTool>();
     public DbSet<PluginRelease> PluginReleases => Set<PluginRelease>();
     public DbSet<PluginGroupSetting> PluginGroupSettings => Set<PluginGroupSetting>();
+    public DbSet<PluginState> PluginStates => Set<PluginState>();
+    public DbSet<PluginPublisher> PluginPublishers => Set<PluginPublisher>();
+    public DbSet<PluginManager> PluginManagers => Set<PluginManager>();
+    public DbSet<PluginStoreEntry> PluginStore => Set<PluginStoreEntry>();
+    public DbSet<PluginJob> PluginJobs => Set<PluginJob>();
+    public DbSet<PluginEvent> PluginEvents => Set<PluginEvent>();
+    public DbSet<PluginPackageBlob> PluginPackageBlobs => Set<PluginPackageBlob>();
     public DbSet<McpServer> McpServers => Set<McpServer>();
     public DbSet<PersonCredential> PersonCredentials => Set<PersonCredential>();
     public DbSet<LocalModel> LocalModels => Set<LocalModel>();
@@ -653,6 +660,66 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.HasIndex(x => new { x.ServerId, x.InstalledAt });
             e.HasOne<McpServer>().WithMany().HasForeignKey(x => x.ServerId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.InstalledById).OnDelete(DeleteBehavior.SetNull);
+        });
+        builder.Entity<PluginState>(e =>
+        {
+            e.ToTable("plugin_states");
+            e.HasKey(x => x.ServerId);
+            e.Property(x => x.State).HasMaxLength(20);
+            e.Property(x => x.Reason).HasMaxLength(2000);
+            e.Property(x => x.Signer).HasMaxLength(64);
+            e.Property(x => x.UntrustedSigner).HasMaxLength(64);
+            e.HasOne<McpServer>().WithMany().HasForeignKey(x => x.ServerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.ChangedById).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.DevOwnerId).OnDelete(DeleteBehavior.Cascade);
+        });
+        builder.Entity<PluginPublisher>(e =>
+        {
+            e.ToTable("plugin_publishers");
+            e.HasKey(x => x.Fingerprint);
+            e.Property(x => x.Fingerprint).HasMaxLength(64);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.PublicKeyPem).HasMaxLength(4000);
+            e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.AddedById).OnDelete(DeleteBehavior.SetNull);
+        });
+        builder.Entity<PluginManager>(e =>
+        {
+            e.ToTable("plugin_managers");
+            e.HasIndex(x => new { x.ServerId, x.UserId, x.GroupId }).IsUnique();
+            e.HasOne<McpServer>().WithMany().HasForeignKey(x => x.ServerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Group>().WithMany().HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+        builder.Entity<PluginStoreEntry>(e =>
+        {
+            e.ToTable("plugin_store");
+            e.HasKey(x => new { x.ServerId, x.OwnerId, x.Key });
+            e.Property(x => x.Key).HasMaxLength(200);
+            e.HasOne<McpServer>().WithMany().HasForeignKey(x => x.ServerId).OnDelete(DeleteBehavior.Cascade);
+        });
+        builder.Entity<PluginJob>(e =>
+        {
+            e.ToTable("plugin_jobs");
+            e.HasKey(x => new { x.ServerId, x.Name });
+            e.Property(x => x.Name).HasMaxLength(50);
+            e.Property(x => x.LastError).HasMaxLength(2000);
+            e.HasIndex(x => x.NextAt);
+            e.HasOne<McpServer>().WithMany().HasForeignKey(x => x.ServerId).OnDelete(DeleteBehavior.Cascade);
+        });
+        builder.Entity<PluginEvent>(e =>
+        {
+            e.ToTable("plugin_events");
+            e.Property(x => x.Type).HasMaxLength(50);
+            e.Property(x => x.LastError).HasMaxLength(2000);
+            e.HasIndex(x => x.DueAt);
+            e.HasOne<McpServer>().WithMany().HasForeignKey(x => x.ServerId).OnDelete(DeleteBehavior.Cascade);
+        });
+        builder.Entity<PluginPackageBlob>(e =>
+        {
+            e.ToTable("plugin_package_blobs");
+            e.HasKey(x => x.ReleaseId);
+            e.Property(x => x.Sha256).HasMaxLength(64);
+            e.HasOne<PluginRelease>().WithOne().HasForeignKey<PluginPackageBlob>(x => x.ReleaseId).OnDelete(DeleteBehavior.Cascade);
         });
         builder.Entity<ToolSetting>(e =>
         {
