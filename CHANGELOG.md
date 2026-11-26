@@ -25,8 +25,9 @@ Sections used:
   choose its thinking; a new **Post to a chat channel** step posts to Slack,
   Teams, Mattermost or Discord (its address kept encrypted, only to the hosts
   an admin allows); plugins' tasks are templates to start from. The limits
-  tasks had hold for scheduled workflows (Settings → Automations: schedules
-  on, at most so many a person, no more often than Most often).
+  tasks had hold for a new or changed schedule (Settings → Automations:
+  schedules on, at most so many a person, no more often than Most often);
+  one kept as it was still saves.
 
 ### :boom: Breaking changes & Deprecations
 

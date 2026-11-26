@@ -10,10 +10,10 @@ using Microsoft.Extensions.Options;
 namespace Llm.Api.Studio;
 
 /// <summary>
-/// What saving a workflow checks beyond its shape, as scheduled tasks did before they became Automations: a schedule only
-/// while schedules are on here (Schedules:Enabled), no more often than Schedules:MinInterval, and at most Schedules:PerPerson
-/// scheduled workflows a person; each webhook step's address an allowed host's (Schedules:WebhookHosts), sealed with
-/// APP_DATA_KEY (such an address is a secret) and shown only as set.
+/// What saving a workflow checks beyond its shape, as scheduled tasks did before they became Automations: a new or changed
+/// schedule only while schedules are on here (Schedules:Enabled), no more often than Schedules:MinInterval, and at most
+/// Schedules:PerPerson scheduled workflows a person (one kept as it was still saves); each webhook step's address an
+/// allowed host's (Schedules:WebhookHosts), sealed with APP_DATA_KEY (such an address is a secret) and shown only as set.
 /// </summary>
 public sealed class FlowRules(IOptionsMonitor<ScheduleOptions> schedules, IOptions<AuthOptions> auth, Webhooks webhooks, TimeProvider clock)
 {
@@ -24,7 +24,9 @@ public sealed class FlowRules(IOptionsMonitor<ScheduleOptions> schedules, IOptio
     {
         var o = schedules.CurrentValue;
         var t = flow.Trigger;
-        if (t.Kind == "schedule")
+        var stored = FlowModel.Read(w.Flow).Trigger;
+        // Checked when the schedule is new or changed: one kept as it was (made before these limits, or before a limit was lowered) still saves.
+        if (t.Kind == "schedule" && (stored.Kind != "schedule" || stored.Cron?.Trim() != t.Cron?.Trim() || stored.TimeZone != t.TimeZone))
         {
             if (!o.Enabled)
             {

@@ -167,6 +167,11 @@ public static class StudioEndpoints
         {
             w.Enabled = enabled;
         }
+        // A schedule with no next time (a scheduled task that was off when it became a workflow): its next one, from now.
+        if (w.NextRunAt is null && FlowModel.Read(w.Flow).Trigger is { Kind: "schedule" } schedule)
+        {
+            w.NextRunAt = StudioRuns.NextRun(schedule, clock.GetUtcNow());
+        }
         if (body.Reach is { } reach)
         {
             if (reach is not (Workflow.Private or Workflow.Groups or Workflow.Company))

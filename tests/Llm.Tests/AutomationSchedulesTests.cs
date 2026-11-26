@@ -188,6 +188,24 @@ public sealed class AutomationSchedulesTests(AppFixture app)
         Assert.Equal("Weekly", chat.GetProperty("title").GetString());
         Assert.Equal(2, chat.GetProperty("messages").EnumerateArray().Count(m => m.GetProperty("role").GetString() == "user"));
 
+        // Kept as it was, an existing schedule past the limits still saves (a step renamed); and one with no next time
+        // (a task that was off when it became a workflow) gets one when it is switched on.
+        using (var scope = f.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var often = new Llm.Core.Studio.Workflow
+            {
+                OwnerId = (await db.Workflows.AsNoTracking().SingleAsync(w => w.Id == id)).OwnerId, Name = "Was a task", Enabled = false,
+                Flow = FlowModel.Write(new Flow { Trigger = new FlowTrigger { Kind = "schedule", Cron = "*/5 * * * *" }, Steps = [new FlowStep { Id = "say", Kind = "text", Text = "hi" }] }),
+            };
+            db.Workflows.Add(often);
+            await db.SaveChangesAsync();
+            var kept = (await b.JsonAsync(await b.GetAsync($"/api/studio/{often.Id}"))).GetProperty("flow");
+            await StatusAssert.Is(HttpStatusCode.OK, await b.Http.PutAsJsonAsync(new Uri($"/api/studio/{often.Id}", UriKind.Relative), new { name = "Still a task", flow = kept }));
+            var on = await b.JsonAsync(await b.Http.PutAsJsonAsync(new Uri($"/api/studio/{often.Id}", UriKind.Relative), new { enabled = true }));
+            Assert.True(on.GetProperty("workflow").GetProperty("nextRunAt").GetDateTimeOffset() > DateTimeOffset.UtcNow);
+        }
+
         // Removed: its chats stay.
         await StatusAssert.Is(HttpStatusCode.NoContent, await b.Http.DeleteAsync(new Uri($"/api/studio/{id}", UriKind.Relative)));
         await StatusAssert.Is(HttpStatusCode.OK, await b.GetAsync($"/api/chat/conversations/{link["/chat/".Length..]}"));
