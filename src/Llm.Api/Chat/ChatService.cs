@@ -327,6 +327,11 @@ public sealed partial class ChatService(
             // them (both), or its tools only as functions in a program (code). Who may call tools from code is the tool's own setting.
             toolMode = research ? ToolModes.Both : await toolModes.OfAsync(modelName, ct);
             chosen.RemoveAll(c => c.Tool.Id == CodeTool.ToolId);
+            // A chat in a project plans in the project (its goals and tasks, below): not in a plan of its own.
+            if (conversation.WorkProjectId is not null)
+            {
+                chosen.RemoveAll(c => c.Tool.Id == Plans.PlansTool.ToolId);
+            }
             if (toolMode != ToolModes.Direct && chosen.Any(c => CodeTool.Callable(c.Tool)) && allowed.FirstOrDefault(t => t.Tool.Id == CodeTool.ToolId) is { } code)
             {
                 chosen.Add(code);

@@ -365,7 +365,6 @@ public static class PlanEndpoints
     public static void MapPlans(this IEndpointRouteBuilder app)
     {
         var g = app.MapGroup("/api/plans").PersonOnly();
-        g.MapGet("", ListAsync);
         g.MapGet("/{id:guid}", GetAsync);
         g.MapPatch("/{id:guid}/steps/{number:int}", StepAsync);
         g.MapPost("/{id:guid}/steps", AddAsync);
@@ -420,20 +419,20 @@ public static class PlanEndpoints
 
     private static DateOnly Today(TimeProvider clock) => DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
 
-    private static async Task<IResult> ListAsync(ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, CancellationToken ct)
+    private static async Task<IResult> GetAsync(Guid id, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, AccessService access, TimeProvider clock, CancellationToken ct)
     {
         var me = await Me(p, users);
-        var rooms = await RoomAccess.RoomsOfAsync(db, me, ct);
-        var plans = await db.Plans.AsNoTracking().Where(x => x.UserId == me.Id || (x.ConversationId != null && rooms.Contains(x.ConversationId.Value)))
-            .OrderByDescending(x => x.UpdatedAt).Take(200)
-            .Select(x => new { x.Id, x.Title, x.ConversationId, x.Source, x.Place, x.UpdatedAt, steps = x.Steps.Count, done = x.Steps.Count(s => s.Status == PlanStep.Done) }).ToListAsync(ct);
-        return Results.Ok(plans);
-    }
-
-    private static async Task<IResult> GetAsync(Guid id, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, TimeProvider clock, CancellationToken ct)
-    {
-        var me = await Me(p, users);
-        return await PlanBook.FindAsync(db, id, me, Need.Read, ct) is { } plan ? Results.Ok(PlanBook.Shape(plan, Today(clock))) : Results.NotFound();
+        if (await PlanBook.FindAsync(db, id, me, Need.Read, ct) is { } plan)
+        {
+            return Results.Ok(PlanBook.Shape(plan, Today(clock)));
+        }
+        // A chat's plan put in its project is the project's goal of the same id: where it is now, for whoever may see the project.
+        if (await db.ProjectGoals.AsNoTracking().SingleOrDefaultAsync(g => g.Id == id, ct) is { } goal
+            && (await Projects.ProjectAccess.FindAsync(db, goal.ProjectId, me.Id, await access.MembershipAsync(me, ct), ct)).Project is { } project)
+        {
+            return Results.Ok(new { moved = new { projectId = project.Id, project = project.Name, goal = goal.Title } });
+        }
+        return Results.NotFound();
     }
 
     private static async Task<IResult> ChangeAsync(Guid id, StepChange change, ClaimsPrincipal p, UserManager<AppUser> users, AppDbContext db, TimeProvider clock, CancellationToken ct)

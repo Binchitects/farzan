@@ -27,6 +27,7 @@ import { api, errorMessage, meQuery } from '@/lib/api'
 import { formatValue, money } from '@/lib/format'
 import { skillsQuery } from '@/lib/skills'
 import { liveFallback, useUsageLive } from '@/lib/usage-live'
+import { Segmented } from '@/components/app/segmented'
 import { useTimeWindow, type TimeWindowState } from '@/lib/use-time-window'
 import { assistantsQuery } from '../chat/api'
 import { GroupChecklist, PeoplePicker, type Person } from '../chat/assistant-sharing'
@@ -37,6 +38,7 @@ import {
   progressOf,
   projectQuery,
   roleLabels,
+  taskStatusLabels,
   type GoalStatus,
   type ItemKind,
   type Project,
@@ -46,6 +48,7 @@ import {
   type ProjectUse,
   type SetBy,
 } from './api'
+import { Due, TaskBoard } from './task-board'
 
 const right = { className: 'text-right tabular-nums' }
 
@@ -501,6 +504,7 @@ function Work({ project: p }: { project: Project }) {
   const may = mayAdd(p.role) && p.status === 'active'
   const [goal, setGoal] = useState({ title: '', dueOn: '' })
   const [task, setTask] = useState({ title: '', goalId: '' })
+  const [view, setView] = useState<'list' | 'board'>('list')
   const people = p.members.filter((m) => m.userId)
   const addGoal = (e: FormEvent) => {
     e.preventDefault()
@@ -574,10 +578,18 @@ function Work({ project: p }: { project: Project }) {
       <Card>
         <CardHeader>
           <CardTitle>Tasks</CardTitle>
-          <CardDescription>What is to be done, of a goal or not, who does it, and the hours it would take by hand. The plans of its chats count as tasks too.</CardDescription>
+          <CardDescription>
+            What is to be done, of a goal or not, where it stands, who does it, when, and the hours it would take by hand. A chat in the project keeps its plan here: a goal and its tasks.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3">
           {p.tasks.length === 0 && <p className="text-sm text-muted-foreground">No tasks yet.</p>}
+          {p.tasks.length > 0 && (
+            <Segmented value={view} onChange={setView} label="Show the tasks as" options={[{ value: 'list', label: 'List' }, { value: 'board', label: 'Board' }]} />
+          )}
+          {view === 'board' ? (
+            <TaskBoard tasks={p.tasks} goals={p.goals} may={may} onStatus={(t, status) => change.mutate({ path: `/tasks/${t.id}`, method: 'PATCH', body: { status } })} />
+          ) : (
           <ul className="grid gap-1" aria-label="Tasks">
             {p.tasks.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center gap-2 rounded-md px-1 py-1.5 hover:bg-accent/50">
@@ -591,6 +603,17 @@ function Work({ project: p }: { project: Project }) {
                 <label htmlFor={`task-${t.id}`} className={t.done ? 'min-w-0 flex-1 text-sm text-muted-foreground line-through' : 'min-w-0 flex-1 text-sm'}>
                   <bdi>{t.title}</bdi>
                   {t.goalId && <span className="ms-2 text-xs text-muted-foreground">{p.goals.find((g) => g.id === t.goalId)?.title}</span>}
+                  {(t.status === 'doing' || t.status === 'blocked') && (
+                    <Badge variant={t.status === 'blocked' ? 'warning' : 'secondary'} className="ms-2">
+                      {taskStatusLabels[t.status]}
+                    </Badge>
+                  )}
+                  {!t.assigneeId && t.owner && <span className="ms-2 text-xs text-muted-foreground">{t.owner}</span>}
+                  {t.dueOn && (
+                    <span className="ms-2">
+                      <Due task={t} />
+                    </span>
+                  )}
                   {t.from && (
                     <span className="ms-2 text-xs text-muted-foreground">
                       <FromChat from={t.from} />
@@ -623,6 +646,7 @@ function Work({ project: p }: { project: Project }) {
               </li>
             ))}
           </ul>
+          )}
           {may && (
             <form className="flex flex-wrap items-end gap-2" onSubmit={addTask} aria-label="New task">
               <Input value={task.title} maxLength={300} onChange={(e) => setTask({ ...task, title: e.target.value })} placeholder="A task" aria-label="New task" className="h-9 min-w-48 flex-1" />

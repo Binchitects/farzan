@@ -6,7 +6,10 @@ using Llm.Core.Plans;
 
 namespace Llm.Tests;
 
-/// <summary>Plans: made and kept by the chat's Plans tool, read and moved along on the page; a room's are its people's.</summary>
+/// <summary>
+/// Plans: made and kept by the chat's Plans tool, read and moved along on the page; a room's are its people's. A chat in a
+/// project plans in the project: its plan moves there when it joins, a goal and its tasks, kept with the project's tools.
+/// </summary>
 [Collection(nameof(AppCollection))]
 public sealed class PlanTests(AppFixture app)
 {
@@ -48,7 +51,7 @@ public sealed class PlanTests(AppFixture app)
         Assert.Equal("Live by December", seen.GetProperty("goal").GetString());
         await StatusAssert.Is(HttpStatusCode.OK, await other.Http.PatchAsJsonAsync(new Uri($"/api/plans/{id}/steps/1", UriKind.Relative), new { status = "done" }));
         await StatusAssert.Is(HttpStatusCode.NotFound, await outsider.GetAsync($"/api/plans/{id}"));
-        Assert.Contains((await other.JsonAsync(await other.GetAsync("/api/plans"))).EnumerateArray(), p => p.GetProperty("id").GetGuid() == id && p.GetProperty("done").GetInt32() == 1);
+        Assert.Equal("done", (await other.JsonAsync(await other.GetAsync($"/api/plans/{id}"))).GetProperty("steps")[0].GetProperty("status").GetString());
 
         // The chat reads it as people left it, and changes it; a circle is refused.
         var shown = JsonDocument.Parse((await CallAsync(owner, room, """@Arena where are we [call plan_show {}]""")).GetProperty("text").GetString()!).RootElement;
@@ -111,5 +114,51 @@ public sealed class PlanTests(AppFixture app)
         Assert.Throws<PlanException>(() => PlanBook.Apply(plan, [new StepChange(Number: 2, Start: "next week")]));
         Assert.Throws<PlanException>(() => PlanBook.Apply(plan, [new StepChange(Number: 2, DependsOn: [9])]));
         Assert.Throws<PlanException>(() => PlanBook.Apply(plan, [new StepChange(Title: "")]));
+    }
+    [Fact]
+    public async Task A_chats_plan_moves_into_the_project_it_joins_as_a_goal_and_its_tasks_kept_there_with_the_projects_tool()
+    {
+        var admin = await new TestBrowser(app.Factory).SignedInAsync("admin", AppFixture.AdminPassword);
+        var project = (await admin.JsonAsync(await admin.PostAsync("/api/projects", new { name = "Launch " + Guid.NewGuid().ToString("N")[..6] }))).GetProperty("id").GetGuid();
+        var chat = (await admin.JsonAsync(await admin.PostAsync("/api/chat/conversations", new { useCodeIntel = false }))).GetProperty("id").GetGuid();
+        await admin.Http.PatchAsJsonAsync(new Uri($"/api/chat/conversations/{chat}", UriKind.Relative), new { tools = new[] { "plans" } });
+        var made = await CallAsync(admin, chat, """plan it [call plan_make {"title": "Launch", "goal": "Live by December", "steps": [{"title": "Design", "owner": "Ann", "start": "2026-11-01", "due": "2026-11-10"}, {"title": "Build", "owner": "Ben", "due": "2026-11-25", "depends_on": [1]}]}]""");
+        var plan = JsonDocument.Parse(made.GetProperty("text").GetString()!).RootElement.GetProperty("id").GetGuid();
+        await StatusAssert.Is(HttpStatusCode.OK, await admin.Http.PatchAsJsonAsync(new Uri($"/api/plans/{plan}/steps/1", UriKind.Relative), new { status = "done" }));
+
+        // Put in the project: its plan is the project's goal of the same id, its steps the goal's tasks.
+        await StatusAssert.Is(HttpStatusCode.OK, await admin.Http.PutAsJsonAsync(new Uri($"/api/chat/conversations/{chat}/project", UriKind.Relative), new { projectId = project }));
+        var moved = (await admin.JsonAsync(await admin.GetAsync($"/api/plans/{plan}"))).GetProperty("moved");
+        Assert.Equal((project, "Launch"), (moved.GetProperty("projectId").GetGuid(), moved.GetProperty("goal").GetString()));
+        var p = await admin.JsonAsync(await admin.GetAsync($"/api/projects/{project}"));
+        var goal = p.GetProperty("goals").EnumerateArray().Single(g => g.GetProperty("id").GetGuid() == plan);
+        Assert.Equal(("Live by December", "doing", "2026-11-25"), (goal.GetProperty("description").GetString(), goal.GetProperty("status").GetString(), goal.GetProperty("dueOn").GetString()));
+        Assert.Equal(chat, goal.GetProperty("from").GetProperty("id").GetGuid());
+        var tasks = p.GetProperty("tasks").EnumerateArray().Where(t => t.GetProperty("goalId").ValueKind == JsonValueKind.String && t.GetProperty("goalId").GetGuid() == plan)
+            .ToDictionary(t => t.GetProperty("title").GetString()!);
+        Assert.Equal(("done", true, "Ann", "2026-11-01"), (tasks["Design"].GetProperty("status").GetString(), tasks["Design"].GetProperty("done").GetBoolean(), tasks["Design"].GetProperty("owner").GetString(), tasks["Design"].GetProperty("startOn").GetString()));
+        Assert.Equal(("todo", "Ben", "2026-11-25"), (tasks["Build"].GetProperty("status").GetString(), tasks["Build"].GetProperty("owner").GetString(), tasks["Build"].GetProperty("dueOn").GetString()));
+        Assert.Equal([tasks["Design"].GetProperty("id").GetGuid()], tasks["Build"].GetProperty("dependsOn").EnumerateArray().Select(x => x.GetGuid()));
+
+        // There the chat plans with the project's tool, not a plan of its own: a task blocked, given to a team, due, waiting.
+        var marker = "in-project-" + Guid.NewGuid().ToString("N")[..8];
+        var build = tasks["Build"].GetProperty("id").GetGuid();
+        var changed = await CallAsync(admin, chat, $$"""{{marker}} [call project_task {"id": "{{build}}", "status": "blocked", "owner": "Platform team", "notes": "Waits for the cluster.", "waits_for": ["{{tasks["Design"].GetProperty("id").GetGuid()}}"]}]""");
+        Assert.False(changed.GetProperty("isError").GetBoolean(), changed.GetProperty("text").GetString());
+        Assert.Contains("blocked; Platform team; due 2026-11-25; waits for \"Design\"", changed.GetProperty("text").GetString(), StringComparison.Ordinal);
+        var offered = app.Model.Requests.Last(r => r.Body["messages"]!.ToJsonString().Contains(marker, StringComparison.Ordinal)).Body["tools"]!.AsArray()
+            .Select(t => t!["function"]!["name"]!.GetValue<string>()).ToList();
+        Assert.Contains("project_task", offered);
+        Assert.DoesNotContain("plan_make", offered);
+        var after = (await admin.JsonAsync(await admin.GetAsync($"/api/projects/{project}"))).GetProperty("tasks").EnumerateArray().Single(t => t.GetProperty("id").GetGuid() == build);
+        Assert.Equal(("blocked", false, "Waits for the cluster."), (after.GetProperty("status").GetString(), after.GetProperty("done").GetBoolean(), after.GetProperty("notes").GetString()));
+
+        // Ticked done on the page, its status is done; taken back, to do.
+        await StatusAssert.Is(HttpStatusCode.NoContent, await admin.Http.PatchAsJsonAsync(new Uri($"/api/projects/{project}/tasks/{build}", UriKind.Relative), new { done = true }));
+        Assert.Equal("done", (await admin.JsonAsync(await admin.GetAsync($"/api/projects/{project}"))).GetProperty("tasks").EnumerateArray().Single(t => t.GetProperty("id").GetGuid() == build).GetProperty("status").GetString());
+        await StatusAssert.Is(HttpStatusCode.NoContent, await admin.Http.PatchAsJsonAsync(new Uri($"/api/projects/{project}/tasks/{build}", UriKind.Relative), new { done = false }));
+        var back = (await admin.JsonAsync(await admin.GetAsync($"/api/projects/{project}"))).GetProperty("tasks").EnumerateArray().Single(t => t.GetProperty("id").GetGuid() == build);
+        Assert.Equal(("todo", false), (back.GetProperty("status").GetString(), back.GetProperty("done").GetBoolean()));
+        await StatusAssert.Is(HttpStatusCode.BadRequest, await admin.Http.PatchAsJsonAsync(new Uri($"/api/projects/{project}/tasks/{build}", UriKind.Relative), new { status = "someday" }));
     }
 }

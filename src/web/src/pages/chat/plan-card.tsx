@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/input'
 import { toast } from '@/components/ui/toaster'
 import { api, errorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import type { Plan, PlanStep } from '@/pages/plans'
+import type { MovedPlan, Plan, PlanStep } from '@/pages/plans'
 
 const marks: Record<PlanStep['status'], { icon: typeof CircleCheck; label: string; className: string }> = {
   done: { icon: CircleCheck, label: 'Done', className: 'text-success' },
@@ -25,7 +25,7 @@ export function PlanCard({ id, live, onAnswer }: { id: string; live: boolean; on
   const queryClient = useQueryClient()
   const plan = useQuery({
     queryKey: ['plans', id] as const,
-    queryFn: ({ signal }) => api<Plan>(`/api/plans/${id}`, { signal }),
+    queryFn: ({ signal }) => api<Plan | MovedPlan>(`/api/plans/${id}`, { signal }),
     // Read again while the chat works on it.
     refetchInterval: live ? 2000 : false,
     retry: false,
@@ -35,6 +35,19 @@ export function PlanCard({ id, live, onAnswer }: { id: string; live: boolean; on
   const [sending, setSending] = useState(false)
   const p = plan.data
   if (!p) return null
+  if ('moved' in p)
+    return (
+      <p className="my-2 flex items-center gap-2 rounded-lg border p-3 text-sm text-muted-foreground">
+        <ListChecks className="size-4 shrink-0" aria-hidden="true" />
+        <span>
+          This plan is a goal of the project{' '}
+          <Link to={`/projects/${p.moved.projectId}`} className="font-medium text-foreground underline underline-offset-2">
+            {p.moved.project}
+          </Link>{' '}
+          now: {p.moved.goal}.
+        </span>
+      </p>
+    )
   const proposed = p.review === 'proposed'
   const review = async (action: 'approve' | 'change' | 'reject', step?: number, words?: string) => {
     if (!onAnswer) return

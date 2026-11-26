@@ -62,19 +62,10 @@ describe('plans', () => {
     expect(screen.getByText(/approve it to carry it out/)).toBeInTheDocument()
   })
 
-  it('lists the plans in progress first, then those done', async () => {
-    fakeApi(member, {
-      'GET /api/plans': () => ({
-        json: [
-          { id: 'p1', title: 'Launch', conversationId: 'c1', source: 'chat', place: null, updatedAt: '', steps: 2, done: 2 },
-          { id: 'p2', title: 'Rename the parser', conversationId: 'c2', source: 'code', place: 'codec', updatedAt: '', steps: 3, done: 1 },
-        ],
-      }),
-    })
-    renderApp('/plans')
-    const going = await screen.findByRole('list', { name: 'Plans in progress' })
-    expect(within(going).getByRole('link', { name: /Rename the parser/ })).toHaveTextContent('1 of 3 done')
-    expect(within(going).getByText('codec')).toBeInTheDocument()
-    expect(within(screen.getByRole('list', { name: 'Plans done' })).getByRole('link', { name: /Launch/ })).toBeInTheDocument()
+  it("says where a plan went when its chat was put in a project, and opens the project", async () => {
+    fakeApi(member, { 'GET /api/plans/p3': () => ({ json: { moved: { projectId: 'w1', project: 'Launch', goal: 'Go live' } } }) })
+    renderApp('/plans/p3')
+    expect(await screen.findByRole('heading', { name: 'Go live' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open Launch' })).toHaveAttribute('href', '/projects/w1')
   })
 })

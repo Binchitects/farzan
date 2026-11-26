@@ -12,6 +12,7 @@ namespace Llm.Tests;
 /// requests imported from LiteLLM whose first token was their end have none; chat answers logged before requests carried
 /// their chat are linked to it, and to its project. Scheduled tasks are Automations' workflows of the same id, with their
 /// runs, chats, webhooks and plugins' templates, and whoever might schedule may use Automations (whoever was denied, is).
+/// A chat's plan in a project is the project's goal and its tasks; Code Arena's plans and those of chats in no project stay.
 /// </summary>
 [Collection(nameof(AppCollection))]
 public sealed class V82MigrationTests(AppFixture app)
@@ -171,5 +172,62 @@ public sealed class V82MigrationTests(AppFixture app)
         Assert.Equal(("Feed", "Feed them", "0 9 * * *"), (template.Name, template.Prompt, template.Cron));
         Assert.Equal(["feature.chat", "feature.studio"], (await db.AccessRoles.AsNoTracking().SingleAsync(r => r.Id == role)).Permissions);
         Assert.Equal("feature.studio", (await db.AccessRules.AsNoTracking().SingleAsync(r => r.Id == deny)).Resource);
+    }
+    [Fact]
+    public async Task A_project_chats_plan_becomes_its_goal_and_tasks_done_when_they_were_and_other_plans_stay()
+    {
+        var cs = app.ConnectionStringFor("v82p_" + Guid.NewGuid().ToString("N")[..8]);
+        var options = new DbContextOptionsBuilder<AppDbContext>();
+        options.UseNpgsql(cs);
+        options.UseOpenIddict<Guid>();
+        await using var db = new AppDbContext(options.Options);
+        var all = db.Database.GetMigrations().ToList();
+        var before = all[all.FindIndex(m => m.EndsWith("_PlansIntoProjects", StringComparison.Ordinal)) - 1];
+        await db.GetService<IMigrator>().MigrateAsync(before);
+
+        var (person, project, inProject, alone, plan, codePlan, lonePlan, ticked, oldGoal) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var (s1, s2, s3) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var changed = new DateTimeOffset(2026, 11, 20, 9, 0, 0, TimeSpan.Zero);
+        var checkedAt = new DateTimeOffset(2026, 11, 18, 15, 0, 0, TimeSpan.Zero);
+        await using (var conn = new NpgsqlConnection(cs))
+        {
+            await conn.OpenAsync();
+            await V61MigrationTests.InsertAsync(conn, "AspNetUsers", new() { ["Id"] = person, ["UserName"] = "mo", ["NormalizedUserName"] = "MO" });
+            await V61MigrationTests.InsertAsync(conn, "work_projects", new() { ["Id"] = project, ["Name"] = "Launch", ["OwnerId"] = person });
+            await V61MigrationTests.InsertAsync(conn, "work_project_goals", new() { ["Id"] = oldGoal, ["ProjectId"] = project, ["Title"] = "Kick-off", ["Status"] = "done", ["Position"] = 0 });
+            await V61MigrationTests.InsertAsync(conn, "work_project_tasks", new() { ["Id"] = ticked, ["ProjectId"] = project, ["Title"] = "Book the room", ["Done"] = true, ["DoneAt"] = checkedAt });
+            await V61MigrationTests.InsertAsync(conn, "conversations", new() { ["Id"] = inProject, ["UserId"] = person, ["WorkProjectId"] = project });
+            await V61MigrationTests.InsertAsync(conn, "conversations", new() { ["Id"] = alone, ["UserId"] = person });
+            await V61MigrationTests.InsertAsync(conn, "plans", new() { ["Id"] = plan, ["UserId"] = person, ["ConversationId"] = inProject, ["Title"] = "Go live", ["Goal"] = "Live by December", ["Source"] = "chat", ["CreatedAt"] = changed.AddDays(-5), ["UpdatedAt"] = changed });
+            await V61MigrationTests.InsertAsync(conn, "plan_steps", new() { ["Id"] = s1, ["PlanId"] = plan, ["Number"] = 1, ["Title"] = "Design", ["Owner"] = "Ann", ["Status"] = "done", ["CheckedAt"] = checkedAt, ["Start"] = new DateOnly(2026, 11, 1) });
+            await V61MigrationTests.InsertAsync(conn, "plan_steps", new() { ["Id"] = s2, ["PlanId"] = plan, ["Number"] = 2, ["Title"] = "Build", ["Status"] = "done", ["DependsOn"] = new[] { 1 } });
+            await V61MigrationTests.InsertAsync(conn, "plan_steps", new() { ["Id"] = s3, ["PlanId"] = plan, ["Number"] = 3, ["Title"] = "Ship", ["Status"] = "blocked", ["Notes"] = "Waits for legal.", ["Due"] = new DateOnly(2026, 12, 1), ["DependsOn"] = new[] { 1, 2 } });
+            // Code Arena's working plan of a session in the project, and a plan of a chat in no project: both stay plans.
+            await V61MigrationTests.InsertAsync(conn, "plans", new() { ["Id"] = codePlan, ["UserId"] = person, ["ConversationId"] = inProject, ["Title"] = "Refactor", ["Source"] = "code" });
+            await V61MigrationTests.InsertAsync(conn, "plans", new() { ["Id"] = lonePlan, ["UserId"] = person, ["ConversationId"] = alone, ["Title"] = "Trip", ["Source"] = "chat" });
+        }
+        await db.Database.MigrateAsync();
+
+        // The task ticked before it had a status is done.
+        var was = await db.ProjectTasks.AsNoTracking().SingleAsync(t => t.Id == ticked);
+        Assert.Equal(("done", true, checkedAt), (was.Status, was.Done, was.DoneAt!.Value));
+        var goal = await db.ProjectGoals.AsNoTracking().SingleAsync(g => g.Id == plan);
+        Assert.Equal((project, "Go live", "Live by December", "doing", inProject, 1), (goal.ProjectId, goal.Title, goal.Description, goal.Status, goal.ChatId!.Value, goal.Position));
+        Assert.Equal(new DateOnly(2026, 12, 1), goal.DueOn);
+        Assert.Null(goal.DoneAt);
+        var tasks = await db.ProjectTasks.AsNoTracking().Where(t => t.GoalId == plan).ToDictionaryAsync(t => t.Id);
+        Assert.Equal(new[] { s1, s2, s3 }.Order(), tasks.Keys.Order());
+        // Done when it was: its check's time, else the plan's last change; never the upgrade's.
+        Assert.Equal(("done", true, checkedAt, "Ann", new DateOnly(2026, 11, 1)), (tasks[s1].Status, tasks[s1].Done, tasks[s1].DoneAt!.Value, tasks[s1].Owner!, tasks[s1].StartOn!.Value));
+        Assert.Equal(changed, tasks[s2].DoneAt);
+        Assert.Equal([s1], tasks[s2].DependsOn);
+        Assert.Equal(("blocked", false, "Waits for legal.", new DateOnly(2026, 12, 1)), (tasks[s3].Status, tasks[s3].Done, tasks[s3].Notes!, tasks[s3].DueOn!.Value));
+        Assert.Equal([s1, s2], tasks[s3].DependsOn);
+        Assert.All(tasks.Values, t => Assert.Equal((project, inProject, person), (t.ProjectId, t.ChatId!.Value, t.CreatedById!.Value)));
+
+        Assert.False(await db.Plans.AnyAsync(x => x.Id == plan));
+        Assert.False(await db.PlanSteps.AnyAsync(x => x.PlanId == plan));
+        Assert.True(await db.Plans.AnyAsync(x => x.Id == codePlan));
+        Assert.True(await db.Plans.AnyAsync(x => x.Id == lonePlan));
     }
 }

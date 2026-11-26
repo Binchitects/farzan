@@ -945,7 +945,7 @@ no debugging left in the code). Nobody else sees them.
 
 ## Plans
 
-The **Plans** tool (in the chat's Tools menu) makes and keeps plans: a title,
+The **Plans** tool (in the chat's Tools menu) makes and keeps a chat's plans: a title,
 a goal, and steps, each with an owner, a status (to do, doing, blocked,
 done), start and due dates, what done means, and the steps it waits for. Ask the chat to plan
 something and say who does what by when; later say what changed, and it
@@ -962,11 +962,20 @@ message. Approved, the chat carries the plan out with its tools, marking each
 step doing as it starts it and done when it is, and the card under the answer
 shows each step as it stands.
 
-Every plan opens under **Plans** (in the sidebar, and from the answer that
-made it) as a **board**, a column per status, where a click moves a step on
-and a new step can be added; and a **timeline**, each step from its start to
-its due date. A plan made in a room is its people's to see and move along;
-the chat reads it as people left it.
+A plan opens from the answer that made it as a **board**, a column per
+status, where a click moves a step on and a new step can be added; and a
+**timeline**, each step from its start to its due date. A plan made in a
+room is its people's to see and move along; the chat reads it as people left
+it.
+
+**A chat in a project plans in the project**, not in a plan of its own: its
+answers keep the project's goals and tasks ([Projects](#projects)), and the
+Plans tool is not offered there. A chat put in a project brings its plan
+with it: the plan is a goal of the project (its card under the answer says
+so, with a link), its steps the goal's tasks, each as it stood (who does it,
+when, what it waits for; done when it was). The upgrade to 8.2 did the same
+for the plans of chats already in a project, rooms' too: such a plan is the
+project's people's now, not the room's.
 
 Code Arena's working plans are there too, with the chat its session keeps in
 step with ([code-arena.md](code-arena.md#the-plan)): each step with what
@@ -1010,12 +1019,16 @@ What a project holds:
 - **Assistants, skills and apps** you made (or may edit). Being in a project
   shares them with no one: who may not use one still may not.
 - **Goals** (milestones with a state: planned, doing, done or dropped, and a
-  due date) and **tasks** (done or not, of a goal or not, with who does
-  them). The plans of the project's chats count too: their steps are tasks.
+  due date) and **tasks** (of a goal or not: to do, doing, blocked or done;
+  who does it, a person of the project or a name; its start and due date,
+  notes, and the tasks it waits for). **List** shows them one a line (a date
+  passed says *late*); **Board** a column for each state, a task's menu
+  moving it on. Code Arena's working plans of the project's sessions count
+  too: their steps are tasks.
   The project's chats keep them up to date themselves: an answer in a chat
   in a project reads its goals and tasks, adds a goal when you set out an
-  aim, adds its steps as tasks under it as it plans, and ticks them as the
-  work is done (the tools `project_plan`, `project_goal` and `project_task`,
+  aim, adds its steps as tasks under it as it plans (with who does each,
+  when and what it waits for), and moves them on as the work goes (the tools `project_plan`, `project_goal` and `project_task`,
   which every answer in a project has; a viewer's chats only read them). The
   page says which chat set each one, linked when it is yours (another
   person's: "set by a chat").

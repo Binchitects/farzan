@@ -7626,11 +7626,20 @@ namespace Llm.Core.Data.Migrations
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uuid");
 
+                    b.PrimitiveCollection<List<Guid>>("DependsOn")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
                     b.Property<bool>("Done")
                         .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("DoneAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("DueOn")
+                        .HasColumnType("date");
 
                     b.Property<Guid?>("GoalId")
                         .HasColumnType("uuid");
@@ -7638,8 +7647,26 @@ namespace Llm.Core.Data.Migrations
                     b.Property<decimal?>("HumanHours")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Owner")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("StartOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasDefaultValue("todo");
 
                     b.Property<string>("Title")
                         .IsRequired()

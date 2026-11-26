@@ -61,12 +61,24 @@ export interface SetBy {
   kind: 'chat' | 'session' | 'room'
 }
 
+export type TaskStatus = 'todo' | 'doing' | 'blocked' | 'done'
+
+export const taskStatusLabels: Record<TaskStatus, string> = { todo: 'To do', doing: 'Doing', blocked: 'Blocked', done: 'Done' }
+
 export interface ProjectTask {
   id: string
   title: string
   goalId: string | null
   assigneeId: string | null
   assignee: string | null
+  /** Who does it in words, when no person of the app is given it. */
+  owner?: string | null
+  status: TaskStatus
+  notes?: string | null
+  startOn?: string | null
+  dueOn?: string | null
+  /** The tasks it waits for. */
+  dependsOn?: string[]
   done: boolean
   doneAt: string | null
   /** The hours a person would take for it by hand; null: not estimated. */

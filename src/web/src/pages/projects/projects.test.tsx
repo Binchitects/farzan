@@ -151,6 +151,43 @@ describe('projects', () => {
     await waitFor(() => expect(calls.find((c) => c.method === 'POST' && c.path === '/api/projects/p1/tasks')?.body).toEqual({ title: 'Write the runbook' }))
   })
 
+  it('shows the tasks as a board by where each stands, its plan of a chat with who, when and what it waits for, and moves one on', async () => {
+    const task = (id: string, title: string, status: string, more: object = {}) => ({
+      id, title, goalId: 'g1', assigneeId: null, assignee: null, owner: null, status, notes: null, startOn: null, dueOn: null, dependsOn: [], done: status === 'done', doneAt: null,
+      humanHours: null, createdAt: '2026-11-01T10:00:00Z', from: { id: 'c1', title: 'Refunds', kind: 'chat' }, ...more,
+    })
+    const calls = fakeApi(member, {
+      'GET /api/projects/p1': () => ({
+        json: project({
+          tasks: [
+            task('t1', 'Design', 'done', { owner: 'Ann' }),
+            task('t2', 'Build', 'blocked', { owner: 'Platform team', dueOn: '2020-01-31', dependsOn: ['t1'], notes: 'Waits for the cluster.' }),
+            task('t3', 'Ship', 'todo', { dependsOn: ['t2'] }),
+          ],
+        }),
+      }),
+      'GET /api/projects/p1/report': () => ({ json: report }),
+      'PATCH /api/projects/p1/tasks/t3': () => ({ status: 204 }),
+    })
+    renderApp('/projects/p1')
+    await userEvent.click(await screen.findByRole('tab', { name: 'Goals and tasks' }))
+    // In the list: where a task stands when it is neither to do nor done, who, and a date passed.
+    const list = screen.getByRole('list', { name: 'Tasks' })
+    expect(within(list).getByText('Blocked')).toBeInTheDocument()
+    expect(within(list).getByText('Platform team')).toBeInTheDocument()
+    expect(within(list).getByText('late: due 2020-01-31')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Board' }))
+    const blocked = screen.getByRole('region', { name: 'Blocked' })
+    const build = within(blocked).getByRole('article', { name: 'Build' })
+    expect(within(build).getByText('Waits for Design')).toBeInTheDocument()
+    expect(within(build).getByText('Waits for the cluster.')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Done' })).getByRole('article', { name: 'Design' })).toBeInTheDocument()
+    await userEvent.click(within(screen.getByRole('region', { name: 'To do' })).getByRole('combobox', { name: 'Where Ship stands' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Doing' }))
+    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH' && c.path === '/api/projects/p1/tasks/t3')?.body).toEqual({ status: 'doing' }))
+  })
+
   it('lets a viewer see a project but not change it', async () => {
     fakeApi(member, {
       'GET /api/projects/p1': () => ({ json: project({ role: 'viewer', isOwner: false }) }),

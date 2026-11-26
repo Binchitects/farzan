@@ -121,14 +121,33 @@ public sealed class ProjectGoal
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
-/// <summary>A task of the project, of a goal or not, done or not, and who does it.</summary>
+/// <summary>
+/// A task of the project, of a goal or not: where it stands (to do, doing, blocked, done), who does it (a person of the
+/// project, or a name as a plan says it), when, and the tasks it waits for. A chat's plan in the project is its goal and
+/// these tasks (what the Plans tool kept before 8.2).
+/// </summary>
 public sealed class ProjectTask
 {
+    public const string Todo = "todo";
+    public const string Doing = "doing";
+    public const string Blocked = "blocked";
+    public const string DoneStatus = "done";
+    public static readonly string[] States = [Todo, Doing, Blocked, DoneStatus];
+
     public Guid Id { get; set; } = Guid.CreateVersion7();
     public Guid ProjectId { get; set; }
     public Guid? GoalId { get; set; }
     public required string Title { get; set; }
+    public string? Notes { get; set; }
     public Guid? AssigneeId { get; set; }
+    /// <summary>Who does it, in words (a team, someone outside the app), when no person of the app is given it.</summary>
+    public string? Owner { get; set; }
+    /// <summary>todo, doing, blocked or done; <see cref="Done"/> is it being done, kept with it.</summary>
+    public string Status { get; set; } = Todo;
+    public DateOnly? StartOn { get; set; }
+    public DateOnly? DueOn { get; set; }
+    /// <summary>The tasks of the project it waits for.</summary>
+    public List<Guid> DependsOn { get; set; } = [];
     public bool Done { get; set; }
     public DateTimeOffset? DoneAt { get; set; }
     /// <summary>The hours a person would take for it by hand, without the models; null: not estimated.</summary>

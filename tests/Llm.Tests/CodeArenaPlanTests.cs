@@ -59,9 +59,9 @@ public sealed class CodeArenaPlanTests(AppFixture app)
         Assert.Equal("make test", steps[2].GetProperty("check").GetString());
         Assert.Equal(JsonValueKind.Null, steps[2].GetProperty("checkResult").ValueKind);
 
-        // On the person's board, as Code Arena's; read there, not changed there.
-        var listed = (await person.JsonAsync(await person.GetAsync("/api/plans"))).EnumerateArray().Single(p => p.GetProperty("id").GetGuid() == id);
-        Assert.Equal(("code", "codec", 3, 1), (listed.GetProperty("source").GetString(), listed.GetProperty("place").GetString(), listed.GetProperty("steps").GetInt32(), listed.GetProperty("done").GetInt32()));
+        // On its page, as Code Arena's; read there, not changed there.
+        var listed = await person.JsonAsync(await person.GetAsync($"/api/plans/{id}"));
+        Assert.Equal(("code", "codec", 3), (listed.GetProperty("source").GetString(), listed.GetProperty("place").GetString(), listed.GetProperty("steps").GetArrayLength()));
         var moved = await person.Http.PatchAsJsonAsync(new Uri($"/api/plans/{id}/steps/2", UriKind.Relative), new { status = "done" });
         await StatusAssert.Is(HttpStatusCode.Conflict, moved);
         Assert.Contains("Code Arena", await moved.Content.ReadAsStringAsync(), StringComparison.Ordinal);

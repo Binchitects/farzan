@@ -38,7 +38,11 @@ public sealed record ChatProjectRequest(Guid? ProjectId);
 public sealed record ProjectGoalRequest(string? Title = null, string? Description = null, string? Status = null, string? DueOn = null, int? Position = null, decimal? HumanHours = null);
 
 /// <summary>Only what is sent changes. GoalId and AssigneeId: Guid.Empty clears them.</summary>
-public sealed record ProjectTaskRequest(string? Title = null, Guid? GoalId = null, Guid? AssigneeId = null, bool? Done = null, decimal? HumanHours = null);
+/// <param name="Status">todo, doing, blocked or done (done or not with it); <paramref name="Done"/> alone ticks it or takes it back to do.</param>
+/// <param name="StartOn">yyyy-MM-dd; "": none. <paramref name="DueOn"/> the same.</param>
+/// <param name="DependsOn">The project's tasks it waits for.</param>
+public sealed record ProjectTaskRequest(string? Title = null, Guid? GoalId = null, Guid? AssigneeId = null, bool? Done = null, decimal? HumanHours = null,
+    string? Status = null, string? Notes = null, string? Owner = null, string? StartOn = null, string? DueOn = null, Guid[]? DependsOn = null);
 
 /// <summary>
 /// Projects in Arena and Code Arena: made by anyone who may (feature.projects; a global one, everyone's to see and add
@@ -346,7 +350,11 @@ public static class ProjectEndpoints
             members, repositories, items = things, chats = shown,
             otherChats = otherOwners.Select(o => new { person = otherNames.GetValueOrDefault(o.Key) ?? "(a former person)", count = o.Count() }),
             goals = goals.Select(x => new { x.Id, x.Title, x.Description, x.Status, x.DueOn, x.DoneAt, x.Position, x.HumanHours, from = From(x.ChatId) }),
-            tasks = tasks.Select(t => new { t.Id, t.Title, t.GoalId, t.AssigneeId, assignee = t.AssigneeId is { } a ? assigneeNames.GetValueOrDefault(a) : null, t.Done, t.DoneAt, t.HumanHours, t.CreatedAt, from = From(t.ChatId) }),
+            tasks = tasks.Select(t => new
+            {
+                t.Id, t.Title, t.GoalId, t.AssigneeId, assignee = t.AssigneeId is { } a ? assigneeNames.GetValueOrDefault(a) : null, t.Owner, t.Status, t.Notes, t.StartOn, t.DueOn, t.DependsOn,
+                t.Done, t.DoneAt, t.HumanHours, t.CreatedAt, from = From(t.ChatId),
+            }),
         });
     }
 
@@ -688,6 +696,11 @@ public static class ProjectEndpoints
             var from = c.WorkProjectId;
             c.WorkProjectId = projectId;
             await db.SaveChangesAsync(ct);
+            // Its plan is the project's now: a goal and its tasks, as the chat keeps them from here on.
+            if (projectId is { } into)
+            {
+                await Plans.PlanMove.IntoProjectAsync(db, c.Id, into, ct);
+            }
             await ProjectTags.RetagAsync(db, c.Id, projectId, ct);
             await audit.WriteAsync("project.chat", (projectId ?? from)?.ToString(), detail: $"{(projectId is null ? "took out" : "put in")} {(c.IsRoom ? "room" : "chat")} {c.Id}");
         }
@@ -871,8 +884,34 @@ public static class ProjectEndpoints
         {
             return ("assignee", "That person is not there.");
         }
+        if (body.Status is { } status && !ProjectTask.States.Contains(status))
+        {
+            return ("status", $"A task is one of: {string.Join(", ", ProjectTask.States)}.");
+        }
+        if (body.Notes is { Length: > 4000 } || body.Owner is { Length: > 120 })
+        {
+            return ("text", "A task's notes have at most 4,000 characters, and who does it 120.");
+        }
+        foreach (var (date, what) in new[] { (body.StartOn, "Its start"), (body.DueOn, "When it is due") })
+        {
+            if (date is { Length: > 0 } && !DateOnly.TryParseExact(date.Trim(), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
+            {
+                return ("date", $"{what} is a date as 2026-11-30, not \"{date}\".");
+            }
+        }
+        if (body.DependsOn is { Length: > 0 } waits)
+        {
+            var distinct = waits.Distinct().ToList();
+            if (distinct.Count > 50 || await db.ProjectTasks.CountAsync(x => x.ProjectId == id && distinct.Contains(x.Id), ct) != distinct.Count)
+            {
+                return ("depends", "A task waits for at most 50 of this project's tasks.");
+            }
+        }
         return HoursFault(body.HumanHours);
     }
+
+    private static DateOnly? DateOf(string text) =>
+        text.Trim() is { Length: > 0 } t ? DateOnly.ParseExact(t, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) : null;
 
     internal static void Apply(ProjectTask task, ProjectTaskRequest body)
     {
@@ -888,10 +927,37 @@ public static class ProjectEndpoints
         {
             task.AssigneeId = assignee == Guid.Empty ? null : assignee;
         }
-        if (body.Done is { } done && done != task.Done)
+        // Where it stands and whether it is done go together: a status says both; done alone ticks it or takes it back to do.
+        var status = body.Status ?? (body.Done is { } d ? (d ? ProjectTask.DoneStatus : task.Status == ProjectTask.DoneStatus ? ProjectTask.Todo : task.Status) : task.Status);
+        if (status != task.Status || (status == ProjectTask.DoneStatus) != task.Done)
         {
-            task.Done = done;
-            task.DoneAt = done ? DateTimeOffset.UtcNow : null;
+            var nowDone = status == ProjectTask.DoneStatus;
+            if (nowDone != task.Done)
+            {
+                task.DoneAt = nowDone ? DateTimeOffset.UtcNow : null;
+            }
+            task.Status = status;
+            task.Done = nowDone;
+        }
+        if (body.Notes is { } notes)
+        {
+            task.Notes = notes.Trim() is { Length: > 0 } n ? n : null;
+        }
+        if (body.Owner is { } owner)
+        {
+            task.Owner = owner.Trim() is { Length: > 0 } o ? o : null;
+        }
+        if (body.StartOn is { } start)
+        {
+            task.StartOn = DateOf(start);
+        }
+        if (body.DueOn is { } due)
+        {
+            task.DueOn = DateOf(due);
+        }
+        if (body.DependsOn is { } waits)
+        {
+            task.DependsOn = [.. waits.Distinct().Where(w => w != task.Id)];
         }
         if (body.HumanHours is { } hours)
         {

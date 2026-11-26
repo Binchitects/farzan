@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ListChecks, MessageSquare, Plus, SquareTerminal } from 'lucide-react'
+import { MessageSquare, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { PageHeader } from '@/components/app/page-header'
@@ -8,7 +8,6 @@ import { Segmented } from '@/components/app/segmented'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from '@/components/ui/toaster'
@@ -59,70 +58,14 @@ const columns: { status: StepStatus; label: string }[] = [
   { status: 'done', label: 'Done' },
 ]
 
+/** A chat's plan put in its project: it is the project's goal of the same id now. */
+export type MovedPlan = { moved: { projectId: string; project: string; goal: string } }
+
 const planQuery = (id: string) => ({
   queryKey: ['plans', id] as const,
-  queryFn: ({ signal }: { signal: AbortSignal }) => api<Plan>(`/api/plans/${id}`, { signal }),
+  queryFn: ({ signal }: { signal: AbortSignal }) => api<Plan | MovedPlan>(`/api/plans/${id}`, { signal }),
   refetchInterval: 15_000,
 })
-
-/** The person's plans and their rooms', newest change first. */
-export function PlansPage() {
-  const plans = useQuery({
-    queryKey: ['plans'] as const,
-    queryFn: ({ signal }) =>
-      api<{ id: string; title: string; conversationId: string | null; source: 'chat' | 'code'; place: string | null; updatedAt: string; steps: number; done: number }[]>('/api/plans', { signal }),
-  })
-  return (
-    <>
-      <PageHeader
-        title="Plans"
-        description="Plans the chat made and keeps up to date (its Plans tool), and Code Arena's working plans: steps with what done means, owners, dates and what each waits for. A room's plans are its people's."
-      />
-      {plans.error ? (
-        <QueryError error={plans.error} retry={() => plans.refetch()} />
-      ) : plans.isPending ? (
-        <Skeleton className="h-32" />
-      ) : plans.data.length === 0 ? (
-        <EmptyState icon={ListChecks} title="No plans yet">
-          Ask a chat with the Plans tool on to plan something: a launch, a migration, a trip.
-        </EmptyState>
-      ) : (
-        <div className="grid gap-6">
-          {[
-            { label: 'In progress', list: plans.data.filter((p) => p.steps === 0 || p.done < p.steps) },
-            { label: 'Done', list: plans.data.filter((p) => p.steps > 0 && p.done >= p.steps) },
-          ]
-            .filter((g) => g.list.length > 0)
-            .map((g) => (
-              <section key={g.label} aria-label={g.label} className="grid gap-2">
-                <h2 className="text-sm font-medium text-muted-foreground">
-                  {g.label} ({g.list.length})
-                </h2>
-                <ul className="grid gap-2" aria-label={`Plans ${g.label.toLowerCase()}`}>
-                  {g.list.map((p) => (
-                    <li key={p.id}>
-                      <Link to={`/plans/${p.id}`} className="flex items-center gap-3 rounded-lg border px-4 py-3 text-sm outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring">
-                        {p.source === 'code' ? (
-                          <SquareTerminal className="size-4 shrink-0 text-muted-foreground" aria-label="Code Arena's" />
-                        ) : (
-                          <ListChecks className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                        )}
-                        <span className="min-w-0 flex-1 truncate font-medium">{p.title}</span>
-                        {p.place && <Badge variant="outline">{p.place}</Badge>}
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {p.done} of {p.steps} done
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-        </div>
-      )}
-    </>
-  )
-}
 
 const day = 24 * 60 * 60 * 1000
 const toTime = (d: string) => new Date(`${d}T00:00:00Z`).getTime()
@@ -176,6 +119,17 @@ export function PlanPage() {
   const [adding, setAdding] = useState('')
   if (plan.error) return <QueryError error={plan.error} retry={() => plan.refetch()} />
   if (!plan.data) return <Skeleton className="h-64" />
+  if ('moved' in plan.data) {
+    const m = plan.data.moved
+    return (
+      <>
+        <PageHeader title={m.goal} description="This plan's chat is in a project: the plan is a goal of the project now, its steps the goal's tasks." />
+        <Button asChild>
+          <Link to={`/projects/${m.projectId}`}>Open {m.project}</Link>
+        </Button>
+      </>
+    )
+  }
   const p = plan.data
   // Code Arena's agent keeps its plan: shown here, changed by asking the agent.
   const kept = p.source === 'code'

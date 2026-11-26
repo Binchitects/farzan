@@ -28,6 +28,12 @@ Sections used:
   tasks had hold for a new or changed schedule (Settings → Automations:
   schedules on, at most so many a person, no more often than Most often);
   one kept as it was still saves.
+- **Plans are the project's.** A chat in a project keeps its plan as the
+  project's goals and tasks; tasks have where they stand (to do, doing,
+  blocked, done), who does them, start and due dates, notes and the tasks
+  they wait for, and the project's page shows them as a list or a board. A
+  chat put in a project brings its plan; the chat's plan card says where it
+  went.
 
 ### :boom: Breaking changes & Deprecations
 
@@ -45,6 +51,12 @@ Sections used:
   `tasks.manage.all` is gone (nothing used it). On an install with the
   `agents` feature off, the scheduled tasks become workflows that run once
   it is turned on.
+- **The Plans list page (`/plans`, `GET /api/plans`) is gone**: a plan is in
+  its chat (its card opens its board), and a project's in the project. The
+  upgrade makes each plan of a chat in a project (a room's too) the project's
+  goal of the same id with its steps as tasks, each done when it was; a
+  room's plan is then the project's people's, not the room's. Code Arena's
+  working plans and those of chats in no project stay plans.
 
 ## v8.1.0 (unreleased, branch v8.1)
 

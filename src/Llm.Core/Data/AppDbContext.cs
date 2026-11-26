@@ -1003,6 +1003,10 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
         {
             e.ToTable("work_project_tasks");
             e.Property(x => x.Title).HasMaxLength(300);
+            e.Property(x => x.Notes).HasMaxLength(4000);
+            e.Property(x => x.Owner).HasMaxLength(120);
+            e.Property(x => x.Status).HasMaxLength(12).HasDefaultValue(Llm.Core.Projects.ProjectTask.Todo);
+            e.Property(x => x.DependsOn).HasDefaultValueSql("'{}'::uuid[]");
             e.HasIndex(x => new { x.ProjectId, x.CreatedAt });
             e.HasOne<Projects.Project>().WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Projects.ProjectGoal>().WithMany().HasForeignKey(x => x.GoalId).OnDelete(DeleteBehavior.SetNull);

@@ -1,4 +1,4 @@
-import { Activity, AppWindow, BookOpenText, FolderKanban, ListOrdered, Megaphone, MessageSquareHeart, BadgeCheck, AudioLines, Brain, GitPullRequest, ListChecks, ListTodo, BarChart, BarChart3, Blocks, Bot, Boxes, Database, FlaskConical, HardDrive, Home, KeyRound, LayoutDashboard, Library, LineChart, Logs, MessageSquare, Package, Palette, Plug, Presentation, ScanSearch, ScrollText, Settings, ShieldAlert, ShieldCheck, Siren, SquareSlash, Telescope, ThumbsUp, Timer, Trophy, Users, UsersRound, Workflow, Wrench, type LucideIcon, Calculator, Gauge, Shield, Sparkles } from 'lucide-react'
+import { Activity, AppWindow, BookOpenText, FolderKanban, ListOrdered, Megaphone, MessageSquareHeart, BadgeCheck, AudioLines, Brain, GitPullRequest, ListTodo, BarChart, BarChart3, Blocks, Bot, Boxes, Database, FlaskConical, HardDrive, Home, KeyRound, LayoutDashboard, Library, LineChart, Logs, MessageSquare, Package, Palette, Plug, Presentation, ScanSearch, ScrollText, Settings, ShieldAlert, ShieldCheck, Siren, SquareSlash, Telescope, ThumbsUp, Timer, Trophy, Users, UsersRound, Workflow, Wrench, type LucideIcon, Calculator, Gauge, Shield, Sparkles } from 'lucide-react'
 import { codeIntelName } from '@/lib/brand'
 
 export interface NavItem {
@@ -43,7 +43,7 @@ export const navigation: NavSection[] = [
       { title: 'Home', path: '/', icon: Home },
       { title: 'Chat', path: '/chat', icon: MessageSquare, keywords: ['conversation', 'ask', 'model', 'code-intel'], may: ['feature.chat'] },
       { title: 'Assistants', path: '/assistants', icon: Bot, keywords: ['gpts', 'gems', 'projects', 'instructions', 'knowledge', 'shared', 'team'] },
-      { title: 'Projects', path: '/projects', icon: FolderKanban, keywords: ['project', 'team', 'accounting', 'budget', 'progress', 'goals', 'milestones', 'tasks', 'report', 'export', 'pdf', 'excel', 'global'] },
+      { title: 'Projects', path: '/projects', icon: FolderKanban, keywords: ['project', 'team', 'accounting', 'budget', 'progress', 'goals', 'milestones', 'tasks', 'report', 'export', 'pdf', 'excel', 'global', 'plan', 'plans', 'board', 'kanban', 'steps'] },
       { title: 'Wiki', path: '/wiki', icon: BookOpenText, keywords: ['search', 'knowledge', 'documents', 'docs', 'handbook', 'code', 'files', 'tables', 'find', 'browse'], may: ['feature.wiki'] },
     ],
   },
@@ -72,7 +72,6 @@ export const navigation: NavSection[] = [
     title: 'Organize',
     space: 'work',
     items: [
-      { title: 'Plans', path: '/plans', icon: ListChecks, keywords: ['plan', 'board', 'timeline', 'gantt', 'steps', 'project', 'kanban'], may: ['feature.plans'] },
       { title: 'Checklists', path: '/checklists', icon: ListTodo, keywords: ['checklist', 'definition of done', 'steps', 'review', 'before merge', 'tick', 'todo'] },
       { title: 'Skills', path: '/skills', icon: SquareSlash, keywords: ['slash commands', 'prompts', 'prompt library', 'templates', 'snippets', 'instructions', 'parameters'] },
       { title: 'Memory', path: '/memory', icon: Brain, keywords: ['remember', 'memories', 'recall', 'preferences', 'facts', 'decisions', 'lessons', 'pinned', 'context', 'what it knows about me'], may: ['feature.memory'] },

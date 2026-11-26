@@ -51,7 +51,24 @@ public static class ProjectWork
         {
             foreach (var t in some)
             {
-                text.Append(CultureInfo.InvariantCulture, $"{indent}- [{(t.Done ? "x" : " ")}] {t.Title} (task {t.Id}){Mine(t.ChatId)}\n");
+                var about = new List<string>();
+                if (t.Status is not (ProjectTask.Todo or ProjectTask.DoneStatus))
+                {
+                    about.Add(t.Status);
+                }
+                if (t.Owner is { Length: > 0 } owner)
+                {
+                    about.Add(owner);
+                }
+                if (t.DueOn is { } due)
+                {
+                    about.Add($"due {due:yyyy-MM-dd}");
+                }
+                if (t.DependsOn.Count > 0)
+                {
+                    about.Add("waits for " + string.Join(", ", t.DependsOn.Select(x => tasks.FirstOrDefault(o => o.Id == x)?.Title is { } title ? $"\"{(title.Length > 40 ? title[..40] + "…" : title)}\"" : x.ToString())));
+                }
+                text.Append(CultureInfo.InvariantCulture, $"{indent}- [{(t.Done ? "x" : " ")}] {t.Title}{(about.Count > 0 ? $" ({string.Join("; ", about)})" : "")} (task {t.Id}){Mine(t.ChatId)}\n");
             }
         }
         foreach (var g in goals)
@@ -119,7 +136,11 @@ public static class ProjectWork
         Changeable(place);
         var p = place.Project;
         var done = args["done"] is JsonValue v && v.TryGetValue<bool>(out var d) ? d : (bool?)null;
-        var body = new ProjectTaskRequest(Schema.Str(args, "title"), Id(args, "goal"), Done: done);
+        Guid[]? waits = args["waits_for"] is JsonArray w
+            ? [.. w.Select(x => Guid.TryParse(x?.ToString().Trim(), out var g) ? g : throw new ProjectWorkException("waits_for holds task ids, as project_plan shows them."))]
+            : null;
+        var body = new ProjectTaskRequest(Schema.Str(args, "title"), Id(args, "goal"), Done: done, Status: Schema.Str(args, "status"), Notes: Schema.Str(args, "notes"),
+            Owner: Schema.Str(args, "owner"), StartOn: Schema.Str(args, "start"), DueOn: Schema.Str(args, "due"), DependsOn: waits);
         if (await ProjectEndpoints.TaskFaultAsync(db, p.Id, body, ct) is { } fault)
         {
             throw new ProjectWorkException(fault.Message);
@@ -210,13 +231,20 @@ public static class ProjectWork
                     ["description"] = Schema.Text("More on it: what done means, how it is checked."),
                     ["due"] = Schema.Text("When it is due, 2026-12-31."),
                 }));
-            functions.Add(Schema.Function(TaskFunction, "Adds a task of the project (no id), under a goal or not, or changes one (its id): its title, its goal, done or not.",
+            functions.Add(Schema.Function(TaskFunction,
+                "Adds a task of the project (no id), under a goal or not, or changes one (its id): its title, its goal, where it stands, who does it, when, what it waits for. A plan of several steps is a goal and its tasks.",
                 new JsonObject
                 {
                     ["id"] = Schema.Text("The task's id, to change it; leave out to add one."),
                     ["title"] = Schema.Text("What to do, in a line (1 to 300 characters)."),
                     ["goal"] = Schema.Text("The id of the goal it is part of."),
+                    ["status"] = Schema.Choice("Where it stands: todo, doing, blocked or done.", ProjectTask.States),
                     ["done"] = new JsonObject { ["type"] = "boolean", ["description"] = "true when it is done; false when it is not after all." },
+                    ["owner"] = Schema.Text("Who does it, as the person says it (a name, a team)."),
+                    ["notes"] = Schema.Text("More on it: what done means, how it is checked, why it is blocked."),
+                    ["start"] = Schema.Text("When it starts, 2026-12-01."),
+                    ["due"] = Schema.Text("When it is due, 2026-12-31."),
+                    ["waits_for"] = new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" }, ["description"] = "The ids of the project's tasks it waits for." },
                 }));
         }
         return functions;

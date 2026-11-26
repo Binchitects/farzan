@@ -667,14 +667,6 @@ export const topics = {
     manual: { doc: 'chat', section: 'checklists' },
   },
 
-  plans: {
-    title: 'Plans',
-    about: "Plans the chat made with its Plans tool, and Code Arena's working plans: steps with what done means, owners, dates and what each waits for. Yours, and those of rooms you are in.",
-    parts: [{ name: 'The list', text: "Each plan, newest change first, with how many of its steps are done; Code Arena's show a terminal and their project. A row opens it." }],
-    tasks: [{ title: 'Make a plan', steps: ['In a chat, turn on **Plans** in the Tools menu.', 'Ask it to plan something; tell it who does what and by when.', 'Open the plan from the answer.'] }],
-    manual: { doc: 'chat', section: 'plans' },
-  },
-
   plan: {
     title: 'A plan',
     about: 'One plan as a board (a column per status) and a timeline (each step from its start to its due date). The chat keeps it up to date; you move steps along here.',
