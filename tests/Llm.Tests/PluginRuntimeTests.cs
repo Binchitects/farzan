@@ -144,8 +144,8 @@ public sealed class PluginRuntimeTests(AppFixture app, PluginRuntimeFixture runt
         // Its frames' host API calls: what it was granted, and nothing it was not.
         var caps = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/host", new { method = "capabilities" }));
         Assert.Contains("storage", caps.GetProperty("result").GetProperty("scopes").EnumerateArray().Select(s => s.GetString()));
-        var people = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/host", new { method = "people.search", @params = new { query = "a" } }));
-        Assert.Equal(-32001, people.GetProperty("error").GetProperty("code").GetInt32());
+        var groups = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/host", new { method = "groups.list" }));
+        Assert.Equal(-32001, groups.GetProperty("error").GetProperty("code").GetInt32());
         var fetch = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/host", new { method = "http.fetch", @params = new { url = "https://evil.example.net/" } }));
         Assert.Equal(-32001, fetch.GetProperty("error").GetProperty("code").GetInt32());
 
@@ -156,7 +156,7 @@ public sealed class PluginRuntimeTests(AppFixture app, PluginRuntimeFixture runt
         var denied = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/tools/list_tickets", new { arguments = new { } }));
         Assert.True(denied.GetProperty("isError").GetBoolean());
         Assert.Contains("not granted storage", denied.GetProperty("content").GetString(), StringComparison.Ordinal);
-        var beyond = await admin.Http.PutAsJsonAsync(new Uri($"/api/admin/plugins/{id}/grants", UriKind.Relative), new { granted = new[] { "scope:people.read" } });
+        var beyond = await admin.Http.PutAsJsonAsync(new Uri($"/api/admin/plugins/{id}/grants", UriKind.Relative), new { granted = new[] { "scope:groups.read" } });
         Assert.Equal(HttpStatusCode.BadRequest, beyond.StatusCode);
 
         // Its pages: listed for the person, their files served under the frames' policy, nothing else of the package.
@@ -249,6 +249,75 @@ public sealed class PluginRuntimeTests(AppFixture app, PluginRuntimeFixture runt
         Assert.False(await db.PluginEvents.AnyAsync(e => e.Type == "chat.message.created" && e.ServerId == db.McpServers.Single(s => s.Plugin == "ticket-desk").Id));
         var last = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/host", new { method = "storage.get", @params = new { key = "last-message-at" } }));
         Assert.Equal(JsonValueKind.String, last.GetProperty("result").ValueKind);
+    }
+
+    [Fact]
+    public async Task An_answer_is_changed_by_a_plugins_after_model_hook_and_one_that_runs_past_its_deadline_is_skipped()
+    {
+        await using var f = NewApp();
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        await TrustAsync(admin);
+        await InstallAsync(admin, "ticket-desk");
+        // The chaos plugin's after_model hook runs past its 500 ms: skipped, and the chat goes on.
+        await InstallAsync(admin, "chaos");
+        Assert.Equal(HttpStatusCode.Created, (await BridgeAsync(admin, "/api/p/ticket-desk/tickets", new { title = "The VPN drops" })).StatusCode);
+        var chat = (await admin.JsonAsync(await admin.PostAsync("/api/chat/conversations", new { useCodeIntel = false }))).GetProperty("id").GetGuid();
+        var sent = await (await admin.PostAsync($"/api/chat/conversations/{chat}/messages", new { content = "Is T-1 fixed?" })).Content.ReadAsStringAsync();
+        Assert.Contains("\"type\":\"done\"", sent, StringComparison.Ordinal);
+        // The page was told the new words, and the answer kept is the hook's: the ticket it names says its status.
+        Assert.Contains("\"type\":\"replace\"", sent, StringComparison.Ordinal);
+        await using var scope = f.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var answer = await db.ChatMessages.AsNoTracking().Where(m => m.ConversationId == chat && m.Role == "assistant").Select(m => m.Content).SingleAsync();
+        Assert.Contains("T-1 (open)", answer, StringComparison.Ordinal);
+        Assert.True(await db.AuditEvents.AnyAsync(e => e.Action == "plugin.hook_modified"));
+    }
+
+    [Fact]
+    public async Task An_upload_is_renamed_or_refused_by_a_plugins_before_store_hook_and_one_that_throws_is_skipped()
+    {
+        await using var f = NewApp();
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        await TrustAsync(admin);
+        await InstallAsync(admin, "ticket-desk");
+        // The chaos plugin's before_store hook throws on every upload: skipped (it observes only, and fails open).
+        await InstallAsync(admin, "chaos");
+        async Task<HttpResponseMessage> UploadAsync(string name, string text)
+        {
+            using var form = new MultipartFormDataContent { { new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(text)), "file", name } };
+            return await admin.Http.PostAsync(new Uri("/api/chat/attachments", UriKind.Relative), form);
+        }
+        var kept = await UploadAsync("vpn log.txt", "the tunnel dropped at 10:02");
+        Assert.Equal(HttpStatusCode.OK, kept.StatusCode);
+        Assert.Equal("vpn-log.txt", (await admin.JsonAsync(kept)).GetProperty("fileName").GetString());
+        var program = await UploadAsync("fix.exe", "MZ");
+        Assert.Equal(HttpStatusCode.BadRequest, program.StatusCode);
+        Assert.Contains("does not take programs (fix.exe)", await program.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        await using var scope = f.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.False(await db.ChatAttachments.AnyAsync(a => a.FileName == "fix.exe"));
+        // Kept under the name the hook gave it.
+        Assert.True(await db.ChatAttachments.AnyAsync(a => a.FileName == "vpn-log.txt"));
+    }
+
+    [Fact]
+    public async Task A_person_made_is_announced_to_the_plugins_allowed_to_them()
+    {
+        await using var f = NewApp();
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        await TrustAsync(admin);
+        await InstallAsync(admin, "ticket-desk");
+        var name = "pc" + Guid.NewGuid().ToString("N")[..8];
+        Assert.Equal(HttpStatusCode.Created, (await admin.PostAsync("/api/admin/people", new { userName = name, email = $"{name}@example.test" })).StatusCode);
+        await using var scope = f.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.True(await db.PluginEvents.AnyAsync(e => e.Type == "person.created"));
+        var work = f.Services.GetServices<Microsoft.Extensions.Hosting.IHostedService>().OfType<Llm.Api.Plugins.PluginWork>().Single();
+        Assert.True(await work.EventsAsync(CancellationToken.None) >= 1);
+        var joined = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/host", new { method = "storage.get", @params = new { key = "people-joined" } }));
+        Assert.Equal(1, joined.GetProperty("result").GetInt32());
+        var newest = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/host", new { method = "storage.get", @params = new { key = "newest-person" } }));
+        Assert.Equal(name, newest.GetProperty("result").GetString());
     }
 
     [Fact]

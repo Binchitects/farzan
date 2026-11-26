@@ -136,6 +136,12 @@ public static class MeetingEndpoints
         {
             return Safeguards.Safeguards.Problem(refused);
         }
+        // Plugins' hooks before it is kept: observed, renamed by one granted to, or refused by one granted to.
+        var (name, stopped) = await Plugins.PluginUploads.BeforeStoreAsync(request.HttpContext.RequestServices, me, Path.GetFileName(file.FileName), file.ContentType, ct);
+        if (stopped is not null)
+        {
+            return AuthEndpoints.Problem(400, "plugin", stopped);
+        }
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms, ct);
         if (Chat.Media.Detect(file.FileName, file.ContentType, ms.ToArray()) is not { } kind)
@@ -145,7 +151,7 @@ public static class MeetingEndpoints
         // Its sound alone is kept (as an MP3, once made): a video's pictures are not the meeting's.
         var recording = new ChatAttachment
         {
-            UserId = me.Id, FileName = Path.GetFileName(file.FileName), ContentType = kind.ContentType, Size = file.Length, Text = "", Kind = "audio", Data = ms.ToArray(),
+            UserId = me.Id, FileName = name, ContentType = kind.ContentType, Size = file.Length, Text = "", Kind = "audio", Data = ms.ToArray(),
         };
         db.ChatAttachments.Add(recording);
         var title = form["title"].ToString().Trim();
@@ -153,6 +159,7 @@ public static class MeetingEndpoints
         db.Meetings.Add(meeting);
         await db.SaveChangesAsync(ct);
         await audit.WriteAsync("meeting.add", meeting.Title.Length > 0 ? meeting.Title : recording.FileName, actor: me);
+        await Plugins.PluginUploads.UploadedAsync(request.HttpContext.RequestServices, recording, me.Id);
         engine.Start(meeting.Id);
         return Results.Created($"/api/meetings/{meeting.Id}", Brief(meeting));
     }

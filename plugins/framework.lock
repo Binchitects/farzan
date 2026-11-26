@@ -1,9 +1,9 @@
 # The plugin framework Arena is held to (tools/plugin-framework-sync.sh writes this).
 framework: Binchitects/farzan-arena-plugin-framework
-version: 0.1.1 (tag v0.1.1)
-commit: 250045783d61b9010e006fbbf7e4bc543cfb5b83
+version: 0.2.0
+commit: bb91893fa8f5148980c27baed4502ae9dc6ad951
 files:
-  keys/publisher.pub.pem: 804619e8044010f78db5acbda3a86549092f85f62a35a255b98537605f2db7fa
+  keys/publisher.pub.pem: e97cbe3862e1ca2b989e625030d7a0c64a3738b73944be92acb7b66371f6ebb3
   manifests/bad-arena-range.yaml: 4c4dc6303cffbad7279c0ce1860c3253e0fc2cc1834190c7f4485a5ed2f954ca
   manifests/bad-cron.yaml: 5822d07eb93174cc26cc5baeebb3473a0bd416a9e5ee292a01398fb984bcfe45
   manifests/bad-name.yaml: ca7f6d36dba30b067c0383ed9cc640e4184ee645af5529535e9d8f88f2f73b05
@@ -31,13 +31,13 @@ files:
   manifests/valid-everything.yaml: 821eed9d27791690417e10b436e1da7b5c9c6562ef9546084fc348e660ada99b
   manifests/valid-minimal.yaml: 00f7bb2ed0778a567a8dd4009e57fd783e8cfbd278b25bea1a53de1f3676ac0e
   manifests/valid-v2-shape.yaml: bbb2da7226cc69e2deaae170810b095e50069923d34c942a6b0357bbb70f5429
-  packages/added-file.fap: 34e905d5f3b91cce61537d9f401a3906c4acf90b1bf3b56790c00a0916bf3a84
-  packages/changed-file.fap: 27abc91ccd61bba80a140a5c53415b43ecd3184ad36017ebe261aaa2c06f53f3
-  packages/changed-list.fap: 6023f5bac22e9f9442a0b82f7a4b6515a8568de259d6cec48c3584effc792b9a
-  packages/chaos.fap: a993c0b1b34453971dd3c4d5a8245fe373c1371076cee089d2529ddcd44a3e1a
+  packages/added-file.fap: 0040cc6f7b437a66585aa6e1c139ced1dbca563874286e9fa54f262a1a974737
+  packages/changed-file.fap: b0259225b59652a2774aa9a6314a79341011279d7051d256eb09c35aad52a07b
+  packages/changed-list.fap: 9bf06f9b75a35931bf59725623d3f2800ee9e354b32d4cd88f659ef7b62531e2
+  packages/chaos.fap: 13942cf62f6f08ad408ebd154f86d426c35c55bca8be7faca6c8967aabcb2341
   packages/expected.json: 2ab39b4f5195ab38589f9657d7ea757ec156b83fa47c0f426602810ea0b54794
-  packages/hello.fap: 959ded0fc39f4012968b73fdf3a6ecb087b464dbc88451d07660c0cd2640ae95
-  packages/stranger-signed.fap: ceeae9d50287d5b2b04bab7d9a50d92a5c4616e1ac50cdf186e109a4df16d0fd
-  packages/swapped-embedded-key.fap: 239202f6edceb97808c0c714584a1ee0e8145735aad58e8bf4fe3568085c2893
-  packages/ticket-desk.fap: e68691c222eda33af9d246f392f908dee683e230f1f095b262528afc555271d5
-  packages/unsigned.fap: e2eec9c01a9bde24d0ef93cdc79b4349be6065f80790dd95e76d8affa330e784
+  packages/hello.fap: 1a048de8604a604a71d68cca229de4f42370b5dbd191e3d553da516cfc512835
+  packages/stranger-signed.fap: 58f669fdd4c0dcf76545ea5b712bbc4b0aa496229d4c4d695ca23d8520d0ed0a
+  packages/swapped-embedded-key.fap: 8a28d98a7aca5e216be694cfdcc151bd0031f330ab66f5f784e89226dd2d4c77
+  packages/ticket-desk.fap: 5094133093cff56f5b0734d3fee40e0169752e06f29fc0c0c98e6429bd638f74
+  packages/unsigned.fap: 5a312f6ca338fb9924bf38486238b686710313ac982d6413f626a8cdd73bbc3a

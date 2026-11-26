@@ -75,6 +75,7 @@ public sealed partial class CompanyPeople(UserManager<AppUser> users, PeopleServ
             throw new CompanyRefusedException(string.Join(" ", created.Errors.Select(e => e.Description)));
         }
         await people.JoinDefaultGroupsAsync(user);
+        await people.AnnounceAsync(user);
         await audit.WriteAsync("person.create", user.UserName, detail: how);
         if (!user.IsDisabled)
         {

@@ -8,7 +8,7 @@ import { toast } from '@/components/ui/toaster'
 import { meQuery } from '@/lib/api'
 import { useTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
-import { createBridge, LOAD_DEADLINE_MS, type FrameContext } from './plugin-bridge'
+import { createBridge, LOAD_DEADLINE_MS, type FrameContext, type FrameReview } from './plugin-bridge'
 import type { MyPlugin } from './plugins'
 
 /** What a frame shows when its plugin broke: what happened, and a way to try again. The page around it goes on. */
@@ -45,6 +45,8 @@ export interface PluginFrameProps {
   chatId?: string | null
   projectId?: string | null
   message?: { id: string; content: string } | null
+  /** For an IDE panel beside a review. */
+  review?: FrameReview | null
   /** Fill the space (a page) or follow the frame's height (a panel). */
   fill?: boolean
   onClose?: () => void
@@ -65,7 +67,7 @@ export function PluginFrame(props: PluginFrameProps) {
   )
 }
 
-function Frame({ plugin, slot, id, entry, rest = '', chatId = null, projectId = null, message = null, fill, onClose, onInsert, className }: PluginFrameProps) {
+function Frame({ plugin, slot, id, entry, rest = '', chatId = null, projectId = null, message = null, review = null, fill, onClose, onInsert, className }: PluginFrameProps) {
   const me = useQuery(meQuery)
   const { resolved } = useTheme()
   const navigate = useNavigate()
@@ -77,8 +79,8 @@ function Frame({ plugin, slot, id, entry, rest = '', chatId = null, projectId = 
   const context = useMemo<FrameContext>(() => ({
     plugin: { name: plugin.name, version: plugin.version, title: plugin.title }, slot, id, rest,
     person: { id: me.data?.id ?? '', name: me.data?.displayName || me.data?.userName || '' },
-    chatId, projectId, message, theme: { mode: resolved, tokens: themeTokens() }, locale: navigator.language || 'en', dev: plugin.dev,
-  }), [plugin, slot, id, rest, me.data, chatId, projectId, message, resolved])
+    chatId, projectId, message, review, theme: { mode: resolved, tokens: themeTokens() }, locale: navigator.language || 'en', dev: plugin.dev,
+  }), [plugin, slot, id, rest, me.data, chatId, projectId, message, review, resolved])
   const contextRef = useRef(context)
   const bridgeRef = useRef<ReturnType<typeof createBridge> | null>(null)
   // What the bridge calls back, read when it calls: a new function from a render (navigate after a route change) never

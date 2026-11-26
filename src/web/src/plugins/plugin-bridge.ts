@@ -23,6 +23,16 @@ export const LOAD_DEADLINE_MS = 8000
 export const MIN_HEIGHT = 48
 export const MAX_HEIGHT = 4000
 
+/** The review an IDE panel is shown beside: its repository, its merge request (or branches), its title. */
+export interface FrameReview {
+  id: string
+  project: string
+  title: string
+  mergeRequest: number | null
+  fromRef: string | null
+  toRef: string | null
+}
+
 export interface FrameContext {
   plugin: { name: string; version: string; title: string }
   slot: 'page' | 'panel' | 'settings' | 'composer-action' | 'message-action' | 'ide-panel'
@@ -32,6 +42,8 @@ export interface FrameContext {
   chatId: string | null
   projectId: string | null
   message: { id: string; content: string } | null
+  /** For an IDE panel beside a review (Code → a review): the review; null on the Code page itself. */
+  review: FrameReview | null
   theme: { mode: 'light' | 'dark'; tokens: Record<string, string> }
   locale: string
   dev: boolean

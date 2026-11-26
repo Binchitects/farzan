@@ -3,7 +3,7 @@ import { allowedPath, BURST, createBridge, MOST_REFUSED, type BridgeHost, type F
 
 const context: FrameContext = {
   plugin: { name: 'desk', version: '1.0.0', title: 'Desk' }, slot: 'page', id: 'board', rest: '', person: { id: 'p1', name: 'Ann' },
-  chatId: null, projectId: null, message: null, theme: { mode: 'light', tokens: {} }, locale: 'en', dev: false,
+  chatId: null, projectId: null, message: null, review: null, theme: { mode: 'light', tokens: {} }, locale: 'en', dev: false,
 }
 
 function setup(over: Partial<BridgeHost> = {}, slot: FrameContext['slot'] = 'page', writes: string[] = []) {

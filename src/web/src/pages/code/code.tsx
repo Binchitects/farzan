@@ -15,6 +15,7 @@ import { Field } from '@/components/ui/field'
 import { Input, Textarea } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PluginIdePanels, useIdePanels } from '@/plugins/plugin-page'
 import { api, errorMessage, mayUse, meQuery } from '@/lib/api'
 import { AutoReviews } from './auto-reviews'
 import { askCode, mergeRequestsQuery, reviewBatchesQuery, reviewsQuery, startReview, verdictLabel, type ReviewBrief } from './api'
@@ -29,7 +30,7 @@ export function ReviewState({ r }: { r: Pick<ReviewBrief, 'status' | 'step' | 'v
   return <Badge variant={r.verdict === 'changes' ? 'warning' : r.verdict === 'looks_good' ? 'success' : 'default'}>{verdictLabel[r.verdict ?? 'comments']}</Badge>
 }
 
-type Tab = 'review' | 'ask'
+type Tab = 'review' | 'ask' | 'plugins'
 
 /**
  * Code, in two parts each its permission's (Admin → Access): Review (review.run starts them: a merge request, a branch,
@@ -40,9 +41,12 @@ export function CodePage() {
   const me = useQuery(meQuery)
   const may = (permission: string) => mayUse(me.data, permission)
   const [params, setParams] = useSearchParams()
+  const idePanels = useIdePanels()
   const tabs: { value: Tab; label: string; shown: boolean }[] = [
     { value: 'review', label: 'Review', shown: may('review.run') || may('code.read') },
     { value: 'ask', label: 'Ask and explore', shown: may('code.read') },
+    // Plugins' IDE panels (Code Studio's extensions), when the person may use any.
+    { value: 'plugins', label: 'Plugins', shown: idePanels },
   ]
   const shown = tabs.filter((t) => t.shown)
   const asked = params.get('tab') as Tab | null
@@ -84,6 +88,7 @@ export function CodePage() {
           <ReviewTab mayRun={may('review.run')} mayRead={may('code.read')} mayAuto={may('review.run') && may('review.policy')} />
         </TabsContent>
         <TabsContent value="ask">{may('code.read') && <AskTab />}</TabsContent>
+        <TabsContent value="plugins">{idePanels && <PluginIdePanels />}</TabsContent>
       </Tabs>
     </>
   )
