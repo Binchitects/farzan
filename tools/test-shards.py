@@ -13,6 +13,7 @@ The times come from a run's TRX files (--times DIR, default the project's tests/
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -95,11 +96,24 @@ def main(argv=None) -> int:
         print(build.stdout[-4000:] + build.stderr[-2000:])
         return len(shards)
 
+    # Coverage instruments the test's assemblies where they are: each shard gets its own copy of the build, else three
+    # processes rewrite the same files at once and a test host crashes at its start.
+    built = project / "bin" / a.configuration
+    target = next(built.glob(f"*/{project.name}.dll"))
+
     def run(i: int) -> tuple[int, int, float, str]:
         # A class by its full name and the dot after it, so one is never another's prefix.
         flt = "|".join(f"FullyQualifiedName~{c}." for c in shards[i])
-        args = [a.dotnet, "test", str(rel), "-c", a.configuration, "--no-build", "--filter", flt,
-                "--results-directory", f"{a.out}/shard{i + 1}", "--logger", f"trx;LogFileName=shard{i + 1}.trx"]
+        what = str(rel)
+        if a.coverage:
+            copy = out / f"bin{i + 1}"
+            shutil.rmtree(copy, ignore_errors=True)
+            shutil.copytree(target.parent, copy)
+            what = str((copy / target.name).relative_to(ROOT))
+        args = [a.dotnet, "test", what, "--filter", flt] + ([] if a.coverage else ["-c", a.configuration, "--no-build"]) + [
+                "--results-directory", f"{a.out}/shard{i + 1}", "--logger", f"trx;LogFileName=shard{i + 1}.trx",
+                # A host that crashes leaves the tests it was running (Sequence_*.xml), to tell which.
+                "--blame"]
         if a.coverage:
             args += ["--collect:XPlat Code Coverage"]
         start = time.time()

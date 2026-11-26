@@ -2258,6 +2258,23 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("product_feedback_images", (string)null);
                 });
 
+            modelBuilder.Entity("Llm.Core.Chat.PromptLogBody", b =>
+                {
+                    b.Property<Guid>("EntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Request")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("Response")
+                        .HasColumnType("bytea");
+
+                    b.HasKey("EntryId");
+
+                    b.ToTable("prompt_log_bodies", (string)null);
+                });
+
             modelBuilder.Entity("Llm.Core.Chat.PromptLogEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2275,6 +2292,9 @@ namespace Llm.Core.Data.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<Guid?>("ChatId")
+                        .HasColumnType("uuid");
+
                     b.Property<int?>("CompletionTokens")
                         .HasColumnType("integer");
 
@@ -2284,6 +2304,9 @@ namespace Llm.Core.Data.Migrations
                     b.Property<string>("Error")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<int?>("From")
+                        .HasColumnType("integer");
 
                     b.Property<string>("KeyToken")
                         .HasMaxLength(64)
@@ -2318,12 +2341,19 @@ namespace Llm.Core.Data.Migrations
                         .HasColumnType("text[]")
                         .HasDefaultValueSql("'{}'::text[]");
 
+                    b.Property<string>("Thread")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("At");
+
+                    b.HasIndex("ChatId", "At")
+                        .HasFilter("\"ChatId\" IS NOT NULL");
 
                     b.HasIndex("UserId", "At");
 
@@ -9055,6 +9085,15 @@ namespace Llm.Core.Data.Migrations
                     b.HasOne("Llm.Core.Chat.ProductFeedback", null)
                         .WithMany()
                         .HasForeignKey("FeedbackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Llm.Core.Chat.PromptLogBody", b =>
+                {
+                    b.HasOne("Llm.Core.Chat.PromptLogEntry", null)
+                        .WithOne()
+                        .HasForeignKey("Llm.Core.Chat.PromptLogBody", "EntryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

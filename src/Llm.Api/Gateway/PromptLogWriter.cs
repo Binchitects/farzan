@@ -126,7 +126,7 @@ public sealed partial class PromptLogWriter(IServiceScopeFactory scopes, TimePro
         private Task _last;
         private bool _ended;
 
-        internal Line(PromptLogWriter writer, PromptLogEntry entry, IReadOnlyList<PromptLogFile> pictures)
+        internal Line(PromptLogWriter writer, PromptLogEntry entry, IReadOnlyList<PromptLogFile> pictures, byte[]? body = null)
         {
             _writer = writer;
             Entry = entry;
@@ -134,6 +134,11 @@ public sealed partial class PromptLogWriter(IServiceScopeFactory scopes, TimePro
             _last = writer.WriteAsync(db =>
             {
                 db.PromptLog.Add(entry);
+                // The request in full: what it sent, zipped (its answer joins it as it ends).
+                if (body is not null)
+                {
+                    db.PromptLogBodies.Add(new PromptLogBody { EntryId = entry.Id, Request = body });
+                }
                 // The question's pictures go in with it, and go with it (the line's retention).
                 foreach (var picture in pictures)
                 {
@@ -174,9 +179,13 @@ public sealed partial class PromptLogWriter(IServiceScopeFactory scopes, TimePro
             int? completionTokens = completion?["usage"]?["completion_tokens"]?.GetValue<int>();
             var said = answer is null ? null : _writer.Cut(answer);
             var why = error is null ? null : Short(error);
+            // The answer in full, zipped: its thinking, words and tool calls with their arguments.
+            var whole = done && completion is not null && _writer.Full ? Response(completion) : null;
             lock (_lock)
             {
-                _last = _last.ContinueWith(_ => _writer.WriteAsync(db => db.PromptLog.Where(p => p.Id == id).ExecuteUpdateAsync(u =>
+                _last = _last.ContinueWith(_ => _writer.WriteAsync(async db =>
+                {
+                    await db.PromptLog.Where(p => p.Id == id).ExecuteUpdateAsync(u =>
                 {
                     u.SetProperty(p => p.State, state).SetProperty(p => p.Status, status);
                     if (said is not null)
@@ -199,7 +208,12 @@ public sealed partial class PromptLogWriter(IServiceScopeFactory scopes, TimePro
                     {
                         u.SetProperty(p => p.DurationMs, ms);
                     }
-                })), TaskScheduler.Default).Unwrap();
+                });
+                    if (whole is not null)
+                    {
+                        await db.PromptLogBodies.Where(b => b.EntryId == id).ExecuteUpdateAsync(u => u.SetProperty(b => b.Response, whole));
+                    }
+                }), TaskScheduler.Default).Unwrap();
             }
         }
 
@@ -230,6 +244,103 @@ public sealed partial class PromptLogWriter(IServiceScopeFactory scopes, TimePro
 
     private TimeProvider Clock => clock;
 
+    /// <summary>Gateway:PromptLogFull: each request kept whole (its messages, tools and answer), not only its last question.</summary>
+    private bool Full => options.CurrentValue.PromptLogFull;
+
+    /// <summary>The run a request is a step of: its chat:ID tag (Code Arena's, the chat's), if it has one.</summary>
+    public static Guid? ChatOf(JsonObject request) =>
+        (request["metadata"]?["tags"] as JsonArray ?? []).Select(t => t is JsonValue v && v.TryGetValue<string>(out var x) ? x : null)
+            .FirstOrDefault(t => t?.StartsWith(Projects.ProjectTags.ChatPrefix, StringComparison.Ordinal) == true) is { } tag && Guid.TryParse(tag[Projects.ProjectTags.ChatPrefix.Length..], out var g) ? g : null;
+
+    /// <summary>A thread of a run: its first two messages' print (the system's and the first question), the same for each of its steps.</summary>
+    public static string ThreadOf(JsonArray messages) =>
+        Print(string.Concat(messages.Take(2).Select(m => (m?["role"]?.ToString() ?? "") + "\u0001" + (m?["content"]?.ToJsonString() ?? "") + "\u0002")))[..16];
+
+    private static string Print(string text) => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text)));
+
+    /// <summary>Each thread's last step: how many messages it sent and their print, so the next keeps only the new ones.</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (int Count, string Print)> _threads = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// A request as kept whole: its settings and tools, and its messages from <c>from</c> on (those its thread's step before
+    /// did not send, when that step's are the start of these; else all), pictures named, not kept again. Zipped.
+    /// </summary>
+    internal (byte[] Body, int From, string Thread) Request(Guid person, Guid? chat, JsonObject request)
+    {
+        var messages = request["messages"] as JsonArray ?? [];
+        var thread = ThreadOf(messages);
+        var texts = messages.Select(m => m?.ToJsonString() ?? "null").ToList();
+        var key = $"{person}:{chat}:{thread}";
+        var from = 0;
+        if (_threads.TryGetValue(key, out var before) && before.Count <= texts.Count && Print(string.Concat(texts.Take(before.Count))) == before.Print)
+        {
+            from = before.Count;
+        }
+        if (_threads.Count > 20_000)
+        {
+            _threads.Clear();
+        }
+        _threads[key] = (texts.Count, Print(string.Concat(texts)));
+        var kept = new JsonArray([.. messages.Skip(from).Select(m => (JsonNode?)Unpictured(m?.DeepClone()))]);
+        var tools = new JsonArray([.. (request["tools"] as JsonArray ?? []).Select(t => (JsonNode?)(t?["function"]?["name"]?.ToString() ?? t?["name"]?.ToString()))]);
+        var settings = new JsonObject();
+        foreach (var name in new[] { "temperature", "top_p", "max_tokens", "max_completion_tokens", "stream", "tool_choice", "reasoning_effort", "response_format" })
+        {
+            if (request[name] is { } v)
+            {
+                settings[name] = v.DeepClone();
+            }
+        }
+        var body = new JsonObject { ["model"] = request["model"]?.DeepClone(), ["from"] = from, ["total"] = texts.Count, ["messages"] = kept, ["tools"] = tools, ["settings"] = settings };
+        return (Zip(body), from, thread);
+    }
+
+    /// <summary>An answer as kept whole: why it ended, its message (thinking, words, tool calls) and its usage. Zipped.</summary>
+    internal static byte[] Response(JsonObject completion)
+    {
+        var choice = completion["choices"]?[0];
+        return Zip(new JsonObject
+        {
+            ["finish_reason"] = choice?["finish_reason"]?.DeepClone(), ["message"] = choice?["message"]?.DeepClone(), ["usage"] = completion["usage"]?.DeepClone(),
+        });
+    }
+
+    /// <summary>A message with its pictures as data named, not kept (the question's are kept apart, as files).</summary>
+    private static JsonNode? Unpictured(JsonNode? m)
+    {
+        foreach (var part in (m?["content"] as JsonArray ?? []).OfType<JsonObject>().Where(p => p["type"]?.ToString() == "image_url"))
+        {
+            part["image_url"] = new JsonObject { ["url"] = "(a picture)" };
+        }
+        return m;
+    }
+
+    internal static byte[] Zip(JsonNode body)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(body.ToJsonString());
+        if (bytes.Length > PromptLogBody.MaxBytes)
+        {
+            bytes = System.Text.Encoding.UTF8.GetBytes(new JsonObject { ["cut"] = true, ["bytes"] = bytes.Length }.ToJsonString());
+        }
+        using var m = new MemoryStream();
+        using (var z = new System.IO.Compression.GZipStream(m, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true))
+        {
+            z.Write(bytes);
+        }
+        return m.ToArray();
+    }
+
+    /// <summary>A kept body read back.</summary>
+    public static JsonNode? Unzip(byte[]? zipped)
+    {
+        if (zipped is null)
+        {
+            return null;
+        }
+        using var z = new System.IO.Compression.GZipStream(new MemoryStream(zipped), System.IO.Compression.CompressionMode.Decompress);
+        return JsonNode.Parse(z);
+    }
+
     /// <summary>A request arrived: in the log at once, waiting for its turn. Null when it asks no question (nothing to show).</summary>
     public Line? Begin(Guid person, string? keyToken, JsonObject request)
     {
@@ -243,19 +354,41 @@ public sealed partial class PromptLogWriter(IServiceScopeFactory scopes, TimePro
         {
             return null;
         }
+        var chat = ChatOf(request);
+        var (body, from, thread) = Full ? Request(person, chat, request) : (null, 0, null);
         return new Line(this, new PromptLogEntry
         {
             UserId = person, KeyToken = keyToken, Model = request["model"]?.GetValue<string>() ?? "",
             Prompt = question.Length > 0 ? Cut(question) : pictures.Count == 1 ? "(a picture)" : $"({pictures.Count} pictures)", Status = 0,
-            State = PromptLogEntry.Waiting, At = clock.GetUtcNow(),
-        }, pictures);
+            State = PromptLogEntry.Waiting, At = clock.GetUtcNow(), ChatId = chat, Thread = thread, From = body is null ? null : from,
+        }, pictures, body);
     }
 
     /// <summary>A request answered at once (from the answer cache): in the log done, with its answer.</summary>
     public void Record(Guid person, string? keyToken, JsonObject request, JsonObject? completion, int status) =>
         Begin(person, keyToken, request)?.End(status is >= 200 and < 300 ? PromptLogEntry.Done : PromptLogEntry.Failed, status, completion: completion);
 
-    private async Task WriteAsync(Func<AppDbContext, Task> write)
+    /// <summary>The writes under way, to wait for (tests).</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Task, byte> _pending = new();
+
+    /// <summary>Every write begun so far has run (tests).</summary>
+    public async Task FlushAsync()
+    {
+        while (_pending.Keys.ToList() is { Count: > 0 } now)
+        {
+            await Task.WhenAll(now);
+        }
+    }
+
+    private Task WriteAsync(Func<AppDbContext, Task> write)
+    {
+        var task = WriteNowAsync(write);
+        _pending[task] = 0;
+        _ = task.ContinueWith(t => _pending.TryRemove(t, out _), TaskScheduler.Default);
+        return task;
+    }
+
+    private async Task WriteNowAsync(Func<AppDbContext, Task> write)
     {
         try
         {

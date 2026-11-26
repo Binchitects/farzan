@@ -28,13 +28,14 @@ public static class PromptLogEndpoints
         var g = app.MapGroup("/api/admin/prompts").RequirePermissions(Llm.Core.Access.Permissions.PromptsReview, Llm.Core.Access.Permissions.PromptsReview);
         g.MapGet("", SearchAsync);
         g.MapGet("/files/{source}/{id:guid}", FileAsync);
+        g.MapPromptLogDetail();
     }
 
     /// <summary>A file of a question (a picture, a document) or one its answer made (a picture, a file Python wrote), read at /files/SOURCE/ID.</summary>
     private sealed record FileRef(Guid Id, string Name, string Kind, string ContentType, long Size);
 
     private sealed record Row(string Source, DateTimeOffset At, Guid Person, string? Model, string Question, string? Answer, Guid? Chat, string? Title, bool Deleted, int? Tokens,
-        string State, string? Error, int? DurationMs, Guid? Id = null, Guid? Answered = null, IReadOnlyList<string>? Tags = null, string? Brief = null)
+        string State, string? Error, int? DurationMs, Guid? Id = null, Guid? Answered = null, IReadOnlyList<string>? Tags = null, string? Brief = null, Guid? Run = null)
     {
         public IReadOnlyList<FileRef> Asked { get; set; } = [];
         public IReadOnlyList<FileRef> Made { get; set; } = [];
@@ -154,7 +155,7 @@ public static class PromptLogEndpoints
                 api = api.Where(p => EF.Functions.ILike(p.Prompt, Like(text), "\\") || EF.Functions.ILike(p.Answer!, Like(text), "\\"));
             }
             rows.AddRange((await api.OrderByDescending(p => p.At).Take(Page).ToListAsync(ct)).Select(p => new Row("api", p.At, p.UserId, p.Model, Cut(p.Prompt), p.Answer is null ? null : Cut(p.Answer),
-                null, null, false, (p.PromptTokens ?? 0) + (p.CompletionTokens ?? 0) is > 0 and var n ? n : null, p.State, p.Error, p.DurationMs, p.Id, null, p.Tags, p.Brief)));
+                null, null, false, (p.PromptTokens ?? 0) + (p.CompletionTokens ?? 0) is > 0 and var n ? n : null, p.State, p.Error, p.DurationMs, p.Id, null, p.Tags, p.Brief, p.ChatId)));
         }
         var page = rows.OrderByDescending(r => r.At).Take(Page).ToList();
         await FilesAsync(db, page, ct);
@@ -171,7 +172,7 @@ public static class PromptLogEndpoints
             items = page.Select(r => new
             {
                 r.Source, r.Id, r.At, person = names.GetValueOrDefault(r.Person), r.Model, r.Question, r.Answer, r.Chat, r.Title, r.Deleted, r.Tokens, r.State, r.Error, r.DurationMs,
-                tags = r.Tags ?? [], r.Brief,
+                tags = r.Tags ?? [], r.Brief, run = r.Run ?? (r.Source == "chat" ? r.Chat : null),
                 files = r.Asked.Select(f => new { f.Id, f.Name, f.Kind, f.ContentType, f.Size, url = $"/api/admin/prompts/files/{r.Source}/{f.Id}" }),
                 made = r.Made.Select(f => new { f.Id, f.Name, f.Kind, f.ContentType, f.Size, url = $"/api/admin/prompts/files/{r.Source}/{f.Id}" }),
             }),

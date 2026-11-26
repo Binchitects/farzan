@@ -24,6 +24,9 @@ public sealed class AnswerCacheOptions
     /// <summary>Gateway:LogPrompts: each API request's last question and answer kept in the prompt log.</summary>
     public bool LogPrompts { get; set; } = true;
 
+    /// <summary>Gateway:PromptLogFull: each API request kept whole (its new messages, its tools, the answer's thinking and tool calls), zipped.</summary>
+    public bool PromptLogFull { get; set; } = true;
+
     /// <summary>Gateway:PromptLogKeep: how many characters of each question and answer are kept.</summary>
     public int PromptLogKeep { get; set; } = Llm.Core.Chat.PromptLogEntry.MaxText;
 

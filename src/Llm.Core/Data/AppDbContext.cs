@@ -94,6 +94,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<ProductFeedbackImage> ProductFeedbackImages => Set<ProductFeedbackImage>();
     public DbSet<PromptLogEntry> PromptLog => Set<PromptLogEntry>();
     public DbSet<PromptLogFile> PromptLogFiles => Set<PromptLogFile>();
+    public DbSet<PromptLogBody> PromptLogBodies => Set<PromptLogBody>();
     public DbSet<Checklist> Checklists => Set<Checklist>();
     public DbSet<ChecklistRun> ChecklistRuns => Set<ChecklistRun>();
     public DbSet<Code.StudioWorkspace> StudioWorkspaces => Set<Code.StudioWorkspace>();
@@ -186,6 +187,9 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.Entity<ChatAttachment>().Property(a => a.Data).HasConversion(maybeFiles, sameMaybeFile);
         builder.Entity<ChatAttachment>().Property(a => a.Sound).HasConversion(maybeFiles, sameMaybeFile);
         builder.Entity<ChatAttachment>().Property(a => a.Text).HasConversion(v => sealer.SealText(v), v => sealer.OpenText(v));
+        // A prompt log's requests and answers in full: sealed as files are.
+        builder.Entity<PromptLogBody>().Property(b => b.Request).HasConversion(files, sameFile);
+        builder.Entity<PromptLogBody>().Property(b => b.Response).HasConversion(maybeFiles, sameMaybeFile);
         builder.Entity<AttachmentPage>().Property(p => p.Data).HasConversion(files, sameFile);
         builder.Entity<Decks.DeckTemplate>().Property(t => t.Data).HasConversion(files, sameFile);
         builder.Entity<Decks.DeckSource>().Property(t => t.Data).HasConversion(files, sameFile);
@@ -909,7 +913,15 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.Property(x => x.Error).HasMaxLength(2000);
             e.HasIndex(x => x.At);
             e.HasIndex(x => new { x.UserId, x.At });
+            e.Property(x => x.Thread).HasMaxLength(16);
+            e.HasIndex(x => new { x.ChatId, x.At }).HasFilter("\"ChatId\" IS NOT NULL");
             e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        builder.Entity<PromptLogBody>(e =>
+        {
+            e.ToTable("prompt_log_bodies");
+            e.HasKey(x => x.EntryId);
+            e.HasOne<PromptLogEntry>().WithOne().HasForeignKey<PromptLogBody>(x => x.EntryId).OnDelete(DeleteBehavior.Cascade);
         });
         builder.Entity<PromptLogFile>(e =>
         {

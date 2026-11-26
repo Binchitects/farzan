@@ -25,6 +25,97 @@ public sealed class PromptLogTests(AppFixture app)
         return res;
     }
 
+    /// <summary>A step of an agent run through a key: its messages, the tools it offers, and its run's chat tag.</summary>
+    private static async Task<JsonElement> StepAsync(WebApplicationFactory<Program> f, string key, Guid chat, object[] messages)
+    {
+        var client = f.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri($"https://gateway.{AppFixture.Domain}"), HandleCookies = false });
+        using var req = new HttpRequestMessage(HttpMethod.Post, new Uri("/v1/chat/completions", UriKind.Relative))
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                model = "Qwen3.8-Flash-Next", messages, stream = true, temperature = 0.2,
+                tools = new[] { new { type = "function", function = new { name = "read_file", parameters = new { type = "object" } } } },
+                metadata = new { tags = new[] { "chat:" + chat } },
+            }), Encoding.UTF8, "application/json"),
+        };
+        req.Headers.Authorization = new("Bearer", key);
+        using var res = await client.SendAsync(req);
+        await StatusAssert.Is(HttpStatusCode.OK, res);
+        await res.Content.ReadAsStringAsync();
+        return default;
+    }
+
+    [Fact]
+    [Trait("Control", "DAT-08")]
+    public async Task A_run_is_shown_whole_each_step_with_its_new_messages_thinking_words_and_tool_calls_by_thread_for_reviewers_only()
+    {
+        await using var f = app.Create(app.ConnectionStringFor("promptrun_" + Guid.NewGuid().ToString("N")[..8]), new FakeGateway());
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        var name = "pr" + Guid.NewGuid().ToString("N")[..8];
+        var made = await admin.JsonAsync(await admin.PostAsync("/api/admin/people", new { userName = name, email = $"{name}@example.test" }));
+        var key = made.GetProperty("apiKey").GetString()!;
+        var person = await new TestBrowser(f).SignedInAsync(name, made.GetProperty("password").GetString()!);
+        var chat = Guid.NewGuid();
+        var system = new { role = "system", content = "You are a coding agent." };
+        var ask = new { role = "user", content = """Fix the build [call read_file {"path":"src/a.cs"}]""" };
+        // The main agent's first step calls a tool; its second carries the call and the tool's result; a sub-agent starts its own.
+        await StepAsync(f, key, chat, [system, ask]);
+        var call = new { role = "assistant", content = "", tool_calls = new[] { new { id = "call_1", type = "function", function = new { name = "read_file", arguments = """{"path":"src/a.cs"}""" } } } };
+        await StepAsync(f, key, chat, [system, ask, call, new { role = "tool", tool_call_id = "call_1", content = "class A { int x = ; }" }]);
+        await StepAsync(f, key, chat, [new { role = "system", content = "You are a sub-agent: look, report." }, new { role = "user", content = "Find where A is used." }]);
+        // Each step ends as its answer has gone out: until all three are done, then what they wrote.
+        JsonElement run = default;
+        List<JsonElement> steps = [];
+        for (var waited = 0; waited < 10_000 && (steps.Count < 3 || steps.Any(x => x.GetProperty("state").GetString() != "done")); waited += 50)
+        {
+            run = await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts/runs/{chat}"));
+            steps = [.. run.GetProperty("steps").EnumerateArray()];
+            await Task.Delay(50);
+        }
+        await f.Services.GetRequiredService<PromptLogWriter>().FlushAsync();
+        Assert.Equal(3, steps.Count);
+        Assert.Equal(["Main", "Sub-agent 1"], run.GetProperty("threads").EnumerateArray().Select(t => t.GetProperty("name").GetString()));
+        Assert.Equal(steps[0].GetProperty("thread").GetString(), steps[1].GetProperty("thread").GetString());
+        Assert.NotEqual(steps[0].GetProperty("thread").GetString(), steps[2].GetProperty("thread").GetString());
+        // Each line of the log says which run it is a step of.
+        var listed = (await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts?person={name}&source=api"))).GetProperty("items").EnumerateArray().ToList();
+        Assert.All(listed, i => Assert.Equal(chat, i.GetProperty("run").GetGuid()));
+
+        // The first step whole: its messages, the tools it offered, its settings, and the call it made with its arguments.
+        var first = await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts/api/{steps[0].GetProperty("id").GetGuid()}/detail"));
+        Assert.Equal((0, 2), (first.GetProperty("from").GetInt32(), first.GetProperty("total").GetInt32()));
+        Assert.Equal(["system", "user"], first.GetProperty("messages").EnumerateArray().Select(m => m.GetProperty("role").GetString()));
+        Assert.Equal(["read_file"], first.GetProperty("tools").EnumerateArray().Select(t => t.GetString()));
+        Assert.Equal(0.2, first.GetProperty("settings").GetProperty("temperature").GetDouble());
+        var made1 = Assert.Single(first.GetProperty("answer").GetProperty("toolCalls").EnumerateArray());
+        Assert.Equal(("read_file", """{"path":"src/a.cs"}"""), (made1.GetProperty("name").GetString(), made1.GetProperty("arguments").GetString()));
+        // The second: only what is new (the call and the tool's result), not the whole history again.
+        var second = await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts/api/{steps[1].GetProperty("id").GetGuid()}/detail"));
+        Assert.Equal((2, 4), (second.GetProperty("from").GetInt32(), second.GetProperty("total").GetInt32()));
+        var news = second.GetProperty("messages").EnumerateArray().ToList();
+        Assert.Equal(["assistant", "tool"], news.Select(m => m.GetProperty("role").GetString()));
+        Assert.Equal("class A { int x = ; }", news[1].GetProperty("content").GetString());
+        Assert.Equal("read_file", news[0].GetProperty("toolCalls")[0].GetProperty("name").GetString());
+        Assert.False(string.IsNullOrEmpty(second.GetProperty("answer").GetProperty("content").GetString()));
+
+        // A chat question's answer round by round: its tool call and the tool's result.
+        var c = (await person.JsonAsync(await person.PostAsync("/api/chat/conversations", new { tools = new[] { "calculator" } }))).GetProperty("id").GetGuid();
+        await (await person.PostAsync($"/api/chat/conversations/{c}/messages", new { content = """Sum it [call calculate {"expression":"2+3"}]""" })).Content.ReadAsStringAsync();
+        var q = (await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts?person={name}&source=chat"))).GetProperty("items").EnumerateArray().Single();
+        var asked = await admin.JsonAsync(await admin.GetAsync($"/api/admin/prompts/chat/{q.GetProperty("id").GetGuid()}/detail"));
+        var rounds = asked.GetProperty("steps").EnumerateArray().ToList();
+        Assert.Contains(rounds, r => r.GetProperty("role").GetString() == "assistant" && r.GetProperty("toolCalls").ValueKind == JsonValueKind.Array
+            && r.GetProperty("toolCalls")[0].GetProperty("name").GetString() == "calculate");
+        Assert.Contains(rounds, r => r.GetProperty("role").GetString() == "tool" && r.GetProperty("tool").GetString() == "calculate");
+
+        // Reviewers only, and each look audited.
+        await StatusAssert.Is(HttpStatusCode.Forbidden, await person.GetAsync($"/api/admin/prompts/runs/{chat}"));
+        await StatusAssert.Is(HttpStatusCode.Forbidden, await person.GetAsync($"/api/admin/prompts/api/{steps[0].GetProperty("id").GetGuid()}/detail"));
+        var audit = (await admin.JsonAsync(await admin.GetAsync("/api/admin/audit"))).EnumerateArray().Select(e => e.GetProperty("action").GetString()).ToList();
+        Assert.Contains("prompts.run.viewed", audit);
+        Assert.Contains("prompts.detail.viewed", audit);
+    }
+
     [Fact]
     [Trait("Control", "DAT-08")]
     public async Task The_chats_and_the_API_requests_questions_and_answers_are_read_with_prompts_review_and_each_search_is_audited()

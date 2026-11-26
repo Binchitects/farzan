@@ -55,6 +55,15 @@ public sealed class PromptLogEntry
     public List<string> Tags { get; set; } = [];
     /// <summary>What it asked and got in a sentence or two (Summarize and tag); null until summarized.</summary>
     public string? Brief { get; set; }
+    /// <summary>The chat or Code Arena session it was a step of (its chat:ID tag), when it named one: its run.</summary>
+    public Guid? ChatId { get; set; }
+    /// <summary>
+    /// Which thread of its run it was a step of: its first messages' print, the same for every step of one agent (the main
+    /// one, or a sub-agent with its own start).
+    /// </summary>
+    public string? Thread { get; set; }
+    /// <summary>Where its stored messages start (<see cref="PromptLogBody"/>): those before were the thread's step before's.</summary>
+    public int? From { get; set; }
 
     /// <summary>In line for its turn (the key's, the model's).</summary>
     public const string Waiting = "waiting";
@@ -67,6 +76,21 @@ public sealed class PromptLogEntry
     public const string Stopped = "stopped";
     /// <summary>Not let in: the line was full, or it waited past the limit.</summary>
     public const string Refused = "refused";
+}
+
+/// <summary>
+/// An API request in full, kept with its line in the prompt log and gone with it: what it sent (the messages new since its
+/// thread's step before, the tools it offered, its settings) and what it got (the thinking, the words, each tool call with
+/// its arguments), each as gzipped JSON.
+/// </summary>
+public sealed class PromptLogBody
+{
+    /// <summary>The most of a request or an answer kept, before it is zipped.</summary>
+    public const int MaxBytes = 8 * 1024 * 1024;
+
+    public Guid EntryId { get; set; }
+    public required byte[] Request { get; set; }
+    public byte[]? Response { get; set; }
 }
 
 /// <summary>
