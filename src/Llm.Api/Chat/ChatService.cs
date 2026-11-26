@@ -1019,7 +1019,9 @@ public sealed partial class ChatService(
                         {
                             took.Restart();
                             progress.CallId = id;
-                            outcome = await target.Run.CallAsync(name, guardedArgs == rawArgs ? args : Arguments(guardedArgs), ct);
+                            // Plugins' hooks on a tool call before it runs: observed, its arguments changed, or stopped, by those granted to.
+                            var (stopped, hookedArgs) = await ToolHookAsync(user, conversation.Id, name, guardedArgs == rawArgs ? args : Arguments(guardedArgs), ct);
+                            outcome = stopped is not null ? new ToolResult(stopped + " Do not try it again.", IsError: true) : await target.Run.CallAsync(name, hookedArgs, ct);
                         }
                     }
                 }

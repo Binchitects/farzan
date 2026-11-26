@@ -371,7 +371,7 @@ public sealed partial class PluginRuntime(IOptionsMonitor<PluginRuntimeOptions> 
     }
 
     /// <summary>One call to the plugin's worker (started first when it is not on this connection), within its deadline.</summary>
-    public async Task<PluginCallResult> CallAsync(McpServer server, PluginManifest manifest, string method, JsonObject args, PluginCallScope who, CancellationToken ct)
+    public async Task<PluginCallResult> CallAsync(McpServer server, PluginManifest manifest, string method, JsonObject args, PluginCallScope who, CancellationToken ct, int? timeoutMs = null)
     {
         if (manifest.Server is not { } code)
         {
@@ -385,7 +385,7 @@ public sealed partial class PluginRuntime(IOptionsMonitor<PluginRuntimeOptions> 
                 return started;
             }
         }
-        var timeout = Math.Min(code.TimeoutMs, options.CurrentValue.MostTimeoutMs);
+        var timeout = Math.Min(timeoutMs ?? code.TimeoutMs, Math.Min(code.TimeoutMs, options.CurrentValue.MostTimeoutMs));
         var token = Mint(who with { Until = clock.GetUtcNow().AddMilliseconds(timeout + 5000) });
         try
         {

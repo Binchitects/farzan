@@ -198,6 +198,33 @@ public sealed class PluginRuntimeTests(AppFixture app, PluginRuntimeFixture runt
     }
 
     [Fact]
+    public async Task A_chat_message_runs_the_plugins_hooks_and_events_and_a_failing_hook_never_stops_the_chat()
+    {
+        await using var f = NewApp();
+        var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
+        await TrustAsync(admin);
+        await InstallAsync(admin, "ticket-desk");
+        // The chaos plugin's before_model hook throws: it observes only and does not fail closed, so it is skipped.
+        await InstallAsync(admin, "chaos");
+        var chat = (await admin.JsonAsync(await admin.PostAsync("/api/chat/conversations", new { useCodeIntel = false }))).GetProperty("id").GetGuid();
+        var sent = await (await admin.PostAsync($"/api/chat/conversations/{chat}/messages", new { content = "Is T-1 fixed, and T-2?" })).Content.ReadAsStringAsync();
+        Assert.Contains("\"type\":\"done\"", sent, StringComparison.Ordinal);
+
+        var host = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/host", new { method = "storage.get", @params = new { key = "mentions" } }));
+        Assert.Equal(2, host.GetProperty("result").GetInt32());
+
+        // The event waits in the outbox until the background work delivers it, as the person.
+        await using var scope = f.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.True(await db.PluginEvents.AnyAsync(e => e.Type == "chat.message.created"));
+        var work = f.Services.GetServices<Microsoft.Extensions.Hosting.IHostedService>().OfType<Llm.Api.Plugins.PluginWork>().Single();
+        Assert.True(await work.EventsAsync(CancellationToken.None) >= 1);
+        Assert.False(await db.PluginEvents.AnyAsync(e => e.Type == "chat.message.created" && e.ServerId == db.McpServers.Single(s => s.Plugin == "ticket-desk").Id));
+        var last = await admin.JsonAsync(await BridgeAsync(admin, "/api/plugins/ticket-desk/host", new { method = "storage.get", @params = new { key = "last-message-at" } }));
+        Assert.Equal(JsonValueKind.String, last.GetProperty("result").ValueKind);
+    }
+
+    [Fact]
     public async Task A_developer_pushes_a_dev_install_with_their_api_key_that_only_they_see()
     {
         await using var f = NewApp();

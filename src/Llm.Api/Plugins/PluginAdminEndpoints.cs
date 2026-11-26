@@ -79,6 +79,7 @@ public static class PluginAdminEndpoints
         server.PluginPermissions = [.. body.Granted.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
         await db.SaveChangesAsync(ct);
         await runtime.StopAsync(server.Plugin!, ct);
+        PluginHooks.Forget();
         var given = server.PluginPermissions.Where(k => !was.Contains(k)).ToList();
         var taken = was.Where(k => !server.PluginPermissions.Contains(k)).ToList();
         await audit.WriteAsync("plugin.grants", server.Plugin, detail: $"granted {(given.Count > 0 ? string.Join(", ", given) : "nothing new")}; taken back {(taken.Count > 0 ? string.Join(", ", taken) : "nothing")}");
@@ -116,6 +117,7 @@ public static class PluginAdminEndpoints
         state.ChangedById = (await users.GetUserAsync(principal))?.Id;
         await db.SaveChangesAsync(ct);
         calls.Reset(id);
+        PluginHooks.Forget();
         if (!body.On)
         {
             await runtime.StopAsync(server.Plugin!, ct);

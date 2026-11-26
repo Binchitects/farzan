@@ -50,7 +50,8 @@ public sealed class PluginCalls(PluginRuntime runtime, IServiceScopeFactory scop
             : $"An admin turned it off{(state.Reason is { Length: > 0 } r ? $": {r}" : "")}.";
     }
 
-    public async Task<PluginCallResult> CallAsync(McpServer server, PluginManifest manifest, string method, JsonObject args, PluginCallScope who, CancellationToken ct)
+    /// <param name="timeoutMs">Shorter than the plugin's own deadline for this call (a hook's).</param>
+    public async Task<PluginCallResult> CallAsync(McpServer server, PluginManifest manifest, string method, JsonObject args, PluginCallScope who, CancellationToken ct, int? timeoutMs = null)
     {
         await using (var scope = scopes.CreateAsyncScope())
         {
@@ -59,7 +60,7 @@ public sealed class PluginCalls(PluginRuntime runtime, IServiceScopeFactory scop
                 return new PluginCallResult(null, "off", $"{server.Name} is off. {off}");
             }
         }
-        var r = await runtime.CallAsync(server, manifest, method, args, who, ct);
+        var r = await runtime.CallAsync(server, manifest, method, args, who, ct, timeoutMs);
         await RecordAsync(server, r, method, ct);
         return r;
     }
@@ -132,6 +133,7 @@ public sealed class PluginCalls(PluginRuntime runtime, IServiceScopeFactory scop
         state.ChangedById = null;
         await db.SaveChangesAsync(ct);
         await runtime.StopAsync(server.Plugin!, CancellationToken.None);
+        PluginHooks.Forget();
         await scope.ServiceProvider.GetRequiredService<Audit>().WriteAsync("plugin.auto_disabled", server.Plugin, success: false, detail: state.Reason);
         await scope.ServiceProvider.GetRequiredService<Notifications.Notifier>().ToAdminsAsync(
             new Notifications.News("plugin", $"{server.Name} was turned off", $"It failed again and again: {state.Reason} Turn it on again in Admin → Plugins once it is fixed.",

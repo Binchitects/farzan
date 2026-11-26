@@ -404,6 +404,7 @@ public static class IdentityWiring
         services.AddSingleton<Plugins.PluginCalls>();
         services.AddScoped<Plugins.PluginHost>();
         services.AddScoped<Plugins.PluginEvents>();
+        services.AddScoped<Plugins.PluginHooks>();
         services.AddHostedService<Plugins.PluginWork>();
         services.AddScoped<Plugins.PersonCredentials>();
         services.AddHttpClient(Plugins.PluginCatalog.Client, c => c.Timeout = TimeSpan.FromSeconds(60));

@@ -737,6 +737,15 @@ public static partial class ChatEndpoints
         // Its secrets masked, when the person's policy masks them (with a skill, as the model reads it: ChatService masks it).
         text = skills.Count == 0 ? verdict.Text ?? text : text;
         quote = verdict.Quote ?? quote;
+        // Plugins' hooks on a message before the model reads it: observed, changed by one granted to, or stopped by one granted to.
+        var hooked = await http.RequestServices.GetRequiredService<Plugins.PluginHooks>().RunAsync("chat.message.before_model", me, c.Id,
+            new System.Text.Json.Nodes.JsonObject { ["content"] = text, ["chatId"] = c.Id.ToString() }, http.RequestAborted);
+        if (hooked.Blocked is { } stopped)
+        {
+            await Problem(http, 400, "plugin", stopped);
+            return;
+        }
+        text = hooked.Payload["content"]?.GetValue<string>() ?? text;
         // A rule may send the question to another model (the company's own, for one that holds personal data).
         await RunAsync(http, c, me, db, jobs, new AnswerOverrides(Model: verdict.Model, Research: body.Research, Again: body.Spoken ? Talk.Note : null), async () =>
         {
@@ -755,6 +764,16 @@ public static partial class ChatEndpoints
             }
             c.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
+            // Plugins that listen hear of it (as the person, those the person may use): kept, then delivered in the background.
+            var events = http.RequestServices.GetRequiredService<Plugins.PluginEvents>();
+            if (first)
+            {
+                await events.EmitAsync("chat.created", new System.Text.Json.Nodes.JsonObject { ["chatId"] = c.Id.ToString(), ["title"] = c.Title }, me.Id, CancellationToken.None);
+            }
+            await events.EmitAsync("chat.message.created", new System.Text.Json.Nodes.JsonObject
+            {
+                ["chatId"] = c.Id.ToString(), ["messageId"] = question.Id.ToString(), ["role"] = "user", ["content"] = question.Content,
+            }, me.Id, CancellationToken.None);
             return (question, first);
         });
     }

@@ -166,7 +166,7 @@ public static class PluginEndpoints
         Results.Json(new { status = "accept", error = $"{what} asks for more than adding tools: grant it to go on.", permissions }, statusCode: 409);
 
     private static async Task<IResult> InstallAsync(InstallRequest body, PluginCatalog catalog, AppDbContext db, Audit audit, IOptions<AuthOptions> auth,
-        UserManager<AppUser> users, ClaimsPrincipal principal, IOptionsMonitor<PluginOptions> pluginOptions, CancellationToken ct)
+        UserManager<AppUser> users, ClaimsPrincipal principal, IOptionsMonitor<PluginOptions> pluginOptions, PluginEvents events, CancellationToken ct)
     {
         var (found, failed) = await PackageAsync(body, catalog, ct);
         if (found is not { } package)
@@ -211,12 +211,15 @@ public static class PluginEndpoints
         await PluginContent.StateAsync(db, server, package, null, ct);
         await Chat.SkillLibrary.SyncAsync(db, server, package, ct);
         await PluginContent.SyncAsync(db, server, package, adminId, ct);
+        PluginHooks.Forget();
+        await events.EmitAsync("plugin.installed", new System.Text.Json.Nodes.JsonObject { ["plugin"] = package.Manifest.Name, ["version"] = package.Manifest.Version }, null, ct);
         await audit.WriteAsync("plugin.install", package.Manifest.Name, detail: $"{package.Manifest.Version}, {server.Url}; granted {string.Join(", ", server.PluginPermissions)}");
         await ServerTls.AuditAsync(audit, server, TlsCheck.System, null);
         return Results.Created($"/api/admin/plugins/{server.Id}", new { server.Id, toolId = McpServerTool.Prefix + server.Id });
     }
 
-    private static async Task<IResult> SettingsAsync(Guid id, PluginSettingsRequest body, AppDbContext db, Audit audit, IOptions<AuthOptions> auth, CancellationToken ct)
+    private static async Task<IResult> SettingsAsync(Guid id, PluginSettingsRequest body, AppDbContext db, Audit audit, IOptions<AuthOptions> auth, PluginRuntime runtime,
+        PluginEvents events, CancellationToken ct)
     {
         if (await db.McpServers.SingleOrDefaultAsync(s => s.Id == id && s.Plugin != null, ct) is not { } server)
         {
@@ -233,6 +236,9 @@ public static class PluginEndpoints
             return AuthEndpoints.Problem(400, "tls", tls);
         }
         await db.SaveChangesAsync(ct);
+        // Its worker starts again with the settings as they are now, and the plugin hears they changed.
+        await runtime.StopAsync(server.Plugin!, ct);
+        await events.EmitAsync("plugin.settings.changed", new System.Text.Json.Nodes.JsonObject { ["plugin"] = server.Plugin }, null, ct);
         await audit.WriteAsync("plugin.settings", server.Plugin);
         await ServerTls.AuditAsync(audit, server, was, wasCa);
         return Results.NoContent();
@@ -360,6 +366,7 @@ public static class PluginEndpoints
         await db.SaveChangesAsync(ct);
         // Its worker is started again with the version installed (and what is granted now), on its next call.
         await runtime.StopAsync(server.Plugin!, ct);
+        PluginHooks.Forget();
         await Chat.SkillLibrary.SyncAsync(db, server, package, ct);
         await PluginContent.SyncAsync(db, server, package, adminId, ct);
         await audit.WriteAsync(action, server.Plugin, detail: $"{was} → {server.PluginVersion}{(more.Count > 0 ? $"; granted {string.Join(", ", more.Select(p => p.Key))}" : "")}");
