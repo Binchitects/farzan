@@ -364,40 +364,6 @@ services:
     healthcheck:
       disable: true
 
-  # TokenSpeed (Admin -> Models, engine TokenSpeed; github.com/lightseekorg/tokenspeed, MIT): snapshots on NVIDIA GPUs,
-  # tensor parallel, a prefix cache shared by every request. One `ts serve` per model the app wants, on its GPUs, run
-  # by the same supervisor (ENGINE_SERVER=tokenspeed; services/tokenspeed/serve.py names the key, metrics and model)
-  # in TokenSpeed's own image, with its Python. Off until asked for: COMPOSE_PROFILES=tokenspeed.
-  tokenspeed:
-    <<: [*service, *gpu]
-    image: ${TOKENSPEED_IMAGE:-lightseekorg/tokenspeed:0.1.1}
-    container_name: tokenspeed
-    profiles: [tokenspeed]
-    entrypoint: [/bin/sh, /vllm/supervisor.sh]
-    environment:
-      ENGINE_KEY: ${ENGINE_KEY}
-      ENGINE_SERVER: tokenspeed
-      CUDA_DEVICE_ORDER: PCI_BUS_ID
-      VLLM_PRESETS: /presets/tokenspeed
-      VLLM_STATUS: /status/tokenspeed
-      # The TokenSpeed to run (fake-gpu.yml: tools/fake-vllm's, as TokenSpeed).
-      VLLM_BIN: ${TOKENSPEED_BIN:-python3 /tokenspeed/serve.py}
-      TOKENSPEED_CLI: ts
-      HF_HUB_OFFLINE: "1"
-    volumes:
-      - ./services/vllm:/vllm:ro
-      - ./services/tokenspeed:/tokenspeed:ro
-      - ./services/gpu-probe.py:/gpu-probe.py:ro
-      - ../tools/fake-vllm:/fake-vllm:ro
-      - ${MODELS_DIR:-./models}:/library:ro
-      - engine:/presets:ro
-      - vllm-status:/status
-    ulimits: { memlock: -1 }
-    shm_size: ${TOKENSPEED_SHM:-16gb}
-    # Its image may check a server of its own; here the supervisor is the engine, as vLLM's is.
-    healthcheck:
-      disable: true
-
   # FreeToken (Admin -> Models, engine FreeToken; github.com/FlashML-org/FreeToken, Apache-2.0): MoE models on one GPU
   # as GGUF files or snapshots, the experts that do not fit there in RAM. One `ft serve` per model the app wants, on its
   # GPU, run by the same supervisor (ENGINE_SERVER=freetoken; services/freetoken/serve.py) in arena-freetoken, built

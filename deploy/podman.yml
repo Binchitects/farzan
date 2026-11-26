@@ -32,9 +32,6 @@ services:
   strata:
     <<: *gpu
     ulimits: !reset {}
-  tokenspeed:
-    <<: *gpu
-    ulimits: !reset {}
   freetoken:
     <<: *gpu
     ulimits: !reset {}

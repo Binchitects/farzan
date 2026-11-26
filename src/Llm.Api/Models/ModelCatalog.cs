@@ -1133,27 +1133,6 @@ public sealed partial class ModelCatalog(AppDbContext db, IOptions<EngineOptions
     }
 
     /// <summary>
-    /// TokenSpeed's arguments for a snapshot: its tensor parallel size, context, answers at once (--max-num-seqs), the share of
-    /// each GPU it may take, and its cache fp8 for fp8. Its launcher (services/tokenspeed/serve.py) names the model, host, port,
-    /// metrics and key. TokenSpeed reads tool calls and thinking by its gateway's defaults for the model's family.
-    /// </summary>
-    public static IReadOnlyList<string> TokenSpeedArgs(LocalModel m, string library, int tp)
-    {
-        var inv = CultureInfo.InvariantCulture;
-        var args = new List<string>
-        {
-            library.TrimEnd('/') + "/" + m.File, "--tp", tp.ToString(inv), "--max-model-len", m.Context.ToString(inv),
-            "--max-num-seqs", Math.Max(1, m.Parallel).ToString(inv),
-            "--gpu-memory-utilization", (m.GpuMemoryUtilization ?? VllmAdvisor.DefaultUtilization).ToString("0.###", inv),
-        };
-        if (m.KvType.StartsWith("fp8", StringComparison.Ordinal))
-        {
-            args.AddRange(["--kv-cache-dtype", "fp8"]);
-        }
-        return args;
-    }
-
-    /// <summary>
     /// Ollama's arguments for a GGUF file (a split one's first part): its context, answers at once and its cache's type (q8_0
     /// for fp8: a byte a value; f16 otherwise). Its launcher (services/ollama/serve.py) makes the file its model, runs Ollama
     /// behind a front that asks the key, and names host and port. Ollama reads tool calls and thinking by the model's template.
@@ -1164,7 +1143,7 @@ public sealed partial class ModelCatalog(AppDbContext db, IOptions<EngineOptions
         "--parallel", Math.Max(1, m.Parallel).ToString(CultureInfo.InvariantCulture), "--kv", m.KvType.StartsWith("fp8", StringComparison.Ordinal) ? "q8_0" : "f16",
     ];
 
-    /// <summary>A model's server's arguments, by its kind (vLLM's, SGLang's, LMDeploy's, Strata's, FreeToken's, TokenSpeed's or Ollama's); its parsers by its family.
+    /// <summary>A model's server's arguments, by its kind (vLLM's, SGLang's, LMDeploy's, Strata's, FreeToken's or Ollama's); its parsers by its family.
     /// <paramref name="trained"/>: the context it was trained for, when YaRN stretches it past that (<see cref="Stretch"/>).</summary>
     public static IReadOnlyList<string> ServerArgs(LocalModel m, string library, int tp, ParserFamily? family = null, int? trained = null) => m.EngineKind switch
     {
@@ -1172,7 +1151,6 @@ public sealed partial class ModelCatalog(AppDbContext db, IOptions<EngineOptions
         EngineKinds.Lmdeploy => LmdeployArgs(m, library, tp, family, trained),
         EngineKinds.Strata => StrataArgs(m, library),
         EngineKinds.FreeToken => FreeTokenArgs(m, library),
-        EngineKinds.TokenSpeed => TokenSpeedArgs(m, library, tp),
         EngineKinds.Ollama => OllamaArgs(m, library),
         _ => VllmArgs(m, library, tp, family, trained),
     };

@@ -1,16 +1,16 @@
-# The vllm, sglang, lmdeploy, strata, tokenspeed, freetoken and ollama engines with stand-ins, for a stack without a GPU big enough for them
+# The vllm, sglang, lmdeploy, strata, freetoken and ollama engines with stand-ins, for a stack without a GPU big enough for them
 # (development, CI, load tests): the real supervisor (services/vllm/supervisor.sh) runs
 # tools/fake-vllm, which answers as vLLM does (health, models, streamed answers at a set pace, vLLM's
 # metrics, sleep and wake), and as SGLang does through SGLang's own launcher (services/sglang/serve.py,
 # with the fake sglang package), as LMDeploy through its launcher (services/lmdeploy/serve.py, with the
 # fake lmdeploy package), as Strata through its launcher (services/strata/serve.py, with the fake
-# strata command), and as TokenSpeed, FreeToken and Ollama through theirs (services/tokenspeed/serve.py, services/freetoken/serve.py and
-# services/ollama/serve.py, with the fake ts, ft and ollama commands), on the python image the stack
+# strata command), and as FreeToken and Ollama through theirs (services/freetoken/serve.py and
+# services/ollama/serve.py, with the fake ft and ollama commands), on the python image the stack
 # already has, with no GPU.
 #
-#   docker compose -f docker-compose.yml -f fake-gpu.yml up -d vllm sglang lmdeploy strata tokenspeed freetoken ollama
-#   podman compose -f docker-compose.yml -f podman.yml -f fake-gpu.yml up -d vllm sglang lmdeploy strata tokenspeed freetoken ollama
-#   (Kubernetes: the chart's vllm.fake, sglang.fake, lmdeploy.fake, strata.fake, tokenspeed.fake, freetoken.fake and ollama.fake set true)
+#   docker compose -f docker-compose.yml -f fake-gpu.yml up -d vllm sglang lmdeploy strata freetoken ollama
+#   podman compose -f docker-compose.yml -f podman.yml -f fake-gpu.yml up -d vllm sglang lmdeploy strata freetoken ollama
+#   (Kubernetes: the chart's vllm.fake, sglang.fake, lmdeploy.fake, strata.fake, freetoken.fake and ollama.fake set true)
 #
 # Admin -> Models then adds vLLM, SGLang and LMDeploy models from the library's snapshots, and Strata
 # models from its GGUF files, as on a real server.
@@ -85,17 +85,6 @@ services:
     environment:
       # Ollama's launcher and its front as on a real server; the fake ollama command answers.
       OLLAMA_CLI: /fake-vllm/ollama
-      FAKE_VLLM_TTFT: ${FAKE_VLLM_TTFT:-0.2}
-      FAKE_VLLM_TPS: ${FAKE_VLLM_TPS:-60}
-    deploy: !reset {}
-    devices: !reset []
-    shm_size: 64mb
-  tokenspeed:
-    image: python:3.13-slim
-    profiles: !reset []
-    environment:
-      # TokenSpeed's launcher as on a real server; the fake ts command answers.
-      TOKENSPEED_CLI: /fake-vllm/ts
       FAKE_VLLM_TTFT: ${FAKE_VLLM_TTFT:-0.2}
       FAKE_VLLM_TPS: ${FAKE_VLLM_TPS:-60}
     deploy: !reset {}

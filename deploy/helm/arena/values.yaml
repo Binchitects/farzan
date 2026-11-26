@@ -87,8 +87,6 @@ images:
   lmdeploy: { repository: arena-lmdeploy, tag: "0.18.0" }
   # Strata (strata.enabled): its own image, from GitHub's registry.
   strata: { repository: ghcr.io/niko1221/strata, tag: 0.2.22-cuda13 }
-  # TokenSpeed (tokenspeed.enabled): its own image, from Docker Hub.
-  tokenspeed: { repository: lightseekorg/tokenspeed, tag: "0.1.1" }
   # FreeToken (freetoken.enabled): arena-freetoken, built from deploy/services/freetoken.Dockerfile and pushed to your registry.
   freetoken: { repository: arena-freetoken, tag: "" }
   # Ollama (ollama.enabled): arena-ollama, built from deploy/services/ollama.Dockerfile and pushed to your registry.
@@ -215,15 +213,6 @@ strata:
     - { name: strata, gpus: 1, nodeSelector: {}, tolerations: [] }
   shmSize: 2Gi
   resources: { requests: { cpu: "8", memory: 64Gi } }
-
-# TokenSpeed (Admin -> Models, engine TokenSpeed): snapshots on NVIDIA GPUs, the same supervisor, one Deployment per instance.
-tokenspeed:
-  enabled: false
-  fake: false
-  instances:
-    - { name: tokenspeed, gpus: 1, nodeSelector: {}, tolerations: [] }
-  shmSize: 16Gi
-  resources: { requests: { cpu: "4", memory: 32Gi } }
 
 # FreeToken (Admin -> Models, engine FreeToken): MoE models on one GPU, the experts that do not fit it in RAM (ask for that
 # RAM here), its compiled kernels in arena-freetoken-cache.

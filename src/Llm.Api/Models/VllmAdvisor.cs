@@ -82,7 +82,6 @@ public static class VllmAdvisor
             "deepseek4", "flint", "gemma4", "glm4moe", "glm5-next", "gpt-oss", "llama", "minimax-m2", "minimax-m3", "muse-glimmer", "qwen2", "qwen3",
             "qwen35", "qwen35moe", "qwen3moe", "qwen3vl", "qwen3vlmoe", "qwen4exp", "ricursive",
         ],
-        [EngineKinds.TokenSpeed] = [],
     };
 
     private static string G(long b) => (b / (double)(1L << 30)).ToString("0.0", CultureInfo.InvariantCulture) + " GiB";
@@ -482,7 +481,7 @@ public static class VllmAdvisor
             Approximate = p.Approximate, Thinking = true, Tools = true,
         };
         // Each request may hold the whole context (--max-model-len), its answer included: the answers at once share the cache, not the window.
-        // YaRN where its engine takes it from the app (vLLM, SGLang, LMDeploy; not Strata, TokenSpeed, FreeToken or Ollama) and the model can stretch.
+        // YaRN where its engine takes it from the app (vLLM, SGLang, LMDeploy; not Strata, FreeToken or Ollama) and the model can stretch.
         var stretches = kind.Kind is EngineKinds.Vllm or EngineKinds.Sglang or EngineKinds.Lmdeploy && p.CanStretch;
         var limits = new ModelLimits(new Bounds(ctxMin, most), ModelAdvisor.OutputBounds(context),
             new Bounds(1, 1024), new Bounds(0, 0), null, new Bounds(1, 8), ModelAdvisor.VllmCacheTypes, [], p.MtpLayers > 0, stretches, [], []);

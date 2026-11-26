@@ -76,7 +76,7 @@ export interface EngineInstance {
 }
 
 /** The kinds of engine a chat model runs on (Llm.Core EngineKinds). */
-export type ChatEngineKind = 'llamacpp' | 'vllm' | 'sglang' | 'lmdeploy' | 'strata' | 'tokenspeed' | 'freetoken' | 'ollama'
+export type ChatEngineKind = 'llamacpp' | 'vllm' | 'sglang' | 'lmdeploy' | 'strata' | 'freetoken' | 'ollama'
 
 /** The kinds that run one server a model, run by the supervisor. */
 export type ServerKind = Exclude<ChatEngineKind, 'llamacpp'>
@@ -95,7 +95,7 @@ export const serverKinds: Record<ServerKind, {
   replicas: boolean
   /** A quantisation the app may set on top of its checkpoint's. */
   quantization: boolean
-  /** Tool-call and reasoning parsers the app sets (Strata, TokenSpeed, FreeToken and Ollama read both themselves). */
+  /** Tool-call and reasoning parsers the app sets (Strata, FreeToken and Ollama read both themselves). */
   parsers: boolean
   /** Its flag for the share of each GPU, for people at once, and the most people at once. */
   share: string
@@ -106,7 +106,6 @@ export const serverKinds: Record<ServerKind, {
   sglang: { label: 'SGLang', snapshot: true, gguf: true, speculative: true, tiers: true, sleep: true, replicas: true, quantization: true, parsers: true, share: '--mem-fraction-static', parallel: '--max-running-requests', maxParallel: 1024 },
   lmdeploy: { label: 'LMDeploy', snapshot: true, gguf: false, speculative: false, tiers: false, sleep: false, replicas: true, quantization: false, parsers: true, share: '--cache-max-entry-count, of what is free once its weights are in', parallel: '--max-batch-size', maxParallel: 1024 },
   strata: { label: 'Strata', snapshot: false, gguf: true, speculative: false, tiers: false, sleep: false, replicas: false, quantization: false, parsers: false, share: 'what of the GPUs it fills; the experts beyond it stay in RAM', parallel: '--parallel', maxParallel: 8 },
-  tokenspeed: { label: 'TokenSpeed', snapshot: true, gguf: false, speculative: false, tiers: false, sleep: false, replicas: true, quantization: false, parsers: false, share: '--gpu-memory-utilization', parallel: '--max-num-seqs', maxParallel: 1024 },
   freetoken: { label: 'FreeToken', snapshot: true, gguf: true, speculative: false, tiers: false, sleep: false, replicas: false, quantization: false, parsers: false, share: '--memory-ratio, of its one GPU; the experts beyond it stay in RAM', parallel: '--max-running-requests', maxParallel: 1024 },
   ollama: { label: 'Ollama', snapshot: false, gguf: true, speculative: false, tiers: false, sleep: false, replicas: false, quantization: false, parsers: false, share: 'what of the GPUs it fills; the layers beyond it stay in RAM', parallel: 'OLLAMA_NUM_PARALLEL', maxParallel: 1024 },
 }

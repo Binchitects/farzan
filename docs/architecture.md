@@ -67,7 +67,7 @@ and the engines directly only to manage them (load, unload, slots, health).
 | the way in | `traefik` | TLS (Let's Encrypt, a certificate of its own, or yours), routes by host and path, security headers and compression |
 | the web and the app | `web`, `app` | the React app; the .NET app and API: sign-in, chat, tools, admin, dashboards, and the model gateway every model request goes through |
 | the stores | `postgres`, `valkey` | the app's database (`llmapp`: people, chats, settings, the ledger of model requests, the API keys and their rate counts); Valkey, LMCache's shared store, only with the `valkey` feature |
-| the engines | `llamacpp`, `vllm`, `sglang`, `lmdeploy`, `strata`, `tokenspeed`, `freetoken`, `ollama`; `imagegen`, `videogen`, `audio`, `embed` | the models: chat models on llama.cpp, vLLM, SGLang, LMDeploy, Strata, TokenSpeed, FreeToken or Ollama, pictures and video on stable-diffusion.cpp, speech on speaches, embeddings on the CPU; other GPU servers the app does not run are reached the same way, through the app's gateway |
+| the engines | `llamacpp`, `vllm`, `sglang`, `lmdeploy`, `strata`, `freetoken`, `ollama`; `imagegen`, `videogen`, `audio`, `embed` | the models: chat models on llama.cpp, vLLM, SGLang, LMDeploy, Strata, FreeToken or Ollama, pictures and video on stable-diffusion.cpp, speech on speaches, embeddings on the CPU; other GPU servers the app does not run are reached the same way, through the app's gateway |
 | Farzan Graph | `code-intel`, `scanners` | the code index of your GitLab (read only), knowledge packs and security advisories, over MCP; the scanners for its security reviews |
 | the tools | `sandbox`, `blender`, `lean`, `browser`, `searxng`, `laya`, `studio` | Python and commands, 3D, proofs, the browser agent, web search, typed decisions, the media studio's own models |
 | monitoring | `prometheus`, `alertmanager`, `loki`, `alloy`, the exporters, `power-limits` | what the app's dashboards, logs and alerts read; power caps kept applied |
@@ -177,7 +177,7 @@ features it requires.
 | `chat-models` | yes | `llamacpp` | chat models on this host's GPUs (llama.cpp) |
 | `vllm`, `sglang` | no | `vllm`, `sglang` | the vLLM and SGLang engines, for many people at once |
 | `lmdeploy`, `strata` | no | `lmdeploy`, `strata` | the LMDeploy engine, and Strata for large MoE GGUF models with experts in RAM |
-| `tokenspeed`, `freetoken`, `ollama` | no | `tokenspeed`, `freetoken`, `ollama` | the TokenSpeed engine for snapshots, FreeToken for MoE models on one GPU with experts in RAM, and Ollama for GGUF files behind a front that asks the engine key |
+| `freetoken`, `ollama` | no | `freetoken`, `ollama` | FreeToken for MoE models on one GPU with experts in RAM, and Ollama for GGUF files behind a front that asks the engine key |
 | `knowledge` | yes | `embed` | company knowledge, and search by meaning |
 | `code-intel` | yes | `code-intel` | the code index of your GitLab, and knowledge packs |
 | `pictures`, `video` | yes | `imagegen`, `videogen` | pictures and video on the GPU |
@@ -211,7 +211,7 @@ on later, put `GITLAB_URL` and `GITLAB_TOKEN` in `.env` and run
 | `scale.yml` | the app as `APP_REPLICAS` replicas ([section 9](#9-several-app-replicas)) |
 | `podman.yml` | rootless Podman: GPUs through CDI, Promtail on the Podman socket, no power limits |
 | `rocm.yml` | AMD GPUs (`/dev/kfd`, `/dev/dri`): llama.cpp's and SGLang's ROCm images, stable-diffusion.cpp's Vulkan image for the picture and video servers, and vLLM's own ROCm image in `VLLM_ROCM_IMAGE` (snapshots only); the app's backend set to `rocm`; no `nvidia-smi` exporter |
-| `fake-gpu.yml` | the real supervisor and launchers of vLLM, SGLang, LMDeploy, Strata, TokenSpeed, FreeToken and Ollama over a fake engine, with no GPU |
+| `fake-gpu.yml` | the real supervisor and launchers of vLLM, SGLang, LMDeploy, Strata, FreeToken and Ollama over a fake engine, with no GPU |
 | `pitr.yml` | Postgres with pgBackRest's WAL archive, for point-in-time recovery |
 | `vllm-build.yml`, `sglang-build.yml`, `lmdeploy-build.yml` | arena-vllm built from PyPI instead of on vLLM's own image, SGLang's image built here, or arena-lmdeploy built from PyPI, for a host that cannot pull theirs |
 
@@ -289,7 +289,7 @@ them, else to llama.cpp's router.
 |---|---|---|---|
 | llama.cpp | `llamacpp` | its router's HTTP API (load, unload, slots), and the presets it writes into `engine`: `models.ini`, `keep`, `max`, `kvcache`. `services/llamacpp/router.sh` restarts llama-server when the list or the count changes, or an admin's Restart writes a new `gen=` in `llamacpp.restart` (one that does not stop within 15 s is killed) | GGUF files; layers or experts in RAM when the GPU is short; a few people at once; each conversation kept in its slot |
 | vLLM, SGLang | `vllm`, `sglang` | files: the app writes the models each may run (`presets.json`) and the ones it wants (`models.json`) into `engine`; `services/vllm/supervisor.sh` runs one server per model on that model's GPUs, drains one taken away, sleeps and wakes them, drains and starts every model again on an admin's Reload (`reload`) or Restart (`restart`, the supervisor too), and writes their status and a heartbeat into `vllm-status`. Load is read from each server's `/metrics` | safetensors snapshots, or GGUF files (vLLM's GGUF plugin, SGLang's loader); tensor parallel; copies of a model; a prefix cache shared by every request; many people at once |
-| LMDeploy, Strata, TokenSpeed, FreeToken, Ollama | `lmdeploy`, `strata`, `tokenspeed`, `freetoken`, `ollama` | the same supervisor and files as vLLM's, each with its launcher (`services/KIND/serve.py`): the server's own names, its GPUs, the key handed over inside its process (Ollama's behind a front that asks it). Load is read from `/metrics` (LMDeploy's, Strata's and TokenSpeed's own, Ollama's front's), or FreeToken's `/v1/stats` | snapshots (LMDeploy, TokenSpeed, FreeToken) or GGUF files (Strata, FreeToken, Ollama); experts or layers in RAM (Strata, FreeToken, Ollama) |
+| LMDeploy, Strata, FreeToken, Ollama | `lmdeploy`, `strata`, `freetoken`, `ollama` | the same supervisor and files as vLLM's, each with its launcher (`services/KIND/serve.py`): the server's own names, its GPUs, the key handed over inside its process (Ollama's behind a front that asks it). Load is read from `/metrics` (LMDeploy's and Strata's own, Ollama's front's), or FreeToken's `/v1/stats` | snapshots (LMDeploy, FreeToken) or GGUF files (Strata, FreeToken, Ollama); experts or layers in RAM (Strata, FreeToken, Ollama) |
 | other GPU servers | none here | registered at the gateway and checked, never loaded or unloaded (Admin → Models → Other servers and providers; their keys kept encrypted) | another vLLM, SGLang, TGI, Ollama, or a cloud |
 | pictures, video | `imagegen`, `videogen` | a control file each in `engine` (on or off, the model, the GPU); `services/sd-serve.sh` follows it and writes its status into `media-status` | stable-diffusion.cpp |
 | speech | `audio` | its own API: models loaded and unloaded | speaches: Whisper, Kokoro |

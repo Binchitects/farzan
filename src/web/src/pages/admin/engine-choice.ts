@@ -4,11 +4,11 @@ import type { LibraryFile, ModelProfile } from './model-profile'
 export type { ChatEngineKind } from './engine-api'
 
 /** The kinds of engine a chat model runs on, in the Engine field's order. */
-const kinds: ChatEngineKind[] = ['llamacpp', 'vllm', 'sglang', 'lmdeploy', 'strata', 'tokenspeed', 'freetoken', 'ollama']
+const kinds: ChatEngineKind[] = ['llamacpp', 'vllm', 'sglang', 'lmdeploy', 'strata', 'freetoken', 'ollama']
 
 /** The feature (deploy/features) that runs this stack's engine of each kind. */
 const featureOf: Record<ChatEngineKind, string> = {
-  llamacpp: 'chat-models', vllm: 'vllm', sglang: 'sglang', lmdeploy: 'lmdeploy', strata: 'strata', tokenspeed: 'tokenspeed', freetoken: 'freetoken', ollama: 'ollama',
+  llamacpp: 'chat-models', vllm: 'vllm', sglang: 'sglang', lmdeploy: 'lmdeploy', strata: 'strata', freetoken: 'freetoken', ollama: 'ollama',
 }
 
 /** One choice of the Engine field: an engine instance, or a kind this stack has none of, and why it cannot be chosen. */

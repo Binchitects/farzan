@@ -258,8 +258,8 @@ public static class ModelAdvisor
     /// vLLM's share of each GPU, quantisation, speculative decoding by EAGLE, or a CPU tier; vLLM and SGLang have none of
     /// llama.cpp's placement by layers, experts in RAM, prompt step, YaRN, extra preset lines or projector file, and SGLang
     /// none of LMCache's tiers. LMDeploy and Strata have no speculative decoding, tiers beyond the GPU or sleep
-    /// the app sets, and read the quantisation their checkpoint or file has; Strata answers 1 to 8 at once. TokenSpeed,
-    /// FreeToken and Ollama have none of those either, and FreeToken runs a model on one GPU.
+    /// the app sets, and read the quantisation their checkpoint or file has; Strata answers 1 to 8 at once. FreeToken
+    /// and Ollama have none of those either, and FreeToken runs a model on one GPU.
     /// </summary>
     public static IReadOnlyList<ModelProblem> KindProblems(LocalModel m)
     {

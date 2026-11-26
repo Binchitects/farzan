@@ -381,7 +381,10 @@ Newest versions of the engines' images, and four engines more: TokenSpeed, FreeT
 - **The new kinds**, each run by the same supervisor as vLLM (one server a model, on its GPUs), its own feature and
   compose profile (off until asked for), Helm Deployment, launcher (`services/KIND/serve.py`), fake for tests, the
   key by the environment only (IAM-08), readiness on `/health`, its load from `/metrics` where it has one:
-  - **TokenSpeed** 0.1.1 (LightSeek, MIT): snapshots on NVIDIA GPUs, tensor parallel, a prefix cache; `ts serve`.
+  - **TokenSpeed** 0.1.1 (LightSeek, MIT): weighed and left out (2026-11-26). Its image, the latest release, fails as it
+    starts: `flashinfer-jit-cache` 0.6.18 against FlashInfer 0.7.1rc2 (and with the version check skipped, the two do
+    not fit: a function one asks is not in the other), so it never serves. Its release candidate rc-377b78 (9.1 GB)
+    was not tried. Back once a release serves (its launcher and wiring are in git: be23631c).
   - **FreeToken** 0.2.3 (FlashML, Apache-2.0): MoE models with experts in RAM on one GPU, GGUF or snapshots;
     `ft serve`; built from PyPI on CUDA 13 (its kernels compiled in the image, nothing at first use).
   - **Ollama** 0.40.18 (MIT): GGUF files of the library made into its models with no pull; it has no key of its own,
@@ -394,8 +397,7 @@ Newest versions of the engines' images, and four engines more: TokenSpeed, FreeT
 - **Where it stands** (2026-11-26): FreeToken and Ollama done and run for real on the RTX 3090 (SmolLM2-135M from the
   library: the key asked, answers through the launcher; FreeToken's first start compiles its kernels, about 3 minutes);
   llama.cpp pinned to b12767 (1.1.0-dev, every preset key the app writes still a flag; run for real); the vLLM PyPI
-  build pinned to 0.34.0 (the same vLLM, torch and GGUF plugin as arena-vllm; not rebuilt here). TokenSpeed's launcher
-  waits for its image (7.3 GB, the proxy cut its first pull), to check its key, metrics and readiness on it.
+  build pinned to 0.34.0 (the same vLLM, torch and GGUF plugin as arena-vllm; not rebuilt here). TokenSpeed left out (above).
 - **Proof.** Each launcher's arguments, key and GPUs (test_engine_launchers.py), its kind's settings in the app
   (EngineKindTests, VllmBackendTests, the advisor), the form (engine-fields), parity with Helm, and each engine run
   for real on this machine's GPU with a model of the library. The images scanned, the bundle and offline scenarios

@@ -237,7 +237,7 @@ An access review lists every privileged role given to a person, a group or every
 
 ### IAM-08: The engines answer only with the engine key, which no command line shows
 
-Each engine the app runs (llama.cpp, vLLM, SGLang, LMDeploy, Strata, TokenSpeed, FreeToken, Ollama) answers its OpenAI-compatible API on the stack's network only with the engine key (ENGINE_KEY), which the app and the gateway hold; Ollama, whose own server asks no key, listens on its container's loopback only, behind its launcher's front that asks it. The key reaches each engine's server by its environment and is handed over inside the launcher's process (or named to Strata by --api-key-env), never on a command line that anyone in the container can read; an entry of the desired state that puts one there is refused.
+Each engine the app runs (llama.cpp, vLLM, SGLang, LMDeploy, Strata, FreeToken, Ollama) answers its OpenAI-compatible API on the stack's network only with the engine key (ENGINE_KEY), which the app and the gateway hold; Ollama, whose own server asks no key, listens on its container's loopback only, behind its launcher's front that asks it. The key reaches each engine's server by its environment and is handed over inside the launcher's process (or named to Strata by --api-key-env), never on a command line that anyone in the container can read; an entry of the desired state that puts one there is refused.
 
 **Serves**
 

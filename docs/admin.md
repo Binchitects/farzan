@@ -693,12 +693,6 @@ full the models kept loaded would make it.
   without drafting: Strata's draft layers are downloads of its own; see
   [deployment.md](deployment.md#engines-and-gpus)), no tiers and no sleep. Its load is read from its metrics, which are
   vLLM's names.
-- **TokenSpeed models** (`engineKind: tokenspeed`, the `tokenspeed` feature):
-  a snapshot on NVIDIA GPUs, tensor parallel, copies, its cache fp8 for fp8,
-  people at once by `--max-num-seqs`; a GGUF file is refused. It reads tool
-  calls and thinking itself, by its gateway's defaults for the model's family:
-  there is no parser to choose. No speculative decoding, tiers or sleep the app
-  sets.
 - **FreeToken models** (`engineKind: freetoken`, the `freetoken` feature): a
   GGUF file of one of FreeToken's families (Qwen, Llama, Gemma 4, GLM,
   DeepSeek-V4, MiniMax, gpt-oss and others) or a snapshot, on one GPU (more is

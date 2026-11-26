@@ -396,7 +396,7 @@ public sealed class VllmBackendTests : IDisposable
     {
         var o = new EngineOptions();
         Assert.Equal([("vllm", EngineKinds.Vllm), ("sglang", EngineKinds.Sglang), ("lmdeploy", EngineKinds.Lmdeploy), ("strata", EngineKinds.Strata),
-            ("tokenspeed", EngineKinds.TokenSpeed), ("freetoken", EngineKinds.FreeToken), ("ollama", EngineKinds.Ollama)], o.VllmEngines.Select(e => (e.Name, e.Kind)));
+            ("freetoken", EngineKinds.FreeToken), ("ollama", EngineKinds.Ollama)], o.VllmEngines.Select(e => (e.Name, e.Kind)));
         o.Vllm = [new VllmEngineOptions { Name = "vllm" }, new VllmEngineOptions { Name = "sglang-a", Kind = EngineKinds.Sglang }, new VllmEngineOptions { Name = "sglang-b", Kind = EngineKinds.Sglang }];
         var all = new VllmBackends(Microsoft.Extensions.Options.Options.Create(o), new OneClient(new Answer("")), TimeProvider.System);
         Assert.Equal("sglang-a", all.For(null, EngineKinds.Sglang)!.Name);

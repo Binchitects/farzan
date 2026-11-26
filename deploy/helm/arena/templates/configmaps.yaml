@@ -47,10 +47,6 @@ data:
 {{ .Files.Get "files/strata-serve.py" | indent 4 }}
   fake-strata: |-
 {{ .Files.Get "files/fake-strata" | indent 4 }}
-  tokenspeed-serve.py: |-
-{{ .Files.Get "files/tokenspeed-serve.py" | indent 4 }}
-  fake-ts: |-
-{{ .Files.Get "files/fake-ts" | indent 4 }}
   freetoken-serve.py: |-
 {{ .Files.Get "files/freetoken-serve.py" | indent 4 }}
   fake-ft: |-

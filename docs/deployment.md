@@ -209,7 +209,6 @@ on; its API answers 404; and its background work does not run.
 | `sglang` | no | `sglang` (with `SGLANG_IMAGE`) | a GPU |
 | `lmdeploy` | no | `lmdeploy` (arena-lmdeploy, built by `lmdeploy-build.yml`) | an NVIDIA GPU |
 | `strata` | no | `strata` (with `STRATA_IMAGE`) | an NVIDIA GPU, RAM for the experts that do not fit it |
-| `tokenspeed` | no | `tokenspeed` (with `TOKENSPEED_IMAGE`) | an NVIDIA GPU |
 | `freetoken` | no | `freetoken` (arena-freetoken, built on `SGLANG_IMAGE`) | an NVIDIA GPU (driver r580+, CUDA 13), RAM for the experts that do not fit it |
 | `ollama` | no | `ollama` (arena-ollama, built from `OLLAMA_IMAGE`) | an NVIDIA GPU, RAM for the layers that do not fit it |
 | `knowledge` | yes | `embed` | |
@@ -649,16 +648,6 @@ how). **no**: missing, with the reason.
   in `strata-data`. Its metrics are vLLM's names, with the engine key. Its CUDA
   13 image holds machine code for RTX 20 to RTX 50 and PTX the driver compiles
   for Hopper (H100, H200) on its first start. Kubernetes: `strata.enabled`.
-- **TokenSpeed** is off until asked for: the `tokenspeed` feature,
-  `--with tokenspeed`. `TOKENSPEED_IMAGE` is TokenSpeed's own image from Docker
-  Hub (`lightseekorg/tokenspeed:0.1.1`, 7.3 GB). TokenSpeed (MIT,
-  github.com/lightseekorg/tokenspeed, the LightSeek Foundation) is an engine for
-  agents' long prompts on NVIDIA GPUs: snapshots, tensor parallel, a prefix
-  cache shared by every request. The same supervisor runs it
-  (`ENGINE_SERVER=tokenspeed`): `services/tokenspeed/serve.py` runs `ts serve`
-  per model on its GPUs, calling TokenSpeed's own `ts` in its process with the
-  key, so no command line shows it; its metrics are on, on the model's port plus
-  1000. Kubernetes: `tokenspeed.enabled`.
 - **FreeToken** is off until asked for: the `freetoken` feature,
   `--with freetoken`. arena-freetoken is built here on `SGLANG_IMAGE`
   (`services/freetoken.Dockerfile`, about 0.4 GB from PyPI): FreeToken 0.2.3
@@ -698,17 +687,16 @@ how). **no**: missing, with the reason.
   TurboMind is a fast C++ engine for the common dense and MoE families. Strata
   runs a MoE model larger than the GPUs with its experts in RAM, faster than
   llama.cpp does it, for one or a few people at once; FreeToken does the same
-  on one GPU for more families, GGUF files or snapshots. TokenSpeed is for
-  agents' long prompts on snapshots. Ollama runs a GGUF file as Ollama runs it,
+  on one GPU for more families, GGUF files or snapshots. Ollama runs a GGUF file as Ollama runs it,
   for those who know it, its layers in RAM when the GPUs are short. The RAM
   llama.cpp keeps for conversations that lost their slot (8 GB a loaded model
   by default) is its prompt cache filling up as designed, not a leak: Admin →
   Settings → *RAM for chats that lost their slot* sizes it.
 - **Without a big GPU**, `fake-gpu.yml` (compose and Podman) or `vllm.fake`,
-  `sglang.fake`, `lmdeploy.fake`, `strata.fake`, `tokenspeed.fake`,
+  `sglang.fake`, `lmdeploy.fake`, `strata.fake`,
   `freetoken.fake` and `ollama.fake` (Helm) runs the real supervisor and
   launchers over the fake servers (`tools/fake-vllm`: the fake vLLM, the fake
-  sglang and lmdeploy packages, and the fake strata, ts, ft and ollama
+  sglang and lmdeploy packages, and the fake strata, ft and ollama
   commands), on the python image the stack already has, with no GPU.
 - **Engines evaluated and not added**: TensorRT-LLM (`trtllm-serve`) runs on
   Hopper and is OpenAI-compatible, but its stable release (1.2.1) has no API key

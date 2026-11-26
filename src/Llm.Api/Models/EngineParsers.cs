@@ -57,7 +57,6 @@ public static partial class EngineParsers
             "qwen3coder",
         ],
         [EngineKinds.Strata] = [],
-        [EngineKinds.TokenSpeed] = [],
         [EngineKinds.FreeToken] = [],
         [EngineKinds.Ollama] = [],
     };
@@ -82,7 +81,6 @@ public static partial class EngineParsers
         ],
         [EngineKinds.Lmdeploy] = ["default", "deepseek-v3", "deepseek-v32", "deepseek-v3.2", "deepseek-v4"],
         [EngineKinds.Strata] = [],
-        [EngineKinds.TokenSpeed] = [],
         [EngineKinds.FreeToken] = [],
         [EngineKinds.Ollama] = [],
     };
@@ -91,7 +89,7 @@ public static partial class EngineParsers
         new(id, label, new Dictionary<string, EngineParserPair>(StringComparer.Ordinal)
         {
             [EngineKinds.Vllm] = vllm, [EngineKinds.Sglang] = sglang, [EngineKinds.Lmdeploy] = lmdeploy,
-            [EngineKinds.Strata] = new(null, null, BuiltIn: true), [EngineKinds.TokenSpeed] = new(null, null, BuiltIn: true),
+            [EngineKinds.Strata] = new(null, null, BuiltIn: true),
             [EngineKinds.FreeToken] = new(null, null, BuiltIn: true), [EngineKinds.Ollama] = new(null, null, BuiltIn: true),
         });
 
@@ -141,10 +139,9 @@ public static partial class EngineParsers
 
     /// <summary>
     /// The kinds that read tool calls and thinking themselves, with no parser named: Strata (its own, for the families it runs),
-    /// TokenSpeed (its gateway's defaults for the model's family, or the template's), FreeToken (by the model's family) and
-    /// Ollama (by the model's template).
+    /// FreeToken (by the model's family) and Ollama (by the model's template).
     /// </summary>
-    public static bool BuiltIn(string? kind) => kind is EngineKinds.Strata or EngineKinds.TokenSpeed or EngineKinds.FreeToken or EngineKinds.Ollama;
+    public static bool BuiltIn(string? kind) => kind is EngineKinds.Strata or EngineKinds.FreeToken or EngineKinds.Ollama;
 
     /// <summary>
     /// A model's family, from its name and file (hf/ORG/REPO@REVISION, a GGUF file's name) and its config's architecture and model

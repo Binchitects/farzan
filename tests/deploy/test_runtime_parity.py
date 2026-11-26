@@ -60,7 +60,6 @@ ALLOWED: dict[tuple[str, str, str], str] = {
     ("mount", "sglang", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
     ("mount", "lmdeploy", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
     ("mount", "strata", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
-    ("mount", "tokenspeed", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
     ("mount", "freetoken", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
     ("mount", "ollama", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
     ("mount", "postgres", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
@@ -145,7 +144,7 @@ def helm_rendered() -> dict[str, dict[str, set[str]]] | None:
         return None
     if helm is None:
         return None
-    on = ["laya.enabled=true", "scanners.enabled=true", "studio.enabled=true", "blender.enabled=true", "lean.enabled=true", "videogen.enabled=true", "vllm.enabled=true", "sglang.enabled=true", "lmdeploy.enabled=true", "strata.enabled=true", "tokenspeed.enabled=true", "freetoken.enabled=true", "ollama.enabled=true", "valkey.enabled=true", "codeIntel.packLibraryClaim=packs", "gitlab.caCert=a-ca"]
+    on = ["laya.enabled=true", "scanners.enabled=true", "studio.enabled=true", "blender.enabled=true", "lean.enabled=true", "videogen.enabled=true", "vllm.enabled=true", "sglang.enabled=true", "lmdeploy.enabled=true", "strata.enabled=true", "freetoken.enabled=true", "ollama.enabled=true", "valkey.enabled=true", "codeIntel.packLibraryClaim=packs", "gitlab.caCert=a-ca"]
     out: dict[str, dict[str, set[str]]] = {}
     # This chart's Postgres, and an external one with a CA of its own: together, every variable a pod can be given.
     # The output holds the Secret it made up: it is read here and never printed.

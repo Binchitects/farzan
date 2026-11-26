@@ -592,24 +592,13 @@ public sealed class EngineKindTests(AppFixture app) : IDisposable
     }
 
     [Fact]
-    public async Task A_tokenspeed_freetoken_or_ollama_model_runs_its_files_on_its_own_engine_with_its_arguments_and_at_the_gateway()
+    public async Task A_freetoken_or_ollama_model_runs_its_files_on_its_own_engine_with_its_arguments_and_at_the_gateway()
     {
         await using var f = NewApp();
         var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
         List<string> Args(string engine, string name) => [.. System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(Config, engine, VllmBackend.PresetsFile)))!["models"]!
             .AsArray().Single(m => m!["name"]!.GetValue<string>() == name)!["args"]!.AsArray().Select(a => a!.GetValue<string>())];
         string After(List<string> args, string flag) => args[args.IndexOf(flag) + 1];
-
-        // TokenSpeed: a snapshot, tensor parallel, its own names; no parser named (its gateway's defaults for the family).
-        await StatusAssert.Is(HttpStatusCode.Created, await admin.PostAsync("/api/admin/models", new
-        {
-            name = "speedy", engineKind = "tokenspeed", file = "hf/acme/Flash@abc123", context = 32768, parallel = 8, kvType = "fp8", devices = "0",
-        }));
-        var ts = Args("tokenspeed", "speedy");
-        Assert.Equal(("/library/hf/acme/Flash@abc123", "1", "32768", "8", "fp8"), (ts[0], After(ts, "--tp"), After(ts, "--max-model-len"), After(ts, "--max-num-seqs"), After(ts, "--kv-cache-dtype")));
-        Assert.DoesNotContain("--tool-call-parser", ts);
-        Assert.Equal("http://tokenspeed:8001/v1", (await app.RoutesOfAsync(f)).Single(m => m.Name == "speedy").Params["api_base"]!.GetValue<string>());
-        await StatusAssert.Is(HttpStatusCode.BadRequest, await admin.PostAsync("/api/admin/models", new { name = "speedy2", engineKind = "tokenspeed", file = "tiny/Tiny-4B-Q4_K_M.gguf", context = 32768 }));
 
         // FreeToken: a GGUF file (or a snapshot), on one GPU, its cache at 8 bits for fp8; nothing it has none of.
         await StatusAssert.Is(HttpStatusCode.Created, await admin.PostAsync("/api/admin/models", new
@@ -641,14 +630,12 @@ public sealed class EngineKindTests(AppFixture app) : IDisposable
     [Fact]
     public void Each_new_kind_says_what_it_can_do_and_is_one_server_a_model()
     {
-        foreach (var kind in new[] { EngineKinds.TokenSpeed, EngineKinds.FreeToken, EngineKinds.Ollama })
+        foreach (var kind in new[] { EngineKinds.FreeToken, EngineKinds.Ollama })
         {
             Assert.True(EngineKinds.ServerPerModel(kind) && EngineKinds.Managed(kind) && EngineKinds.ServerKinds.Contains(kind));
             Assert.True(EngineParsers.BuiltIn(kind) && !EngineParsers.Sets(kind));
             Assert.True(EngineKinds.Of(kind) is { Sleep: false, Speculative: false, KvTiers.Count: 0 });
         }
-        Assert.True(EngineKinds.TokenSpeedCapabilities is { TensorParallel: true, Replicas: true, SpillToRam: false, PrefixCache: true });
-        Assert.Equal(["safetensors"], EngineKinds.TokenSpeedCapabilities.Formats);
         Assert.True(EngineKinds.FreeTokenCapabilities is { TensorParallel: false, Replicas: false, SpillToRam: true, PrefixCache: true });
         Assert.True(EngineKinds.OllamaCapabilities is { TensorParallel: false, Replicas: false, SpillToRam: true });
         Assert.Equal(["gguf"], EngineKinds.OllamaCapabilities.Formats);

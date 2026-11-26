@@ -312,7 +312,7 @@ controls:
     title: The engines answer only with the engine key, which no command line shows
     meets: >-
       Each engine the app runs (llama.cpp, vLLM, SGLang, LMDeploy, Strata,
-      TokenSpeed, FreeToken, Ollama) answers its OpenAI-compatible API on the
+      FreeToken, Ollama) answers its OpenAI-compatible API on the
       stack's network only with the engine key (ENGINE_KEY), which the app and
       the gateway hold; Ollama, whose own server asks no key, listens on its
       container's loopback only, behind its launcher's front that asks it. The
