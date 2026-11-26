@@ -912,6 +912,34 @@ controls:
       - Llm.Tests/PluginTests.A_plugins_own_server_runs_in_the_sandbox_with_its_settings_one_job_a_call
     operator: Keep the sandbox's host patched.
 
+  - id: OPS-03
+    title: Plugins run apart, with only what an admin granted
+    meets: >-
+      A plugin's code runs in the plugin runtime, each plugin its own worker,
+      user and limits, with no network; its pages in sandboxed frames with an
+      opaque origin. Code or pages install only signed by a trusted publisher.
+      Every host API call is checked against the plugin's grants and the
+      person's own access; denials, writes and outward calls are audited; a
+      plugin failing again and again is turned off by itself.
+    frameworks:
+      iso27001: [A.8.22, A.8.7, A.8.26, A.5.15]
+      soc2: [CC6.1, CC6.8, CC7.2]
+      gdpr: [Art.32(1)(b)]
+      csaccm: [IVS, AIS, IAM]
+      nistcsf: [PR.PS-05, PR.AA-05]
+      nist80053: [SC-39, AC-6, SI-7, AU-2]
+    docs: [plugins.md#plugins-with-code-and-pages]
+    tests:
+      - Llm.Tests/PluginRuntimeTests.A_signed_plugin_installs_once_its_publisher_is_trusted_and_its_calls_are_checked_by_its_grants
+      - Llm.Tests/PluginRuntimeTests.A_plugin_that_crashes_five_times_in_a_row_is_turned_off_by_itself_and_on_again_by_an_admin
+      - Llm.Tests/PluginConformanceTests.Each_package_is_read_or_refused_as_the_framework_says
+      - deploy/test_plugin_runtime.py::test_isolation_another_plugins_files_the_network_the_socket_and_its_own_code
+      - deploy/test_plugin_runtime.py::test_processes_files_and_file_size_stop_at_its_own_limits
+    operator: >-
+      Trust only publishers whose keys the company holds, grant plugins the
+      least they need, give them to the groups that need them, and read their
+      audit (plugin.*).
+
   - id: GOV-01
     title: The controls are kept from breaking
     meets: >-

@@ -35,6 +35,7 @@ public sealed class PluginConformanceTests
     }
 
     [Theory]
+    [Trait("Control", "OPS-03")]
     [MemberData(nameof(Packages))]
     public void Each_package_is_read_or_refused_as_the_framework_says(string file)
     {

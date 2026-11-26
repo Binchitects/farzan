@@ -85,6 +85,7 @@ public sealed class PluginRuntimeTests(AppFixture app, PluginRuntimeFixture runt
     }
 
     [Fact]
+    [Trait("Control", "OPS-03")]
     public async Task A_signed_plugin_installs_once_its_publisher_is_trusted_and_its_calls_are_checked_by_its_grants()
     {
         await using var f = NewApp();
@@ -155,6 +156,7 @@ public sealed class PluginRuntimeTests(AppFixture app, PluginRuntimeFixture runt
     }
 
     [Fact]
+    [Trait("Control", "OPS-03")]
     public async Task A_plugin_that_crashes_five_times_in_a_row_is_turned_off_by_itself_and_on_again_by_an_admin()
     {
         await using var f = NewApp();

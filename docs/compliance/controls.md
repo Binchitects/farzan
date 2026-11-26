@@ -2,7 +2,7 @@
 
 <!-- Written by tools/compliance-docs.py from controls.yaml and frameworks.yaml: change those and run it, not this. -->
 
-The 40 controls Arena provides, from [controls.yaml](controls.yaml). How they are kept: [README](README.md#controls-and-how-they-are-kept). Each framework's clauses and the controls that serve them: [ISO/IEC 27001:2022, clauses 4 to 10 and Annex A](frameworks/iso27001.md), [SOC 2, Trust Services Criteria](frameworks/soc2.md), [HIPAA, 45 CFR Part 164 (Security Rule, Breach Notification, Privacy Rule)](frameworks/hipaa.md), [The GDPR, Regulation (EU) 2016/679](frameworks/gdpr.md), [ISO/IEC 42001:2023, the AI management system: clauses 4 to 10 and Annex A](frameworks/iso42001.md), [ISO 22301:2019, business continuity management systems](frameworks/iso22301.md), [PCI DSS v4.0.1: its twelve requirements and their sections](frameworks/pcidss.md), [CSA Cloud Controls Matrix v4 (CSA STAR), by its domains](frameworks/csaccm.md), [NIST Cybersecurity Framework 2.0: its categories and subcategories](frameworks/nistcsf.md), [NIST SP 800-53 Rev. 5 (5.2.0), with the low, moderate, high and privacy baselines](frameworks/nist80053.md), [NIST SP 800-171 Rev. 3, protecting controlled unclassified information (CMMC builds on it)](frameworks/nist800171.md), [NIST AI Risk Management Framework 1.0 (AI 100-1): Govern, Map, Measure and Manage, as its Playbook lists them](frameworks/airmf.md), [EU Artificial Intelligence Act, Regulation (EU) 2024/1689: its articles and annexes](frameworks/euaiact.md), [Common Criteria CC:2022 (ISO/IEC 15408): the functional (Part 2) and assurance (Part 3) families](frameworks/commoncriteria.md).
+The 41 controls Arena provides, from [controls.yaml](controls.yaml). How they are kept: [README](README.md#controls-and-how-they-are-kept). Each framework's clauses and the controls that serve them: [ISO/IEC 27001:2022, clauses 4 to 10 and Annex A](frameworks/iso27001.md), [SOC 2, Trust Services Criteria](frameworks/soc2.md), [HIPAA, 45 CFR Part 164 (Security Rule, Breach Notification, Privacy Rule)](frameworks/hipaa.md), [The GDPR, Regulation (EU) 2016/679](frameworks/gdpr.md), [ISO/IEC 42001:2023, the AI management system: clauses 4 to 10 and Annex A](frameworks/iso42001.md), [ISO 22301:2019, business continuity management systems](frameworks/iso22301.md), [PCI DSS v4.0.1: its twelve requirements and their sections](frameworks/pcidss.md), [CSA Cloud Controls Matrix v4 (CSA STAR), by its domains](frameworks/csaccm.md), [NIST Cybersecurity Framework 2.0: its categories and subcategories](frameworks/nistcsf.md), [NIST SP 800-53 Rev. 5 (5.2.0), with the low, moderate, high and privacy baselines](frameworks/nist80053.md), [NIST SP 800-171 Rev. 3, protecting controlled unclassified information (CMMC builds on it)](frameworks/nist800171.md), [NIST AI Risk Management Framework 1.0 (AI 100-1): Govern, Map, Measure and Manage, as its Playbook lists them](frameworks/airmf.md), [EU Artificial Intelligence Act, Regulation (EU) 2024/1689: its articles and annexes](frameworks/euaiact.md), [Common Criteria CC:2022 (ISO/IEC 15408): the functional (Part 2) and assurance (Part 3) families](frameworks/commoncriteria.md).
 
 ## People and access (IAM)
 
@@ -814,6 +814,31 @@ Python, documents and a plugin's own server run in the sandbox: no network, a re
 - `Llm.Tests/PluginTests.A_plugins_own_server_runs_in_the_sandbox_with_its_settings_one_job_a_call`
 
 **The company's part** Keep the sandbox's host patched.
+
+### OPS-03: Plugins run apart, with only what an admin granted
+
+A plugin's code runs in the plugin runtime, each plugin its own worker, user and limits, with no network; its pages in sandboxed frames with an opaque origin. Code or pages install only signed by a trusted publisher. Every host API call is checked against the plugin's grants and the person's own access; denials, writes and outward calls are audited; a plugin failing again and again is turned off by itself.
+
+**Serves**
+
+- [ISO/IEC 27001:2022, clauses 4 to 10 and Annex A](frameworks/iso27001.md): A.8.22 Segregation of networks; A.8.7 Protection against malware; A.8.26 Application security requirements; A.5.15 Access control
+- [SOC 2, Trust Services Criteria](frameworks/soc2.md): CC6.1 Logical access security software, infrastructure and architectures; CC6.8 Preventing or detecting unauthorised or malicious software; CC7.2 Monitoring system components for anomalies
+- [The GDPR, Regulation (EU) 2016/679](frameworks/gdpr.md): Art.32(1)(b) Security of processing
+- [CSA Cloud Controls Matrix v4 (CSA STAR), by its domains](frameworks/csaccm.md): IVS Infrastructure and virtualization security; AIS Application and interface security; IAM Identity and access management
+- [NIST Cybersecurity Framework 2.0: its categories and subcategories](frameworks/nistcsf.md): PR.PS-05 Installation and execution of unauthorized software are prevented; PR.AA-05 Access permissions, entitlements, and authorizations are defined in a policy, managed, enforced, and reviewed, and incorporate the principles of least privilege and separation of duties
+- [NIST SP 800-53 Rev. 5 (5.2.0), with the low, moderate, high and privacy baselines](frameworks/nist80053.md): SC-39 Process Isolation; AC-6 Least Privilege; SI-7 Software, Firmware, and Information Integrity; AU-2 Event Logging
+
+**Documented in** [plugins.md#plugins-with-code-and-pages](../plugins.md#plugins-with-code-and-pages)
+
+**Proved by**
+
+- `Llm.Tests/PluginRuntimeTests.A_signed_plugin_installs_once_its_publisher_is_trusted_and_its_calls_are_checked_by_its_grants`
+- `Llm.Tests/PluginRuntimeTests.A_plugin_that_crashes_five_times_in_a_row_is_turned_off_by_itself_and_on_again_by_an_admin`
+- `Llm.Tests/PluginConformanceTests.Each_package_is_read_or_refused_as_the_framework_says`
+- `deploy/test_plugin_runtime.py::test_isolation_another_plugins_files_the_network_the_socket_and_its_own_code`
+- `deploy/test_plugin_runtime.py::test_processes_files_and_file_size_stop_at_its_own_limits`
+
+**The company's part** Trust only publishers whose keys the company holds, grant plugins the least they need, give them to the groups that need them, and read their audit (plugin.*).
 
 ## Governance (GOV)
 
