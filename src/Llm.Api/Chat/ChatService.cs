@@ -918,6 +918,22 @@ public sealed partial class ChatService(
                 withheld = true;
                 calls.Clear();
             }
+            // Plugins' hooks on the finished answer (after the answer rules: they see what the person would): observed, changed
+            // by one granted to (the page shows the new words), or withheld by one granted to (its tool calls not run).
+            if (!withheld && content.Length > 0)
+            {
+                var (stopped, after) = await AnswerHookAsync(user, conversation.Id, content.ToString(), CancellationToken.None);
+                if (stopped is not null || after != content.ToString())
+                {
+                    content.Clear().Append(stopped ?? after);
+                    await emit(new { type = "replace", text = content.ToString() });
+                }
+                if (stopped is not null)
+                {
+                    withheld = true;
+                    calls.Clear();
+                }
+            }
             Keep(MessageStatus.Complete);
             // What filled this round's request, by piece, adding up to what the engine counted of it (the context view).
             var pieces = window.Pieces;

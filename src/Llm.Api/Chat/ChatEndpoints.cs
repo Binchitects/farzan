@@ -1139,17 +1139,25 @@ public static partial class ChatEndpoints
         {
             return Safeguards.Safeguards.Problem(refused);
         }
+        // Plugins' hooks before it is kept: observed, renamed by one granted to, or refused by one granted to.
+        var (name, stopped) = await Plugins.PluginUploads.BeforeStoreAsync(request.HttpContext.RequestServices, me, Path.GetFileName(file.FileName), file.ContentType,
+            request.HttpContext.RequestAborted);
+        if (stopped is not null)
+        {
+            return AuthEndpoints.Problem(400, "plugin", stopped);
+        }
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms);
         if (Attachments.ImageType(file.FileName, ms.ToArray()) is { } imageType)
         {
             var image = new ChatAttachment
             {
-                UserId = me.Id, FileName = Path.GetFileName(file.FileName), ContentType = imageType, Size = file.Length,
+                UserId = me.Id, FileName = name, ContentType = imageType, Size = file.Length,
                 Text = "", Kind = "image", Data = ms.ToArray(),
             };
             db.ChatAttachments.Add(image);
             await db.SaveChangesAsync();
+            await Plugins.PluginUploads.UploadedAsync(request.HttpContext.RequestServices, image, me.Id);
             return Results.Ok(new { image.Id, image.FileName, image.Size, image.Kind, image.ContentType, chars = 0, image.Truncated });
         }
         // A sound or a video: what the models take is made once, now, in the sandbox.
@@ -1157,7 +1165,7 @@ public static partial class ChatEndpoints
         {
             var m = new ChatAttachment
             {
-                UserId = me.Id, FileName = Path.GetFileName(file.FileName), ContentType = kind.ContentType, Size = file.Length, Text = "", Kind = kind.Kind, Data = ms.ToArray(),
+                UserId = me.Id, FileName = name, ContentType = kind.ContentType, Size = file.Length, Text = "", Kind = kind.Kind, Data = ms.ToArray(),
             };
             db.ChatAttachments.Add(m);
             try
@@ -1169,6 +1177,7 @@ public static partial class ChatEndpoints
                 return AuthEndpoints.Problem(400, "unreadable", ex.Message);
             }
             await db.SaveChangesAsync();
+            await Plugins.PluginUploads.UploadedAsync(request.HttpContext.RequestServices, m, me.Id);
             return Results.Ok(new { m.Id, m.FileName, m.Size, m.Kind, m.ContentType, chars = 0, m.Truncated, m.Seconds });
         }
         try
@@ -1186,15 +1195,14 @@ public static partial class ChatEndpoints
             }
             var a = new ChatAttachment
             {
-                UserId = me.Id, FileName = Path.GetFileName(file.FileName), ContentType = file.ContentType ?? "application/octet-stream",
+                UserId = me.Id, FileName = name, ContentType = file.ContentType ?? "application/octet-stream",
                 Size = file.Length, Text = text, Truncated = truncated,
                 // A document's own bytes are kept beside its text: the Python sandbox opens the real .xlsx.
                 Data = converted ? ms.ToArray() : null,
             };
             db.ChatAttachments.Add(a);
             await db.SaveChangesAsync();
-            await request.HttpContext.RequestServices.GetRequiredService<Plugins.PluginEvents>().EmitAsync("file.uploaded",
-                new System.Text.Json.Nodes.JsonObject { ["fileId"] = a.Id.ToString(), ["name"] = a.FileName, ["contentType"] = a.ContentType, ["size"] = a.Size }, me.Id, CancellationToken.None);
+            await Plugins.PluginUploads.UploadedAsync(request.HttpContext.RequestServices, a, me.Id);
             return Results.Ok(new { a.Id, a.FileName, a.Size, a.Kind, a.ContentType, chars = text.Length, a.Truncated, original = a.Data is not null });
         }
         catch (AttachmentException ex)
