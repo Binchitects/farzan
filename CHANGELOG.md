@@ -20,7 +20,7 @@ Sections used:
 ### :rocket: Epics and highlights
 
 - **Plugins with code, pages and access to Arena, installed like today's.** Plugins v3 (the plugin framework,
-  [Binchitects/farzan-arena-plugin-framework](https://github.com/Binchitects/farzan-arena-plugin-framework) 0.1.1):
+  [Binchitects/farzan-arena-plugin-framework](https://github.com/Binchitects/farzan-arena-plugin-framework) 0.2.0):
   server code with tools for models, routes, hooks, events and scheduled jobs; pages in the menu, panels beside a chat,
   a project, the home page and the admin overview, a settings screen and chat actions; a versioned host API to chats,
   projects, models, knowledge, files, people, groups, settings, storage, the internet hosts granted, the bell and the
@@ -49,6 +49,10 @@ Sections used:
   `"status": "loading"`).
 - The `plugins` feature and service (on by default), its volume and its Helm Deployment (TCP with a key, a
   NetworkPolicy with no egress).
+- Every extension point a plugin's manifest takes runs: hooks on a message before the model reads it, on the finished
+  answer (a change replaces the words on the page), on a tool call, and on a file a person uploads before it is kept
+  (renamed or refused); events for chats, messages, projects, tasks, uploads, people made and group members; IDE
+  panels in Code Studio (the Code page's Plugins tab, and beside each review, told which).
 - Admin → Plugins: on and off with the reason, the signer, what it may reach, its worker and logs, its own settings
   screen, trusted publishers; `.fap` uploads.
 - New permissions: plugins.grant, plugins.enable, feature.plugins.develop. Settings → Plugins: Allow unsigned plugins

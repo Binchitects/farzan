@@ -354,11 +354,16 @@ only. **feature.plugins.develop** pushes dev installs (below).
 - **The breaker**: five of its own failures in a row, or ten of its last twenty
   within ten minutes, turn the plugin off by itself: its worker stopped, its
   admins told on the bell, audited `plugin.auto_disabled`. An admin turns it on.
-- **Hooks** (a message before the model reads it, a tool call before it runs)
-  run within their deadlines; a failing one is skipped unless it fails closed
-  with hooks.block granted. **Events** (chats, messages, projects, tasks,
-  uploads, group members, plugins installed or set) are delivered at least once
-  in the background; **jobs** run on their cron, once across replicas.
+- **Hooks** (a message before the model reads it, an answer once it is
+  finished, a tool call before it runs, a file a person uploads before it is
+  kept) run within their deadlines; a failing one is skipped unless it fails
+  closed with hooks.block granted. A changed answer replaces the words on the
+  person's page; a refused upload is not kept. **Events** (chats, messages,
+  projects, tasks, uploads, people made, group members, plugins installed or
+  set) are delivered at least once in the background; **jobs** run on their
+  cron, once across replicas.
+- **IDE panels** show in Code Studio: the Code page's Plugins tab, and beside
+  each review, which the panel is told (`context.review`).
 
 ### Publishing and dev installs
 

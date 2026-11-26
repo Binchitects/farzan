@@ -361,8 +361,9 @@ and 8.x with installed v2 plugins. The offline scenarios, since compose, the fea
 Done (2026-11-26, on `v8.3`): 1 to 6, and of 7 the migration with its upgrade test, compose, the feature, Helm, the
 docs and the compliance control (OPS-03); the framework released as v0.1.0. To do before 8.3.0: the whole Llm.Tests
 run, the offline scenarios (compose and the bundle changed), release-scan and image-scan, the upgrade from 7.x and
-8.x on a real install, the framework's 0.1.1; IDE panels, the after_model and before_store hooks and person.created
-come later.
+8.x on a real install, the framework's 0.1.1. Done since (2026-11-27): IDE panels (Code Studio's Code page and each
+review), the after_model and before_store hooks and person.created, with the framework's 0.2.0, which runs every
+extension point its manifest takes.
 
 1. The framework's contract and CLI (its repository). 2. Its server SDK and harness. 3. The runtime service and its
 chaos tests. 4. The registry, the tables and the v2 migration, the host API, tools, routes, events, hooks, jobs,
