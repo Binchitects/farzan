@@ -18,6 +18,11 @@ public sealed partial class LdapSync(IServiceScopeFactory scopes, IOptionsMonito
     /// <summary>One check at a time: "Check the directory now" right after a save meets the one the save woke.</summary>
     private readonly SemaphoreSlim _one = new(1, 1);
 
+    private int _rounds;
+
+    /// <summary>The background checks done so far (each that ran, well or not): what it has seen since a change.</summary>
+    public int Rounds => Volatile.Read(ref _rounds);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // The settings can change at any time (the Settings page): they are read
@@ -54,6 +59,7 @@ public sealed partial class LdapSync(IServiceScopeFactory scopes, IOptionsMonito
                     // left to escape here would stop the whole app, not just the check.
                     LogFailed(logger, ex);
                 }
+                Interlocked.Increment(ref _rounds);
             }
             using var changed = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
             using var subscription = options.OnChange((_, _) => changed.Cancel());

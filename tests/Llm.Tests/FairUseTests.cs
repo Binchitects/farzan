@@ -432,8 +432,8 @@ public sealed class FairUseTests(AppFixture app)
             {
                 await Task.Delay(50);
             }
+            // In the gate's line: it waits there until the first is done.
             Assert.Equal((1, 1), gate.Now());
-            await Task.Delay(500);
             Assert.False(second.IsCompleted);
             app.Mcp.Hold.SetResult();
             Assert.Contains("done", await first.WaitAsync(TimeSpan.FromSeconds(20)));

@@ -249,8 +249,7 @@ public sealed class ModelStateMediaTests(AppFixture app) : IDisposable
 
         // A day later, after a round of the media loop.
         s.Clock.Now += TimeSpan.FromDays(1);
-        s.Media.Wake();
-        await Task.Delay(1500);
+        await LoopRounds.SeenAsync(s.Media);
         var status = await s.StatusAsync();
 
         Assert.True(status != "loading",
@@ -350,8 +349,7 @@ public sealed class ModelStateMediaTests(AppFixture app) : IDisposable
         clock.Now += TimeSpan.FromMinutes(9);
         media.Touch(MediaModels.TextToSpeech);
         clock.Now += TimeSpan.FromMinutes(9);
-        media.Wake();
-        await Task.Delay(500);
+        await LoopRounds.SeenAsync(media);
         Assert.True(speech.Loaded.ContainsKey(kokoro), "used nine minutes ago: still loaded");
 
         // Ten minutes and more unused: the app unloads it (speaches would not: its own unloading is off); the kept one stays.
@@ -546,8 +544,7 @@ public sealed class ModelStateMediaTests(AppFixture app) : IDisposable
         var res = await client.SendAsync(req).WaitAsync(Deadline);
         await StatusAssert.Is(HttpStatusCode.BadRequest, res);
         Assert.Contains("You have no picture credit: an admin sets it under People.", await res.Content.ReadAsStringAsync(), StringComparison.Ordinal);
-        s.Media.Wake();
-        await Task.Delay(1000);
+        await LoopRounds.SeenAsync(s.Media);
         Assert.Equal("off", s.File);
         Assert.Empty(Pictures.Paths);
     }
@@ -580,8 +577,7 @@ public sealed class ModelStateMediaTests(AppFixture app) : IDisposable
                 await client.SendAsync(req).WaitAsync(Deadline));
         }
         Assert.Empty(Pictures.Paths);
-        s.Media.Wake();
-        await Task.Delay(1000);
+        await LoopRounds.SeenAsync(s.Media);
         Assert.Equal("off", s.File);
     }
 
@@ -615,8 +611,7 @@ public sealed class ModelStateMediaTests(AppFixture app) : IDisposable
         // The app's own gateway refuses it itself.
         await StatusAssert.Is(HttpStatusCode.Forbidden, await client.SendAsync(req).WaitAsync(Deadline));
         Assert.Empty(Pictures.Paths);
-        s.Media.Wake();
-        await Task.Delay(1000);
+        await LoopRounds.SeenAsync(s.Media);
         Assert.Equal("off", s.File);
     }
 
@@ -648,16 +643,14 @@ public sealed class ModelStateMediaTests(AppFixture app) : IDisposable
         // An admin loads kokoro: it says so while it is loaded, round after round (not "for a request").
         media.Load(MediaModels.TextToSpeech);
         await Until(async () => (await Row(MediaModels.TextToSpeech)).Now == "loaded", "kokoro is loaded");
-        media.Wake();
-        await Task.Delay(500);
+        await LoopRounds.SeenAsync(media);
         Assert.Equal("loaded by an admin", (await Row(MediaModels.TextToSpeech)).Why);
 
         // Dictation: the speech server loaded its voice detector by itself. It stays while speech to text is used.
         speech.Loaded["silero_vad_v5"] = true;
         media.Touch(MediaModels.SpeechToText);
         clock.Now += TimeSpan.FromMinutes(5);
-        media.Wake();
-        await Task.Delay(500);
+        await LoopRounds.SeenAsync(media);
         Assert.True(speech.Loaded.ContainsKey("silero_vad_v5"), "used five minutes ago: still loaded");
         // Ten minutes and more without speech to text: unloaded, as the models are.
         clock.Now += TimeSpan.FromMinutes(6);

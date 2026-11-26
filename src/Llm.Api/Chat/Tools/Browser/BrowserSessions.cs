@@ -15,6 +15,22 @@ public sealed class BrowserSession(Guid conversationId, Guid userId, string cont
     public DateTimeOffset LastUsed { get; set; } = DateTimeOffset.UtcNow;
     /// <summary>The person has the browser: the agent's calls wait until they hand it back.</summary>
     public bool TakenOver { get; set; }
+    private int _waiting;
+
+    /// <summary>The agent's steps waiting now for the person to hand the browser back.</summary>
+    public int WaitingForPerson => Volatile.Read(ref _waiting);
+
+    /// <summary>A step of the agent's waits for the person until it is disposed.</summary>
+    public IDisposable WaitForPerson()
+    {
+        Interlocked.Increment(ref _waiting);
+        return new Waited(this);
+    }
+
+    private sealed class Waited(BrowserSession s) : IDisposable
+    {
+        public void Dispose() => Interlocked.Decrement(ref s._waiting);
+    }
     public string Url { get; set; } = "about:blank";
     public string Title { get; set; } = "";
     /// <summary>One thing at a time on the page: the agent's steps and the person's clicks take turns.</summary>

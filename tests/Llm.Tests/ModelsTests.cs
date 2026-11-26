@@ -421,7 +421,7 @@ public sealed class ModelsTests(AppFixture app) : IDisposable
 
         // Unloaded on purpose: it does not come back.
         await StatusAssert.Is(HttpStatusCode.Accepted, await admin.PostAsync("/api/admin/models/plain/unload"));
-        await Task.Delay(1500);
+        await LoopRounds.SeenAsync(f.Services.GetRequiredService<Llm.Api.Models.EngineWatcher>());
         Assert.Equal("unloaded", app.Engine.StatusOf("plain"));
         await StatusAssert.Is(HttpStatusCode.NotFound, await admin.PostAsync("/api/admin/models/nothing-like-it/load"));
         var audit = (await admin.JsonAsync(await admin.GetAsync("/api/admin/audit"))).EnumerateArray().Select(e => e.GetProperty("action").GetString()).ToList();
@@ -497,7 +497,7 @@ public sealed class ModelsTests(AppFixture app) : IDisposable
         await StatusAssert.Is(HttpStatusCode.OK, await KeepAsync(admin, "tiny-b", true));
         await EventuallyAsync(async () => Row(await ModelsAsync(admin), "tiny-b").GetProperty("status").GetString() == "failed", "the page shows tiny-b failed");
         // Not tried again every few seconds: each would fail.
-        await Task.Delay(1500);
+        await LoopRounds.SeenAsync(f.Services.GetRequiredService<Llm.Api.Models.EngineWatcher>());
         Assert.Equal(1, app.Engine.LoadsOf("tiny-b"));
     }
 
