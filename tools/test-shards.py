@@ -99,6 +99,8 @@ def main(argv=None) -> int:
     # Coverage instruments the test's assemblies where they are: each shard gets its own copy of the build, else three
     # processes rewrite the same files at once and a test host crashes at its start.
     built = project / "bin" / a.configuration
+    version = re.search(r'Include="coverlet.collector" Version="([^"]+)"', (project / f"{project.name}.csproj").read_text()).group(1)
+    collector = f"/home/dev/.nuget/packages/coverlet.collector/{version}/build/netstandard2.0"
     target = next(built.glob(f"*/{project.name}.dll"))
 
     def run(i: int) -> tuple[int, int, float, str]:
@@ -115,8 +117,9 @@ def main(argv=None) -> int:
                 # A host that crashes leaves the tests it was running (Sequence_*.xml), to tell which.
                 "--blame"]
         if a.coverage:
-            # The collector from the shard's own copy: a dll run directly finds it only where it is told to look.
-            args += ["--collect:XPlat Code Coverage", "--test-adapter-path", str(Path(what).parent)]
+            # A dll run directly finds the collector only where it is told: the package the project restored (in the SDK's
+            # container, tools/dn's NuGet cache is at /home/dev/.nuget).
+            args += ["--collect:XPlat Code Coverage", "--test-adapter-path", collector]
         start = time.time()
         with open(out / f"shard{i + 1}.log", "w") as log:
             code = subprocess.run(args, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT).returncode
