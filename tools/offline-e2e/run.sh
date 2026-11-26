@@ -28,6 +28,9 @@
 #                         (no deploy/, containers, images or data folders); then installed again
 #     --interrupt-at TEXT stopped once its output shows TEXT (then --interrupt-after S seconds more)
 #     --again             install once more over the finished installation (it must pass again)
+#     --operations        then the operator's commands on it: maintenance on (every address answers 503 with the
+#                         page and its message, the app stopped), maintenance off (200 again, the API answering), and
+#                         backup schedule (systemd's timer at the time asked, show, off)
 #     --model FILE        a chat model (.gguf) copied onto the test host and installed with it
 #                         (--models-dir, --model, --hosts); then the functional test
 #                         (deploy/scripts/functional-test.py) runs there: as the admin and a person
@@ -49,11 +52,12 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 BUNDLE="" FIRST="" MODEL="" WITH="" WITHOUT="" OLD_WITHOUT="" UPGRADE_FROM="" INTERRUPT="" INTERRUPT_AT="" AGAIN=0 REUSE=0 CPU=0 KEEP=0 CLEAN=0 DIR="${HOME}/arena-e2e" NAME=arena-e2e IMAGE=arena-offline-host:1
-FAIL_UPGRADE=0 ROLLBACK=0 SIGNAL=INT UPGRADE_TIMEOUT="" STOPS=() CUT_BY="" STOP_AFTER=0
+OPERATIONS=0 FAIL_UPGRADE=0 ROLLBACK=0 SIGNAL=INT UPGRADE_TIMEOUT="" STOPS=() CUT_BY="" STOP_AFTER=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --bundle) BUNDLE="$2"; shift ;;
     --first) FIRST="$2"; shift ;;
+    --operations) OPERATIONS=1 ;;
     --model) MODEL="$2"; shift ;;
     --with) WITH="$2"; shift ;;
     --without) WITHOUT="$2"; shift ;;
@@ -429,6 +433,35 @@ if [[ $AGAIN -eq 1 ]]; then
   H /srv/arena/deploy/scripts/installer.sh status --dir /srv/arena > "$LOG/status-again.log" 2>&1 || fail "status after install again"
   [[ "$(curl_in "https://$domain:$port/")" == 200 ]] || fail "the site after install again"
   say "  again: installed, status well, the site 200"
+fi
+if [[ $OPERATIONS -eq 1 ]]; then
+  say "==> the operator's commands"
+  I=/srv/arena/deploy/scripts/installer.sh
+  H "$I" maintenance on --dir /srv/arena --yes --message "Back at 14:00 <b>sharp</b>" > "$LOG/maintenance-on.log" 2>&1 \
+    || { tail -n 20 "$LOG/maintenance-on.log"; fail "maintenance on failed"; }
+  code="$(curl_in "https://$domain:$port/")"; [[ $code == 503 ]] || fail "in maintenance, https://$domain/ answered $code, not 503"
+  code="$(curl_in "https://$domain:$port/api/auth/me")"; [[ $code == 503 ]] || fail "in maintenance, the API answered $code, not 503"
+  body="$(H curl -sk --resolve "$domain:$port:127.0.0.1" "https://$domain:$port/chat")"
+  grep -qF 'Back at 14:00 &lt;b&gt;sharp&lt;/b&gt;' <<<"$body" || fail "the maintenance page does not say its message (escaped): $(head -c 300 <<<"$body")"
+  [[ "$(H docker inspect -f '{{.State.Running}}' app 2>/dev/null)" == false ]] || fail "in maintenance, the app still runs"
+  [[ "$(H docker inspect -f '{{.State.Running}}' postgres 2>/dev/null)" == true ]] || fail "in maintenance, the database was stopped"
+  H "$I" status --dir /srv/arena 2>/dev/null | grep -q "IN MAINTENANCE" || fail "status does not say it is in maintenance"
+  say "  maintenance on: every address 503 with the page and its message, the app stopped, the database up"
+  H "$I" maintenance off --dir /srv/arena > "$LOG/maintenance-off.log" 2>&1 || { tail -n 20 "$LOG/maintenance-off.log"; fail "maintenance off failed"; }
+  code="$(curl_in "https://$domain:$port/")"; [[ $code == 200 ]] || fail "after maintenance off, the site answered $code"
+  code="$(curl_in "https://$domain:$port/api/auth/me")"; [[ $code == 401 || $code == 200 ]] || fail "after maintenance off, the API answered $code"
+  H sh -c 'docker ps -a --format "{{.Names}}"' | grep -qx maintenance && fail "the maintenance page's container is left"
+  say "  maintenance off: the site 200 and the API answering again, the page gone"
+  H /srv/arena/deploy/scripts/backup.sh --deploy /srv/arena/deploy schedule "Mon,Thu 02:00" --keep 5 > "$LOG/schedule.log" 2>&1 \
+    || { tail -n 20 "$LOG/schedule.log"; fail "backup schedule failed"; }
+  H systemctl show -p TimersCalendar --value arena-backup.timer | grep -q "Mon,Thu \*-\*-\* 02:00:00" \
+    || fail "the backup timer is not at Mon,Thu 02:00: $(H systemctl show -p TimersCalendar --value arena-backup.timer)"
+  H sh -c "grep -qx 'BACKUP_TIME=Mon,Thu 02:00' /srv/arena/deploy/.env && grep -qx 'BACKUP_KEEP=5' /srv/arena/deploy/.env" || fail "backup schedule did not save BACKUP_TIME and BACKUP_KEEP in .env"
+  H /srv/arena/deploy/scripts/backup.sh --deploy /srv/arena/deploy schedule show > "$LOG/schedule-show.log" 2>&1 && grep -q "next:" "$LOG/schedule-show.log" \
+    || fail "backup schedule show does not say the next run: $(cat "$LOG/schedule-show.log")"
+  H /srv/arena/deploy/scripts/backup.sh --deploy /srv/arena/deploy schedule off > /dev/null 2>&1 || fail "backup schedule off failed"
+  H systemctl cat arena-backup.timer >/dev/null 2>&1 && fail "the backup timer is left after schedule off"
+  say "  backup schedule: systemd's timer at Mon,Thu 02:00 (show says the next run), saved in .env, and off again"
 fi
 say "E2E PASS ($LOG)"
 
