@@ -44,6 +44,18 @@ public sealed class AdminAssistantTests(AppFixture app)
         .SelectMany(b => b["messages"]!.AsArray().Where(m => m?["role"]?.ToString() == "tool").Select(m => m!["content"]!.ToString())));
 
     [Fact]
+    public async Task Its_thinking_comes_as_it_thinks_then_how_long_it_thought_then_its_words()
+    {
+        var admin = await AdminAsync();
+        var events = await AskAsync(admin, "[ponder] how do I add a group?");
+        var types = events.Select(e => e.GetProperty("type").GetString()).ToList();
+        Assert.Contains("thinking", types);
+        var thought = types.IndexOf("thought");
+        Assert.True(thought > types.IndexOf("thinking") && thought < types.IndexOf("delta"), string.Join(",", types));
+        Assert.True(events[thought].GetProperty("ms").GetInt32() >= 0);
+    }
+
+    [Fact]
     [Trait("Control", "IAM-05")]
     public async Task It_reads_as_the_person_proposes_a_change_and_makes_it_only_on_their_yes_audited_through_the_assistant()
     {
@@ -60,6 +72,17 @@ public sealed class AdminAssistantTests(AppFixture app)
         Assert.Contains("HTTP 200", results, StringComparison.Ordinal);
         Assert.Contains("\"admin\"", results, StringComparison.Ordinal);
         Assert.Contains(events, e => e.GetProperty("type").GetString() == "step" && e.TryGetProperty("status", out var s) && s.GetInt32() == 200);
+        // Each step shows as the chat's tool calls do: running, then done with what came back, by the same id.
+        var steps = events.Where(e => e.GetProperty("type").GetString() == "step").ToList();
+        foreach (var running in steps.Where(e => e.GetProperty("state").GetString() == "running"))
+        {
+            Assert.Contains(steps, e => e.GetProperty("id").GetString() == running.GetProperty("id").GetString() && e.GetProperty("state").GetString() is "done" or "failed"
+                && !string.IsNullOrEmpty(e.GetProperty("result").GetString()));
+        }
+        Assert.Equal(2, steps.Count(e => e.GetProperty("state").GetString() == "running"));
+        // Its words come as they are written, a round at a time.
+        Assert.Contains(events, e => e.GetProperty("type").GetString() == "delta");
+        Assert.Contains(events, e => e.GetProperty("type").GetString() == "round");
         var proposal = events.Single(e => e.GetProperty("type").GetString() == "proposal");
         Assert.Equal($"Adds {name}.", proposal.GetProperty("what").GetString());
         Assert.Equal("done", events[^1].GetProperty("type").GetString());
