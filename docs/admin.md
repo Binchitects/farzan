@@ -2008,8 +2008,19 @@ what running the models really cost over the time chosen, and shares it out.
   groups counts in both, and once in a cost centre. **By tag** counts a
   request under each tag of its chat and of its project (once each), so the
   tags can add up to more than the whole.
+- **Only this**: the funnel beside a person, group, project, model, source or
+  kind narrows the whole report to it (`?person=`, `group=`, `project=`,
+  `model=`, `source=`, `kind=`; a link opens the same report, and they can be
+  put together). The machine's running cost, power and idle time stay the
+  whole machine's; the use narrowed to gets its share of it, by the basis
+  chosen (**Only model qwen3: 25% of the use, $391 of the running cost of
+  $1,566**), and each row costs what it does in the whole report. The chats'
+  time narrows by person, group and project.
 - **Export**: a PDF report, an Excel workbook or a CSV with every figure,
-  chart and table, for the time and basis shown; each export is audited.
+  chart and table, for the time, basis and narrowing shown (it says what it
+  was narrowed to); each export is audited. The Usage exports (yours, and
+  everyone's by person) narrow the same way by `model`, `source` and
+  `project`; Usage by person's export takes the model chosen on it.
 
 The GPUs' busy time, idle time, energy and what held work back are on the
 Hardware dashboard's **GPU time and what holds work back, in the time window** section.

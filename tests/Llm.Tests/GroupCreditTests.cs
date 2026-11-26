@@ -258,6 +258,29 @@ public sealed class GroupCreditTests(AppFixture app)
         await StatusAssert.Is(HttpStatusCode.OK, await admin.GetAsync($"/api/admin/accounting/export?from={from}&to={to}&format=pdf"));
         await StatusAssert.Is(HttpStatusCode.BadRequest, await admin.GetAsync($"/api/admin/accounting/export?from={from}&to={to}&format=docx"));
 
+        // Narrowed to Ben: his use only, its share of the whole ($4 of $15) and so its cost of the running cost, the machine's
+        // own cost still whole; his row costs what it did in the whole report.
+        var ben = await admin.JsonAsync(await admin.GetAsync($"/api/admin/accounting?from={from}&to={to}&person={Uri.EscapeDataString(benEmail)}"));
+        Assert.Equal((1L, 4m, 1), (ben.GetProperty("used").GetProperty("requests").GetInt64(), ben.GetProperty("used").GetProperty("charged").GetDecimal(),
+            ben.GetProperty("used").GetProperty("people").GetInt32()));
+        var narrowed = ben.GetProperty("narrowed");
+        Assert.Equal((0.266667, 0.80m, 15m), (narrowed.GetProperty("share").GetDouble(), narrowed.GetProperty("cost").GetDecimal(), narrowed.GetProperty("whole").GetProperty("charged").GetDecimal()));
+        Assert.Equal(3.00m, ben.GetProperty("running").GetProperty("total").GetDecimal());
+        Assert.Equal(0.80m, Assert.Single(ben.GetProperty("people").EnumerateArray()).GetProperty("cost").GetDecimal());
+        Assert.Equal(0.80m, ben.GetProperty("unit").GetProperty("perRequest").GetDecimal());
+        // Narrowed to the group (Ann and Ben): 7 of 15, $1.40, as its row in the whole report.
+        var grp = await admin.JsonAsync(await admin.GetAsync($"/api/admin/accounting?from={from}&to={to}&group={data}"));
+        Assert.Equal((7m, 1.40m), (grp.GetProperty("used").GetProperty("charged").GetDecimal(), grp.GetProperty("narrowed").GetProperty("cost").GetDecimal()));
+        Assert.Equal(new[] { annEmail, benEmail }.Order(StringComparer.Ordinal), grp.GetProperty("people").EnumerateArray().Select(p => p.GetProperty("email").GetString()!).Order(StringComparer.Ordinal));
+        // A model nobody used: nothing; an id that is not one: refused. The whole report says it is not narrowed.
+        var none = await admin.JsonAsync(await admin.GetAsync($"/api/admin/accounting?from={from}&to={to}&model=nobody-uses-this"));
+        Assert.Equal((0L, 0m), (none.GetProperty("used").GetProperty("requests").GetInt64(), none.GetProperty("narrowed").GetProperty("cost").GetDecimal()));
+        await StatusAssert.Is(HttpStatusCode.BadRequest, await admin.GetAsync($"/api/admin/accounting?from={from}&to={to}&project=not-an-id"));
+        Assert.Equal(JsonValueKind.Null, report.GetProperty("narrowed").ValueKind);
+        // The export says what it was narrowed to.
+        var benCsv = System.Text.Encoding.UTF8.GetString(await (await admin.GetAsync($"/api/admin/accounting/export?from={from}&to={to}&format=csv&person={Uri.EscapeDataString(benEmail)}")).Content.ReadAsByteArrayAsync());
+        Assert.Contains($"Narrowed to,person {benEmail}", benCsv, StringComparison.Ordinal);
+
         // For billing.read only.
         var (person, _, _) = await PersonAsync(f, admin);
         await StatusAssert.Is(HttpStatusCode.Forbidden, await person.GetAsync($"/api/admin/accounting?from={from}&to={to}"));

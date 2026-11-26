@@ -20,7 +20,7 @@ import { Variables, type Chosen } from './variables'
  * preset or a custom range of days) goes in the address (Grafana's from and to),
  * so a link opens the same view. Its menu is as wide as its label, but no wider
  * than the page: a long one is cut short. <paramref name="actions"/>: what goes
- * beside it for the window shown (an export). A panel marked hideWhenEmpty is left out while it has no data (a sensor
+ * beside it for the window shown (an export), its query with the variables chosen (var-NAME). A panel marked hideWhenEmpty is left out while it has no data (a sensor
  * this machine lacks); a row with emptyText says it instead of its panels while
  * none of them has data (the GPU section of a machine without one).
  */
@@ -66,7 +66,7 @@ export function DashboardView({ uid, actions }: { uid: string; actions?: (query:
           </Button>
         )}
         <ExportMenu path={`/api/dashboards/${uid}/export`} query={() => withVars(time.query(), vars)} label="Export" />
-        {actions?.(time.query)}
+        {actions?.(() => withVars(time.query(), vars))}
         {d.variables && d.variables.length > 0 && (
           <div className="basis-full">
             <Variables uid={uid} variables={d.variables} from={current.from} to={current.to} value={vars} onChange={setVars} />

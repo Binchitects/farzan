@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Calculator, ChevronDown, ChevronRight, Coins, Cpu, Gauge, Hash, Settings2, Timer, TrendingUp, Users, Wrench, Zap } from 'lucide-react'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { ArrowDown, ArrowUp, Calculator, ChevronDown, ChevronRight, Coins, Cpu, Filter, Gauge, Hash, Settings2, Timer, TrendingUp, Users, Wrench, X, Zap } from 'lucide-react'
 import { Fragment, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/app/page-header'
 import { PageSkeleton, QueryError } from '@/components/app/query-state'
 import { Stat, StatGrid } from '@/components/app/stat'
@@ -42,6 +42,20 @@ export interface AccountRow {
   credit?: number | null
   /** A group's or cost centre's people who used it. */
   members?: AccountRow[] | null
+  /** A model's, source's or kind's own value, which the report narrows by. */
+  key?: string | null
+}
+
+/** What the report can be narrowed to, each by its parameter. */
+const narrowings = ['model', 'person', 'group', 'project', 'source', 'kind'] as const
+export type Narrowing = (typeof narrowings)[number]
+
+/** The value a row narrows the report by, and the parameter it goes in; null: it cannot narrow it. */
+function narrowsBy(row: AccountRow): [Narrowing, string] | null {
+  if (row.kind === 'person') return row.email ? ['person', row.email] : null
+  if (row.kind === 'group' || row.kind === 'project') return row.id ? [row.kind, row.id] : null
+  if (row.kind === 'model' || row.kind === 'source' || row.kind === 'kind') return row.key != null ? [row.kind, row.key] : null
+  return null
 }
 
 export interface AccountUse {
@@ -76,6 +90,8 @@ export interface AccountingReport {
   tags: AccountRow[]
   /** Where the chats' time went: the model's, the tools', the people's (null: not read). */
   time?: AccountTime | null
+  /** When narrowed: to what, its share of the use and its part of the running cost, and the whole window's use. */
+  narrowed?: { filter: Partial<Record<Narrowing, string | null>>; share: number; cost: number; whole: AccountUse } | null
 }
 
 /** A person's or project's chat time (or all of it), in hours. */
@@ -116,15 +132,27 @@ const kwh = (v: number) => formatValue(v, 'kwatth')
 export function AccountingPage() {
   const time = useTimeWindow({ from: 'now-30d', to: 'now' })
   const [basis, setBasis] = useState<Basis | null>(null)
+  // What it is narrowed to, kept in the address: a link opens the same report.
+  const [params, setParams] = useSearchParams()
+  const only = narrowings.flatMap((k) => (params.get(k) ? [[k, params.get(k)!] as const] : []))
+  const narrow = (k: Narrowing, v: string | null) => {
+    const next = new URLSearchParams(params)
+    if (v) next.set(k, v)
+    else next.delete(k)
+    setParams(next, { replace: true })
+  }
   const query = () => {
     const q = time.query()
     if (basis) q.set('basis', basis)
+    for (const [k, v] of only) q.set(k, v)
     return q
   }
   // Every request booked shows within a second or two (the usage stream), a window ending now moving with it.
   useUsageLive(() => [['admin', 'accounting']])
   const report = useQuery({
-    queryKey: ['admin', 'accounting', time.key, basis],
+    queryKey: ['admin', 'accounting', time.key, basis, only],
+    // Narrowed or not, the report on screen stays (its tab too) until the next one is read.
+    placeholderData: keepPreviousData,
     refetchInterval: liveFallback,
     queryFn: async ({ signal }) => {
       const r = time.resolved()
@@ -165,6 +193,25 @@ export function AccountingPage() {
       </div>
 
       <div className="grid gap-6">
+        {only.length > 0 && (
+          <section aria-label="Narrowed to" className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+            <Filter className="size-4" aria-hidden="true" />
+            <span>Only</span>
+            {only.map(([k, v]) => (
+              <Button key={k} variant="secondary" size="sm" className="h-7" onClick={() => narrow(k, null)} aria-label={`Not only this ${k}`}>
+                {k} {nameOf(r, k, v)} <X />
+              </Button>
+            ))}
+            {r.narrowed && (
+              <span className="text-muted-foreground">
+                {pct(r.narrowed.share)} of the use ({basisLabel}): {money(r.narrowed.cost)} of the running cost of {money(running.total)}. The machine&apos;s cost, power and idle time are the whole machine&apos;s.
+              </span>
+            )}
+            <Button variant="ghost" size="sm" className="h-7" onClick={() => setParams(new URLSearchParams(), { replace: true })}>
+              All of it
+            </Button>
+          </section>
+        )}
         {(settings.hardwarePrice === 0 || settings.servicePerMonth === 0 || running.gpuKwh === null) && (
           <Alert>
             {[
@@ -295,25 +342,25 @@ export function AccountingPage() {
                 <TabsTrigger value="tags">By tag</TabsTrigger>
               </TabsList>
               <TabsContent value="groups">
-                <Shares rows={r.groups} label="Groups" first="Group" credit />
+                <Shares rows={r.groups} label="Groups" first="Group" credit onNarrow={narrow} />
               </TabsContent>
               <TabsContent value="centres">
                 <Shares rows={r.costCentres} label="Cost centres" first="Cost centre" empty="No group has a cost centre (Admin → Groups)." />
               </TabsContent>
               <TabsContent value="people">
-                <Shares rows={r.people} label="People" first="Person" search />
+                <Shares rows={r.people} label="People" first="Person" search onNarrow={narrow} />
               </TabsContent>
               <TabsContent value="projects">
-                <Shares rows={r.projects} label="Projects" first="Project" />
+                <Shares rows={r.projects} label="Projects" first="Project" onNarrow={narrow} />
               </TabsContent>
               <TabsContent value="models">
-                <Shares rows={r.models} label="Models" first="Model" />
+                <Shares rows={r.models} label="Models" first="Model" onNarrow={narrow} />
               </TabsContent>
               <TabsContent value="sources">
-                <Shares rows={r.sources} label="Where it came from" first="From" />
+                <Shares rows={r.sources} label="Where it came from" first="From" onNarrow={narrow} />
               </TabsContent>
               <TabsContent value="kinds">
-                <Shares rows={r.kinds} label="What it was for" first="Kind" />
+                <Shares rows={r.kinds} label="What it was for" first="Kind" onNarrow={narrow} />
               </TabsContent>
               <TabsContent value="tags">
                 <Shares
@@ -521,7 +568,23 @@ const columns: { key: SortKey; title: string }[] = [
 ]
 
 /** One way the cost is shared out: sortable by any column; a group's or cost centre's people open under it. */
-function Shares({ rows, label, first, empty = 'Nothing used in this time.', credit, search }: { rows: AccountRow[]; label: string; first: string; empty?: string; credit?: boolean; search?: boolean }) {
+function Shares({
+  rows,
+  label,
+  first,
+  empty = 'Nothing used in this time.',
+  credit,
+  search,
+  onNarrow,
+}: {
+  rows: AccountRow[]
+  label: string
+  first: string
+  empty?: string
+  credit?: boolean
+  search?: boolean
+  onNarrow?: (k: Narrowing, v: string) => void
+}) {
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'cost', desc: true })
   const [open, setOpen] = useState<string | null>(null)
   const [words, setWords] = useState('')
@@ -579,6 +642,17 @@ function Shares({ rows, label, first, empty = 'Nothing used in this time.', cred
                         <span className={cn((x.kind === 'group' || x.kind === 'cost centre') && 'ps-5')}>
                           <Name row={x} />
                         </span>
+                      )}
+                      {onNarrow && narrowsBy(x) && (
+                        <button
+                          type="button"
+                          className="ml-1.5 inline-flex align-middle text-muted-foreground hover:text-foreground"
+                          aria-label={`Only ${x.name}`}
+                          title="The whole report for this one only"
+                          onClick={() => onNarrow(...narrowsBy(x)!)}
+                        >
+                          <Filter className="size-3.5" />
+                        </button>
                       )}
                     </td>
                     {credit && <td className="py-1.5 pr-3 text-right tabular-nums">{x.credit == null ? '—' : money(x.credit)}</td>}
@@ -654,4 +728,11 @@ function Name({ row }: { row: AccountRow }) {
       {row.kind === 'group' && row.costCentre && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{row.costCentre}</span>}
     </span>
   )
+}
+
+/** A narrowing's value in words: a group's or project's name, a source's or kind's, as the report's rows say them. */
+function nameOf(r: AccountingReport, k: Narrowing, v: string) {
+  const rows = k === 'group' ? r.groups : k === 'project' ? r.projects : k === 'source' ? r.sources : k === 'kind' ? r.kinds : []
+  const row = rows.find((x) => (k === 'group' || k === 'project' ? x.id === v : x.key === v))
+  return row?.name ?? v
 }

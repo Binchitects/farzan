@@ -48,7 +48,11 @@ public sealed class CostOptions
 /// <summary>One person's, group's, cost centre's, project's, model's, source's or kind's share of the window; a group's members under it.</summary>
 /// <param name="Tokens">All of them, in and out; <paramref name="Input"/> the input not read from the prompt cache, <paramref name="Cached"/> the input read from it, <paramref name="Output"/> the answers'.</param>
 public sealed record AccountRow(string Kind, Guid? Id, string Name, string? Email, string? CostCentre, int People, long Requests, long Tokens, double ModelHours, decimal Charged, double Share,
-    decimal Cost, decimal? Credit = null, IReadOnlyList<AccountRow>? Members = null, long Input = 0, long Cached = 0, long Output = 0);
+    decimal Cost, decimal? Credit = null, IReadOnlyList<AccountRow>? Members = null, long Input = 0, long Cached = 0, long Output = 0)
+{
+    /// <summary>A model's, source's or kind's own value, which the report is narrowed by (its name is the words for it).</summary>
+    public string? Key { get; init; }
+}
 
 /// <summary>The running cost of a window, from the settings and the GPUs' measured power.</summary>
 public sealed record RunningCost(double Hours, double? GpuKwh, double OtherKwh, double Kwh, decimal Power, decimal Hardware, decimal Service, decimal Total);
@@ -80,6 +84,18 @@ public sealed record TimeRow(string Kind, Guid? Id, string Name, string? Email, 
 /// <summary>Where the chats' time went in the window: all of it, by person, by project.</summary>
 public sealed record AccountTime(TimeRow All, IReadOnlyList<TimeRow> People, IReadOnlyList<TimeRow> Projects);
 
+/// <summary>
+/// What the report is narrowed to (each null: all): one model, person (their email), group (its members), project, source or
+/// kind of work. The machine's running cost stays whole; the use narrowed to gets its share of it.
+/// </summary>
+public sealed record AccountFilter(string? Model = null, string? Person = null, Guid? Group = null, Guid? Project = null, string? Source = null, string? Kind = null)
+{
+    public bool Any => Model is not null || Person is not null || Group is not null || Project is not null || Source is not null || Kind is not null;
+}
+
+/// <summary>The use narrowed to, against the whole window's: its share by the basis, and its part of the running cost.</summary>
+public sealed record AccountNarrowed(AccountFilter Filter, double Share, decimal Cost, AccountUse Whole);
+
 /// <summary>Everything Admin → Accounting and its exports show.</summary>
 public sealed record AccountingReport(DateTimeOffset From, DateTimeOffset To, string Basis, CostOptions Settings, RunningCost Running, AccountUse Used, AccountUnit Unit,
     AccountHealth Health, AccountBefore? Before, TimeSpan Interval, IReadOnlyList<AccountBucket> Series, IReadOnlyList<AccountRow> People, IReadOnlyList<AccountRow> Groups,
@@ -88,6 +104,9 @@ public sealed record AccountingReport(DateTimeOffset From, DateTimeOffset To, st
 {
     /// <summary>Where the chats' time went (the model's, the tools', the people's); null where it could not be read.</summary>
     public AccountTime? Time { get; init; }
+
+    /// <summary>When narrowed: to what, and that use's share and cost of the whole; null for the whole window.</summary>
+    public AccountNarrowed? Narrowed { get; init; }
 }
 
 /// <summary>
@@ -168,12 +187,47 @@ public static class Accounting
 
     private sealed record Used(string? Person, Guid? Project, string Model, string Surface, string Kind, long Requests, long Tokens, double Seconds, decimal Charged, long Input, long Cached, long Output);
 
-    private static async Task<IResult> JsonAsync(DateTimeOffset from, DateTimeOffset to, string? basis, LedgerSql sql, AppDbContext db, Credit credit, PromDatasource prom,
-        IOptionsMonitor<CostOptions> costs, TimeProvider clock, ILoggerFactory logs, CancellationToken ct)
+    /// <summary>What a report is narrowed to, in words: "model Qwen3-4B, person ann@example.test".</summary>
+    public static string Narrowing(AccountFilter f) => string.Join(", ", new[]
     {
+        f.Model is { } m ? $"model {m}" : null, f.Person is { } p ? $"person {p}" : null, f.Group is { } g ? $"group {g}" : null,
+        f.Project is { } j ? $"project {j}" : null, f.Source is { } s ? $"source {Projects.ProjectReport.Surface(s)}" : null, f.Kind is { } k ? $"kind {KindName(k)}" : null,
+    }.OfType<string>());
+
+    /// <summary>The filter a request asks for, from its model, person, group, project, source and kind; an error when one is not one.</summary>
+    private static (AccountFilter Filter, IResult? Problem) FilterOf(string? model, string? person, string? group, string? project, string? source, string? kind)
+    {
+        static string? Given(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+        Guid? Id(string? v, out bool bad)
+        {
+            bad = false;
+            if (Given(v) is not { } t)
+            {
+                return null;
+            }
+            bad = !Guid.TryParse(t, out var g);
+            return bad ? null : g;
+        }
+        var g = Id(group, out var badGroup);
+        var p = Id(project, out var badProject);
+        if (badGroup || badProject)
+        {
+            return (new AccountFilter(), AuthEndpoints.Problem(400, "filter", "A group and a project are chosen by their id."));
+        }
+        return (new AccountFilter(Given(model), Given(person)?.ToLowerInvariant(), g, p, Given(source), Given(kind)), null);
+    }
+
+    private static async Task<IResult> JsonAsync(DateTimeOffset from, DateTimeOffset to, string? basis, string? model, string? person, string? group, string? project, string? source, string? kind,
+        LedgerSql sql, AppDbContext db, Credit credit, PromDatasource prom, IOptionsMonitor<CostOptions> costs, TimeProvider clock, ILoggerFactory logs, CancellationToken ct)
+    {
+        var (only, bad) = FilterOf(model, person, group, project, source, kind);
+        if (bad is not null)
+        {
+            return bad;
+        }
         try
         {
-            return await ReadAsync(from, to, basis, sql, db, credit, prom, costs.CurrentValue, clock, logs, ct) is { } r ? Results.Ok(r) : Problem(from, to, basis)!;
+            return await ReadAsync(from, to, basis, sql, db, credit, prom, costs.CurrentValue, clock, logs, ct, only) is { } r ? Results.Ok(r) : Problem(from, to, basis)!;
         }
         catch (Npgsql.NpgsqlException ex)
         {
@@ -188,8 +242,9 @@ public static class Accounting
 
     /// <summary>The report; null when the window or the basis is not one (<see cref="Problem"/> says why).</summary>
     public static async Task<AccountingReport?> ReadAsync(DateTimeOffset from, DateTimeOffset to, string? basis, LedgerSql sql, AppDbContext db, Credit credit, PromDatasource prom,
-        CostOptions o, TimeProvider clock, ILoggerFactory logs, CancellationToken ct)
+        CostOptions o, TimeProvider clock, ILoggerFactory logs, CancellationToken ct, AccountFilter? only = null)
     {
+        only ??= new AccountFilter();
         if (Problem(from, to, basis) is not null)
         {
             return null;
@@ -200,20 +255,44 @@ public static class Accounting
         var log = logs.CreateLogger("Llm.Api.Accounting");
         var interval = Projects.ProjectReport.IntervalFor(from, to);
         var window = new Dictionary<string, object> { ["from"] = from.ToUniversalTime(), ["to"] = to.ToUniversalTime(), ["secs"] = interval.TotalSeconds };
-        var table = await sql.QueryAsync("""
+        // The narrowing, as parameters (never in the SQL's text): a group is its members' emails.
+        var narrow = new System.Text.StringBuilder();
+        var filterValues = new Dictionary<string, object>();
+        void Narrow(string clause, string name, object value)
+        {
+            narrow.Append(" and ").Append(clause);
+            filterValues[name] = value;
+        }
+        if (only.Model is { } fm) Narrow("coalesce(r.model, '') = @f_model", "f_model", fm);
+        if (only.Person is { } fp) Narrow("lower(r.person) = @f_person", "f_person", fp);
+        if (only.Project is { } fj) Narrow("r.project_id = @f_project", "f_project", fj);
+        if (only.Source is { } fs) Narrow("coalesce(r.surface, '') = @f_source", "f_source", fs);
+        if (only.Kind is { } fk) Narrow("coalesce(r.credit_kind, '') = @f_kind", "f_kind", fk);
+        if (only.Group is { } fg)
+        {
+            var members = await db.Groups.AsNoTracking().SingleOrDefaultAsync(x => x.Id == fg, ct) is { } grp
+                ? (await credit.MembersAsync(grp, ct)).Select(e => e.ToLowerInvariant()).Distinct().ToArray() : [];
+            Narrow("lower(r.person) = any(@f_people)", "f_people", members);
+        }
+        var nar = narrow.ToString();
+        foreach (var (k, v) in filterValues)
+        {
+            window[k] = v;
+        }
+        var table = await sql.QueryAsync($"""
             select r.person, r.project_id, coalesce(r.model, ''), coalesce(r.surface, ''), coalesce(r.credit_kind, ''), count(*),
                    coalesce(sum(r.prompt_tokens),0) + coalesce(sum(r.completion_tokens),0), coalesce(sum(r.duration_ms),0) / 1000.0, coalesce(sum(r.cost),0),
                    coalesce(sum(greatest(r.prompt_tokens - r.cached_tokens, 0)),0), coalesce(sum(r.cached_tokens),0), coalesce(sum(r.completion_tokens),0)
             from gateway.requests r
-            where r.started_at >= @from and r.started_at < @to and r.status <> 'refused'
+            where r.started_at >= @from and r.started_at < @to and r.status <> 'refused'{nar}
             group by 1, 2, 3, 4, 5
             """, window, ct);
         var rows = table.Rows.Select(r => new Used(((string?)r[0])?.ToLowerInvariant(), Uuid(r[1]), (string)r[2]!, (string)r[3]!, (string)r[4]!, Num(r[5]), Num(r[6]),
             Dbl(r[7]), Dec(r[8]), Num(r[9]), Num(r[10]), Num(r[11]))).ToList();
-        var byTime = (await sql.QueryAsync("""
+        var byTime = (await sql.QueryAsync($"""
             select floor(extract(epoch from r.started_at)/@secs)*@secs, count(*), coalesce(sum(r.prompt_tokens),0) + coalesce(sum(r.completion_tokens),0), coalesce(sum(r.cost),0)
             from gateway.requests r
-            where r.started_at >= @from and r.started_at < @to and r.status <> 'refused'
+            where r.started_at >= @from and r.started_at < @to and r.status <> 'refused'{nar}
             group by 1
             """, window, ct)).Rows.ToDictionary(r => (long)Dbl(r[0]), r => (Requests: Num(r[1]), Tokens: Num(r[2]), Charged: Dec(r[3])));
 
@@ -244,13 +323,32 @@ public static class Accounting
         long allTokens = rows.Sum(r => r.Tokens), allRequests = rows.Sum(r => r.Requests);
         var allSeconds = rows.Sum(r => r.Seconds);
         var allCharged = rows.Sum(r => r.Charged);
+        // The whole window's use, which the running cost is shared over: the same as the rows' unless narrowed.
+        long wholeTokens = allTokens, wholeRequests = allRequests;
+        double wholeSeconds = allSeconds;
+        decimal wholeCharged = allCharged;
+        AccountUse? wholeUse = null;
+        if (only.Any)
+        {
+            var w = (await sql.QueryAsync("""
+                select count(*), coalesce(sum(r.prompt_tokens),0) + coalesce(sum(r.completion_tokens),0), coalesce(sum(r.duration_ms),0) / 1000.0, coalesce(sum(r.cost),0), count(distinct lower(r.person)),
+                       coalesce(sum(greatest(r.prompt_tokens - r.cached_tokens, 0)),0), coalesce(sum(r.cached_tokens),0), coalesce(sum(r.completion_tokens),0)
+                from gateway.requests r
+                where r.started_at >= @from and r.started_at < @to and r.status <> 'refused'
+                """, new Dictionary<string, object> { ["from"] = from.ToUniversalTime(), ["to"] = to.ToUniversalTime() }, ct)).Rows[0];
+            (wholeRequests, wholeTokens, wholeSeconds, wholeCharged) = (Num(w[0]), Num(w[1]), Dbl(w[2]), Dec(w[3]));
+            wholeUse = new AccountUse(wholeRequests, wholeTokens, Math.Round(wholeSeconds / 3600, 2), wholeCharged, (int)Num(w[4]), Num(w[5]), Num(w[6]), Num(w[7]));
+        }
+        var narrowedShare = only.Any ? ShareOf(by, allTokens, allSeconds, allCharged, wholeTokens, wholeSeconds, wholeCharged) : 1;
+        // What the use shown costs: all of the running cost, or the narrowed use's share of it.
+        var shownCost = only.Any ? Math.Round(running.Total * (decimal)narrowedShare, 2) : running.Total;
         AccountRow Row(string kind, Guid? id, string name, string? email, string? centre, int people, IEnumerable<Used> some, decimal? creditOf = null, IReadOnlyList<AccountRow>? members = null)
         {
             var u = some.ToList();
             long tokens = u.Sum(x => x.Tokens), requests = u.Sum(x => x.Requests);
             var seconds = u.Sum(x => x.Seconds);
             var charged = u.Sum(x => x.Charged);
-            var share = ShareOf(by, tokens, seconds, charged, allTokens, allSeconds, allCharged);
+            var share = ShareOf(by, tokens, seconds, charged, wholeTokens, wholeSeconds, wholeCharged);
             return new AccountRow(kind, id, name, email, centre, people, requests, tokens, Math.Round(seconds / 3600, 2), charged, Math.Round(share, 6),
                 Math.Round(running.Total * (decimal)share, 2), creditOf, members, u.Sum(x => x.Input), u.Sum(x => x.Cached), u.Sum(x => x.Output));
         }
@@ -298,19 +396,19 @@ public static class Accounting
         int PeopleIn(IEnumerable<Used> some) => some.Select(x => x.Person).Where(p => p is not null).Distinct().Count();
         var projects = rows.GroupBy(r => r.Project)
             .Select(g => Row("project", g.Key, g.Key is { } id ? names.GetValueOrDefault(id) ?? "(a deleted project)" : "(in no project)", null, null, PeopleIn(g), g)).ToList();
-        var models = rows.GroupBy(r => r.Model).Select(g => Row("model", null, g.Key.Length > 0 ? g.Key : "(no model)", null, null, PeopleIn(g), g)).ToList();
-        var sources = rows.GroupBy(r => r.Surface).Select(g => Row("source", null, Projects.ProjectReport.Surface(g.Key), null, null, PeopleIn(g), g)).ToList();
-        var kinds = rows.GroupBy(r => r.Kind).Select(g => Row("kind", null, KindName(g.Key), null, null, PeopleIn(g), g)).ToList();
+        var models = rows.GroupBy(r => r.Model).Select(g => Row("model", null, g.Key.Length > 0 ? g.Key : "(no model)", null, null, PeopleIn(g), g) with { Key = g.Key }).ToList();
+        var sources = rows.GroupBy(r => r.Surface).Select(g => Row("source", null, Projects.ProjectReport.Surface(g.Key), null, null, PeopleIn(g), g) with { Key = g.Key }).ToList();
+        var kinds = rows.GroupBy(r => r.Kind).Select(g => Row("kind", null, KindName(g.Key), null, null, PeopleIn(g), g) with { Key = g.Key }).ToList();
 
         // By tag: a request counts under each tag of its chat and of its project, once each (so the tags add up to more than the whole).
-        var tagged = (await sql.QueryAsync("""
+        var tagged = (await sql.QueryAsync($$"""
             select t.tag, lower(r.person), count(*), coalesce(sum(r.prompt_tokens),0) + coalesce(sum(r.completion_tokens),0), coalesce(sum(r.duration_ms),0) / 1000.0, coalesce(sum(r.cost),0),
                    coalesce(sum(greatest(r.prompt_tokens - r.cached_tokens, 0)),0), coalesce(sum(r.cached_tokens),0), coalesce(sum(r.completion_tokens),0)
             from gateway.requests r
             left join conversations c on c."Id" = r.conversation_id
             left join work_projects p on p."Id" = r.project_id
             cross join lateral (select distinct x from unnest(coalesce(c."Tags", '{}'::text[]) || coalesce(p."Tags", '{}'::text[])) x) t(tag)
-            where r.started_at >= @from and r.started_at < @to and r.status <> 'refused'
+            where r.started_at >= @from and r.started_at < @to and r.status <> 'refused'{{nar}}
             group by 1, 2
             """, window, ct)).Rows.Select(r => (Tag: (string)r[0]!, Used: new Used((string?)r[1], null, "", "", "", Num(r[2]), Num(r[3]), Dbl(r[4]), Dec(r[5]), Num(r[6]), Num(r[7]), Num(r[8])))).ToList();
         var tags = tagged.GroupBy(t => t.Tag, StringComparer.Ordinal).Select(g => Row("tag", null, g.Key, null, null, PeopleIn(g.Select(x => x.Used)), g.Select(x => x.Used))).ToList();
@@ -318,10 +416,10 @@ public static class Accounting
         var active = byPerson.Keys.Count(k => k.Length > 0);
         var modelHours = Math.Round(allSeconds / 3600, 2);
         var unit = new AccountUnit(
-            allTokens > 0 ? Math.Round(running.Total / allTokens * 1_000_000, 4) : null,
-            allRequests > 0 ? Math.Round(running.Total / allRequests, 4) : null,
-            active > 0 ? Math.Round(running.Total / active, 2) : null,
-            allSeconds > 0 ? Math.Round(running.Total / (decimal)(allSeconds / 3600), 2) : null);
+            allTokens > 0 ? Math.Round(shownCost / allTokens * 1_000_000, 4) : null,
+            allRequests > 0 ? Math.Round(shownCost / allRequests, 4) : null,
+            active > 0 ? Math.Round(shownCost / active, 2) : null,
+            allSeconds > 0 ? Math.Round(shownCost / (decimal)(allSeconds / 3600), 2) : null);
 
         // The GPUs' busy share over the window, and what their idle time cost.
         double? busy = null;
@@ -339,35 +437,38 @@ public static class Accounting
         var prevFrom = from - length;
         if (length <= DashboardEndpoints.MaxRange)
         {
-            var prev = (await sql.QueryAsync("""
+            var prev = (await sql.QueryAsync($"""
                 select count(*), coalesce(sum(r.prompt_tokens),0) + coalesce(sum(r.completion_tokens),0), coalesce(sum(r.duration_ms),0) / 1000.0, coalesce(sum(r.cost),0), count(distinct lower(r.person)),
                        coalesce(sum(greatest(r.prompt_tokens - r.cached_tokens, 0)),0), coalesce(sum(r.cached_tokens),0), coalesce(sum(r.completion_tokens),0)
                 from gateway.requests r
-                where r.started_at >= @from and r.started_at < @to and r.status <> 'refused'
-                """, new Dictionary<string, object> { ["from"] = prevFrom.ToUniversalTime(), ["to"] = from.ToUniversalTime() }, ct)).Rows[0];
+                where r.started_at >= @from and r.started_at < @to and r.status <> 'refused'{nar}
+                """, new Dictionary<string, object>(filterValues) { ["from"] = prevFrom.ToUniversalTime(), ["to"] = from.ToUniversalTime() }, ct)).Rows[0];
             var prevUse = new AccountUse(Num(prev[0]), Num(prev[1]), Math.Round(Dbl(prev[2]) / 3600, 2), Dec(prev[3]), (int)Num(prev[4]), Num(prev[5]), Num(prev[6]), Num(prev[7]));
             var prevWatts = await ScalarAsync(prom, $"sum(avg_over_time(nvidia_smi_power_draw_watts[{(long)Math.Max(60, length.TotalSeconds)}s]))", from, log, ct);
             var prevCost = Cost(o, prevFrom, from, prevWatts is { } pw ? pw * length.TotalHours / 1000 : null);
             before = new AccountBefore(prevFrom, from, prevCost.Total, prevUse, Change((double)prevCost.Total, (double)running.Total), Change((double)prevUse.Charged, (double)allCharged),
                 Change(prevUse.Tokens, allTokens));
         }
-        var time = await TimeAsync(sql, db, window, users.ToDictionary(u => u.Key, u => (u.Value.Id, Name: u.Value.DisplayName is { Length: > 0 } d ? d : u.Value.UserName ?? u.Key)), ct);
+        var time = await TimeAsync(sql, db, window, only, users.ToDictionary(u => u.Key, u => (u.Value.Id, Name: u.Value.DisplayName is { Length: > 0 } d ? d : u.Value.UserName ?? u.Key)), ct);
         return new AccountingReport(from, to, by, o, running, new AccountUse(allRequests, allTokens, modelHours, allCharged, active, rows.Sum(r => r.Input), rows.Sum(r => r.Cached), rows.Sum(r => r.Output)), unit, health, before, interval, series,
             Ordered(Whole(people, running.Total)), [.. groups.OrderBy(g => g.Id is null).ThenByDescending(g => g.Cost)], Ordered(centreRows), Ordered(Whole(projects, running.Total)),
             Ordered(Whole(models, running.Total)), Ordered(Whole(sources, running.Total)), Ordered(Whole(kinds, running.Total)),
-            Ordered(tags)) { Time = time };
+            Ordered(tags)) { Time = time, Narrowed = only.Any ? new AccountNarrowed(only, Math.Round(narrowedShare, 6), shownCost, wholeUse!) : null };
     }
 
     /// <summary>
     /// The chats' time in the window (gateway.chat_times): the model's (answers' rounds), the tools' (their runs, sub-agents
     /// included), the people's (before each question; a break past 15 minutes a minute); all, by person, by project, the most first.
     /// </summary>
-    private static async Task<AccountTime> TimeAsync(LedgerSql sql, AppDbContext db, Dictionary<string, object> window, Dictionary<string, (Guid Id, string Name)> users, CancellationToken ct)
+    private static async Task<AccountTime> TimeAsync(LedgerSql sql, AppDbContext db, Dictionary<string, object> window, AccountFilter only, Dictionary<string, (Guid Id, string Name)> users, CancellationToken ct)
     {
-        var parts = (await sql.QueryAsync("""
+        // Narrowed by person, group or project (the chats' time has no model, source or kind of its own).
+        var narrow = (only.Person is not null ? " and lower(t.person) = @f_person" : "") + (window.ContainsKey("f_people") ? " and lower(t.person) = any(@f_people)" : "")
+            + (only.Project is not null ? " and t.project = @f_project" : "");
+        var parts = (await sql.QueryAsync($"""
             select t.person, t.project, t.part, coalesce(sum(t.ms),0) / 3600000.0
             from gateway.chat_times t
-            where t.at >= @from and t.at < @to
+            where t.at >= @from and t.at < @to{narrow}
             group by 1, 2, 3
             """, window, ct)).Rows.Select(r => (Person: ((string?)r[0])?.ToLowerInvariant(), Project: Uuid(r[1]), Part: (string)r[2]!, Hours: Dbl(r[3]))).ToList();
         static double H(IEnumerable<(string? Person, Guid? Project, string Part, double Hours)> some, string part) => Math.Round(some.Where(x => x.Part == part).Sum(x => x.Hours), 2);
@@ -454,9 +555,15 @@ public static class Accounting
         _ => kind,
     };
 
-    private static async Task<IResult> ExportAsync(DateTimeOffset from, DateTimeOffset to, string? basis, string? format, bool? dashboards, ClaimsPrincipal principal, UserManager<AppUser> users,
+    private static async Task<IResult> ExportAsync(DateTimeOffset from, DateTimeOffset to, string? basis, string? format, bool? dashboards, string? model, string? person, string? group,
+        string? project, string? source, string? kind, ClaimsPrincipal principal, UserManager<AppUser> users,
         LedgerSql sql, AppDbContext db, Credit credit, PromDatasource prom, IOptionsMonitor<CostOptions> costs, Audit audit, DashboardBook book, TimeProvider clock, ILoggerFactory logs, CancellationToken ct)
     {
+        var (only, bad) = FilterOf(model, person, group, project, source, kind);
+        if (bad is not null)
+        {
+            return bad;
+        }
         if (Problem(from, to, basis) is { } problem)
         {
             return problem;
@@ -468,14 +575,15 @@ public static class Accounting
         AccountingReport r;
         try
         {
-            r = (await ReadAsync(from, to, basis, sql, db, credit, prom, costs.CurrentValue, clock, logs, ct))!;
+            r = (await ReadAsync(from, to, basis, sql, db, credit, prom, costs.CurrentValue, clock, logs, ct, only))!;
         }
         catch (Npgsql.NpgsqlException ex)
         {
             return AuthEndpoints.Problem(503, "usage", "Usage cannot be read right now: " + ex.Message);
         }
         var me = (await users.GetUserAsync(principal))!;
-        await audit.WriteAsync("accounting.export", "accounting", detail: $"{(format ?? "pdf").ToLowerInvariant()}, {from:O} to {to:O}" + (dashboards == true ? ", with the dashboards" : ""));
+        await audit.WriteAsync("accounting.export", "accounting", detail: $"{(format ?? "pdf").ToLowerInvariant()}, {from:O} to {to:O}" + (dashboards == true ? ", with the dashboards" : "")
+            + (only.Any ? $", narrowed to {Narrowing(only)}" : ""));
         var doc = Document(r, string.IsNullOrEmpty(me.DisplayName) ? me.UserName ?? "" : me.DisplayName, clock.GetUtcNow());
         // With every dashboard the person may see, over the same window.
         if (dashboards == true)
@@ -503,6 +611,11 @@ public static class Accounting
             new("GPU idle", r.Health.IdleCost is { } idle ? m(idle) : "–", r.Health.GpuBusy is { } b ? $"Busy {Pct(b)} of the time" : "The GPUs not measured"),
             new("A million tokens", r.Unit.PerMillionTokens is { } t ? m(t) : "–", $"{ReportFiles.Compact(r.Used.Tokens)} tokens ({ReportFiles.Compact(r.Used.Input)} in, {ReportFiles.Compact(r.Used.Cached)} cached, {ReportFiles.Compact(r.Used.Output)} out), {r.Used.Requests:#,##0} requests, {r.Used.People} people"),
         };
+        if (r.Narrowed is { } n)
+        {
+            // Narrowed: what to, and that use's share of the running cost (the figures above it are the whole machine's).
+            figures.Insert(0, new("Narrowed to", Narrowing(n.Filter), $"{Pct(n.Share)} of the use ({r.Basis}): {m(n.Cost)} of the running cost of {m(run.Total)}"));
+        }
         var charts = new List<ReportChart>
         {
             new("Running cost", ["Power", "Hardware", "Service"], [.. r.Series.Select(b => (b.At, new[] { (double)b.Power, (double)b.Hardware, (double)b.Service }))], ReportKind.Money),

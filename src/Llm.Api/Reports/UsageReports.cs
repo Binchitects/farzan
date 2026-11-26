@@ -30,6 +30,39 @@ public static class UsageReports
         Projects.ProjectEndpoints.RangeProblem(from, to)
         ?? (ReportFiles.Formats.Contains((format ?? "pdf").ToLowerInvariant()) ? null : AuthEndpoints.Problem(400, "format", "Export as pdf, xlsx or csv."));
 
+    /// <summary>
+    /// Narrowed to one model, source or project (each as the page or the link gives it, bound as a parameter), as the
+    /// clause on the ledger and the words for it; a project that is not an id is refused.
+    /// </summary>
+    private static (string Where, string Words, IResult? Problem) Narrow(Dictionary<string, object> p, string? model, string? source, string? project)
+    {
+        var where = new System.Text.StringBuilder();
+        var words = new List<string>();
+        if (!string.IsNullOrWhiteSpace(model))
+        {
+            p["f_model"] = model.Trim();
+            where.Append(" and coalesce(r.model, '') = @f_model");
+            words.Add($"model {model.Trim()}");
+        }
+        if (!string.IsNullOrWhiteSpace(source))
+        {
+            p["f_source"] = source.Trim();
+            where.Append(" and coalesce(r.surface, '') = @f_source");
+            words.Add($"source {Projects.ProjectReport.Surface(source.Trim())}");
+        }
+        if (!string.IsNullOrWhiteSpace(project))
+        {
+            if (!Guid.TryParse(project, out var id))
+            {
+                return ("", "", AuthEndpoints.Problem(400, "filter", "A project is chosen by its id."));
+            }
+            p["f_project"] = id;
+            where.Append(" and r.project_id = @f_project");
+            words.Add($"project {id}");
+        }
+        return (where.ToString(), string.Join(", ", words), null);
+    }
+
     private static Dictionary<string, object> Window(DateTimeOffset from, DateTimeOffset to) => new()
     {
         ["from"] = from.ToUniversalTime(),
@@ -88,8 +121,8 @@ public static class UsageReports
         return (figures, charts, tables);
     }
 
-    private static async Task<IResult> MineAsync(DateTimeOffset from, DateTimeOffset to, string? format, ClaimsPrincipal principal, UserManager<AppUser> users, LedgerSql sql,
-        Audit audit, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> MineAsync(DateTimeOffset from, DateTimeOffset to, string? format, string? model, string? source, string? project, ClaimsPrincipal principal,
+        UserManager<AppUser> users, LedgerSql sql, Audit audit, TimeProvider clock, CancellationToken ct)
     {
         if (Problem(from, to, format) is { } problem)
         {
@@ -98,14 +131,23 @@ public static class UsageReports
         var me = (await users.GetUserAsync(principal))!;
         var p = Window(from, to);
         p["me"] = me.Email!.ToLowerInvariant();
+        var (only, words, bad) = Narrow(p, model, source, project);
+        if (bad is not null)
+        {
+            return bad;
+        }
         try
         {
-            var (figures, charts, tables) = await CommonAsync(sql, "and r.person = @me", p, from, to, ct);
+            var (figures, charts, tables) = await CommonAsync(sql, "and r.person = @me" + only, p, from, to, ct);
+            if (words.Length > 0)
+            {
+                figures.Insert(0, new ReportFigure("Narrowed to", words));
+            }
             figures.RemoveAll(f => f.Label == "People");
             var name = string.IsNullOrEmpty(me.DisplayName) ? me.UserName! : me.DisplayName;
             var doc = new ReportDocument($"Usage of {name}", "Your chats, Code Arena and API keys: tokens, cost and models, at the prices when each request ran.", from, to,
                 clock.GetUtcNow(), figures, charts, tables, name);
-            await audit.WriteAsync("usage.export", "me", detail: Detail(format, from, to));
+            await audit.WriteAsync("usage.export", "me", detail: Detail(format, from, to) + (words.Length > 0 ? ", " + words : ""));
             return ReportFiles.Result(doc, format, "usage-" + (me.UserName ?? "me"))!;
         }
         catch (Npgsql.NpgsqlException ex)
@@ -114,8 +156,8 @@ public static class UsageReports
         }
     }
 
-    private static async Task<IResult> EveryoneAsync(DateTimeOffset from, DateTimeOffset to, string? format, ClaimsPrincipal principal, UserManager<AppUser> users, AppDbContext db,
-        LedgerSql sql, Audit audit, TimeProvider clock, CancellationToken ct)
+    private static async Task<IResult> EveryoneAsync(DateTimeOffset from, DateTimeOffset to, string? format, string? model, string? source, string? project, ClaimsPrincipal principal,
+        UserManager<AppUser> users, AppDbContext db, LedgerSql sql, Audit audit, TimeProvider clock, CancellationToken ct)
     {
         if (Problem(from, to, format) is { } problem)
         {
@@ -123,13 +165,22 @@ public static class UsageReports
         }
         var me = (await users.GetUserAsync(principal))!;
         var p = Window(from, to);
+        var (only, words, bad) = Narrow(p, model, source, project);
+        if (bad is not null)
+        {
+            return bad;
+        }
         try
         {
-            var (figures, charts, tables) = await CommonAsync(sql, "", p, from, to, ct);
+            var (figures, charts, tables) = await CommonAsync(sql, only, p, from, to, ct);
+            if (words.Length > 0)
+            {
+                figures.Insert(0, new ReportFigure("Narrowed to", words));
+            }
             var byPerson = await sql.QueryAsync($"""
                 select coalesce(r.person, '(no one)'), count(*), coalesce(sum(greatest(r.prompt_tokens - r.cached_tokens, 0)),0), coalesce(sum(r.cached_tokens),0),
                        coalesce(sum(r.completion_tokens),0), coalesce(sum(r.cost),0), coalesce(sum(r.duration_ms),0)
-                {Ledger} group by 1 order by 6 desc, 2 desc
+                {Ledger} {only} group by 1 order by 6 desc, 2 desc
                 """, p, ct);
             var names = await Names(db, ct);
             tables.Insert(0, new ReportTable("People",
@@ -138,7 +189,7 @@ public static class UsageReports
                 [.. byPerson.Rows.Select(r => (object?[])[names.GetValueOrDefault((string)r[0]!) ?? (string)r[0]!, r[0], D(r[1]), D(r[2]), D(r[3]), D(r[4]), (decimal)D(r[5]), D(r[6]) / 1000])]));
             var doc = new ReportDocument("Usage by person", "Everyone's chats, Code Arena and API keys: each person's requests, tokens and cost.", from, to, clock.GetUtcNow(),
                 figures, charts, tables, Name(me));
-            await audit.WriteAsync("usage.export", "everyone", detail: Detail(format, from, to));
+            await audit.WriteAsync("usage.export", "everyone", detail: Detail(format, from, to) + (words.Length > 0 ? ", " + words : ""));
             return ReportFiles.Result(doc, format, "usage-by-person")!;
         }
         catch (Npgsql.NpgsqlException ex)

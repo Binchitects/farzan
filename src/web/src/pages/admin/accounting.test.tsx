@@ -22,12 +22,12 @@ const report = (basis: AccountingReport['basis']): AccountingReport => ({
   health: { gpuBusy: 0.25, idleCost: 1175.19, monthlyRunning: 1589.77, monthlyCharged: 2.03, recovered: 0.0013 },
   before: { from: '2026-09-09T00:00:00Z', to: '2026-10-09T00:00:00Z', total: 1400, used: { requests: 10, tokens: 8000, input: 2000, cached: 4800, output: 1200, modelHours: 0.5, charged: 1, people: 1 }, totalChange: 0.1192, chargedChange: 1, tokensChange: 0.25 },
   series: [{ at: '2026-11-01T00:00:00Z', power: 3, hardware: 32.85, service: 16.43, total: 52.28, charged: 0.5, tokens: 1000, requests: 3, kwh: 15 }],
-  people: [ann, zed, row('person', null, '(attributed to nobody)', 0.05, 78.35)],
+  people: [ann, zed, row('person', null, '(attributed to nobody)', 0.05, 78.35, { email: null })],
   groups: [row('group', 'g1', 'Research', 0.95, 1488.57, { people: 2, credit: 100, costCentre: 'CC-7', members: [ann, zed] }), row('group', null, '(in no group)', 0, 0, { members: [] })],
   costCentres: [],
   projects: [row('project', 'pr1', 'Atlas', 1, 1566.92)],
-  models: [row('model', null, 'qwen3', 1, 1566.92)],
-  sources: [row('source', null, 'Chat', 1, 1566.92)],
+  models: [row('model', null, 'qwen3', 1, 1566.92, { key: 'qwen3' })],
+  sources: [row('source', null, 'Chat', 1, 1566.92, { key: 'chat' })],
   kinds: [row('kind', null, 'Chat answers', 1, 1566.92)],
   tags: [row('tag', null, 'security', 1, 120.5)],
 })
@@ -58,7 +58,7 @@ describe('accounting', () => {
     const groups = screen.getByRole('table', { name: 'Groups' })
     expect(within(groups).getByText('CC-7')).toBeInTheDocument()
     expect(within(groups).getByText('$100.00')).toBeInTheDocument()
-    await userEvent.click(within(groups).getByRole('button', { name: /Research/ }))
+    await userEvent.click(within(groups).getByRole('button', { name: /^Research/ }))
     expect(within(groups).getByRole('link', { name: 'Ann' })).toHaveAttribute('href', '/admin/people/p1')
 
     // People: sorted by any column, found by name; the unattributed row stays last.
@@ -89,6 +89,33 @@ describe('accounting', () => {
     // With every dashboard the admin may see, over the same window.
     const all = new URL(screen.getByRole('menuitem', { name: 'PDF report, with the dashboards' }).getAttribute('href')!, 'https://x')
     expect([all.searchParams.get('format'), all.searchParams.get('dashboards'), all.searchParams.get('basis')]).toEqual(['pdf', 'true', 'tokens'])
+  })
+
+  it('narrows the whole report to one model, person, group or project from its row, keeps it in the address, and says its share of the cost', async () => {
+    const calls = fakeApi(admin, {
+      'GET /api/admin/accounting': (_b, _i, url) => {
+        const r = report('spend')
+        return { json: url.searchParams.get('model') ? { ...r, narrowed: { filter: { model: 'qwen3' }, share: 0.25, cost: 391.73, whole: r.used } } : r }
+      },
+    })
+    const { router } = renderApp('/admin/accounting')
+    await userEvent.click(await screen.findByRole('tab', { name: 'Models' }))
+    await userEvent.click(within(screen.getByRole('table', { name: 'Models' })).getByRole('button', { name: 'Only qwen3' }))
+    await waitFor(() => expect(calls.some((c) => c.path.startsWith('/api/admin/accounting?') && c.path.includes('model=qwen3'))).toBe(true))
+    expect(router.state.location.search).toContain('model=qwen3')
+    const narrowed = await screen.findByRole('region', { name: 'Narrowed to' })
+    expect(narrowed).toHaveTextContent('25.0% of the use (by spend): $391.73 of the running cost of $1,566.92')
+    // Then a person on top of it; each chip takes its own off, and All of it takes them all.
+    await userEvent.click(screen.getByRole('tab', { name: 'People' }))
+    await userEvent.click(within(screen.getByRole('table', { name: 'People' })).getByRole('button', { name: 'Only Ann' }))
+    await waitFor(() => expect(router.state.location.search).toContain('person=ann%40example.test'))
+    // A row that is no one (attributed to nobody) cannot narrow it.
+    expect(within(screen.getByRole('table', { name: 'People' })).queryByRole('button', { name: /Only \(attributed/ })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Not only this model' }))
+    await waitFor(() => expect(router.state.location.search).not.toContain('model='))
+    await userEvent.click(screen.getByRole('button', { name: 'All of it' }))
+    await waitFor(() => expect(router.state.location.search).toBe(''))
+    expect(screen.queryByRole('region', { name: 'Narrowed to' })).not.toBeInTheDocument()
   })
 
   it('says what is missing from the cost: the GPUs not measured, no hardware price, no service cost', async () => {
