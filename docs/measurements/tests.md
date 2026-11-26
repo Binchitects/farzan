@@ -31,12 +31,19 @@ They run real processes and real waits for a model's load: they stay, as they pr
 
 ## The other suites
 
-| Suite | Tests | Wall time | Lines |
-|---|---|---|---|
-| CodeArena.Tests | 794 | 1 min 53 s | 84.1% |
-| CodeIntel.Tests | 378 | 45 s | n/a |
-| tests/deploy (pytest) | 475 | 13 min 56 s | n/a (9 failed on v8.1's maintenance service, before) |
-| Web (vitest) | 1,771 → 1,780 | about 4 min | 77.4% (before) |
+Before: as branched. After: `v8.2` at 9d0ddb44, run the same way (`tools/dn test tests/<suite> -c Release --collect "XPlat
+Code Coverage"`), with Llm.Tests' leave-out coverage run going beside them (the times read high for it).
+
+| Suite | Tests | Wall time, before → after | Test time summed | Lines | Branches |
+|---|---|---|---|---|---|
+| CodeArena.Tests | 794 (779 run, 15 skipped) | 1 min 53 s → 2 min 0 s | 12.3 → 12.8 min | 84.1% → 84.1% (CodeArena) | 74.6% → 74.7% |
+| CodeIntel.Tests | 378 | 45 s → 50 s | 0.9 → 0.9 min | n/a → **74.5%** (CodeIntel) | n/a → **65.9%** |
+| tests/deploy (unittest) | 475 | 13 min 56 s | | n/a | |
+| Web (vitest) | 1,771 → 1,776 | about 4 min | 31.8 min summed (beside the server runs) | 77.4% → 77.5% | 70.2% |
+
+Neither .NET suite changed in v8.2: their numbers are the same, the times within the machine's load. CodeIntel.Tests had
+no coverage collector, so its coverage was never measured: it has coverlet.collector now (6.0.4, the one Llm.Tests
+uses), and 74.5% of its lines. Its slowest class is PlatformHttpTests (8 s); nothing there to cut for time.
 
 The web suite had flaky tests under load (a lazy page's code loaded after the test looked, a fake model's
 advice missing a field, an element replaced while clicked): fixed at their cause (each test file preloads the
