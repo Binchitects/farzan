@@ -906,6 +906,8 @@ def cmd_publish(a) -> int:
     host, _, base = registry.partition("/")
     reg = Registry(host, registry_token(host), proxy(), retries=a.retries)
     work = Path(a.work_dir or os.environ.get("ARENA_PUBLISH_TMP") or tempfile.gettempdir())
+    # A folder named for the work that is not there yet is made (as --work-dir /var/tmp/arena-publish on a first run).
+    work.mkdir(parents=True, exist_ok=True)
     rows = []
     for svc, src, refs in plan:
         step(f"{svc}: {src}")

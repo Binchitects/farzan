@@ -960,6 +960,26 @@ public sealed class ChatTests(AppFixture app)
     }
 
     [Fact]
+    public async Task A_round_after_the_tools_that_ends_without_a_word_is_asked_once_to_answer()
+    {
+        var (b, email) = await PersonAsync();
+        var id = await NewChatAsync(b, new { useCodeIntel = false, tools = new[] { "calculator" } });
+        // After the tool's result the model thinks and stops with nothing for the person: asked once more, it answers.
+        await SendAsync(b, id, """[silent after tools] [call calculate {"expression":"2+3"}]""");
+        using (var scope = app.Factory.Services.CreateScope())
+        {
+            var answers = await scope.ServiceProvider.GetRequiredService<AppDbContext>().ChatMessages.Where(m => m.ConversationId == id && m.Role == "assistant")
+                .OrderBy(m => m.Sequence).ToListAsync();
+            Assert.Equal("Answered after all.", answers[^1].Content);
+        }
+        var asked = RequestsOf(email, summaries: false).Last()["messages"]!.AsArray();
+        Assert.Equal(ChatService.NoAnswerNote, asked[^1]!["content"]!.ToString());
+        // The note was for the model only: the chat keeps it out of what it sends next.
+        await SendAsync(b, id, "and now?");
+        Assert.DoesNotContain(RequestsOf(email, summaries: false).Last()["messages"]!.AsArray(), m => m!["content"]?.ToString() == ChatService.NoAnswerNote);
+    }
+
+    [Fact]
     public async Task An_answer_that_adds_nothing_when_asked_to_go_on_stops_and_says_so()
     {
         var (b, _) = await PersonAsync();

@@ -87,6 +87,9 @@ public sealed partial class ChatService(
 
     internal const string ThoughtOutNote = "(Your thinking used the whole output limit. Answer now, from what you have thought.)";
 
+    /// <summary>A round after the tools' results that ended with no words and no call: asked once more to answer.</summary>
+    public const string NoAnswerNote = "(You ended without a word for the person. Answer them now, from what the tools returned above.)";
+
     /// <summary>
     /// Deep research with sub-agents: in how many rounds the answer may delegate (the research, then
     /// its gaps) before it writes the report. The delegate calls of one round are one step, and a call
@@ -678,6 +681,8 @@ public sealed partial class ChatService(
             var streamed = 0L;
             var streamedAtCut = -1L;
             var carryMessages = 0;
+            // A round after tool results that ends with nothing to say (its thinking only) is asked once to answer.
+            var nudged = false;
             var clock = Stopwatch.StartNew();
             var timing = _answerClock.Round(msg);
             TimeSpan? thoughtFrom = null;
@@ -825,6 +830,22 @@ public sealed partial class ChatService(
                     {
                         await MakeRoomAsync(request, null);
                     }
+                    finish = null;
+                    continue;
+                }
+                if (finish != "length" && !withheld && !nudged && calls.Count == 0 && content.Length == 0
+                    && messages.Count > carryMessages && messages[messages.Count - 1 - carryMessages]?["role"]?.ToString() == "tool")
+                {
+                    // After the tools' results, an end with no words (thinking alone, or nothing): the person would get an empty
+                    // answer. Asked once, without thinking, to answer from what came back.
+                    nudged = true;
+                    messages.Add(new JsonObject { ["role"] = "user", ["content"] = NoAnswerNote });
+                    carryMessages++;
+                    if (request["chat_template_kwargs"] is not null)
+                    {
+                        request["chat_template_kwargs"] = ThinkingPresets.TemplateKwargs("off");
+                    }
+                    request["messages"] = messages.DeepClone();
                     finish = null;
                     continue;
                 }
