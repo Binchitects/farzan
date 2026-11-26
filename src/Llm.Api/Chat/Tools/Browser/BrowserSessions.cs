@@ -83,8 +83,11 @@ public sealed partial class BrowserSessions(IHttpClientFactory http, IOptionsMon
             }
             if (_cdp is not null)
             {
-                // The browser restarted: its contexts went with it.
-                await _cdp.DisposeAsync();
+                // The browser restarted: its contexts went with it. Let go of at once, so a connection that then fails leaves none to
+                // dispose again (at the app's stop).
+                var gone = _cdp;
+                _cdp = null;
+                await gone.DisposeAsync();
                 _sessions.Clear();
             }
             var url = options.CurrentValue.Url is { Length: > 0 } u ? new Uri(u) : throw new CdpException("no browser is set up");
@@ -314,9 +317,9 @@ public sealed partial class BrowserSessions(IHttpClientFactory http, IOptionsMon
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         await base.StopAsync(cancellationToken);
-        if (_cdp is not null)
+        if (Interlocked.Exchange(ref _cdp, null) is { } cdp)
         {
-            await _cdp.DisposeAsync();
+            await cdp.DisposeAsync();
         }
     }
 
