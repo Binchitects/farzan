@@ -140,10 +140,60 @@ public sealed class AppFixture : IAsyncLifetime
     public string ConnectionStringFor(string database) =>
         new Npgsql.NpgsqlConnectionStringBuilder(Server) { Database = database }.ConnectionString;
 
-    /// <summary>A separate app on its own database, for tests that need a fresh start (imports, LDAP).</summary>
+    /// <summary>
+    /// A separate app on its own database, for tests that need a fresh start (imports, LDAP). A database that is not there
+    /// yet is a copy of one migrated once a run (the shared app's start proves the create path): a fresh app starts in a
+    /// fraction of the time a migration from nothing takes. One already there (an app started again) is used as it is.
+    /// </summary>
     /// <param name="services">Test services of its own (a clock), after the fakes.</param>
-    public WebApplicationFactory<Program> Create(string connectionString, FakeGateway gateway, IDictionary<string, string?>? settings = null, Action<IServiceCollection>? services = null) =>
-        Build(connectionString, gateway, settings, services);
+    /// <param name="fresh">The app makes its database itself, as at a first install (replicas starting together on one).</param>
+    public WebApplicationFactory<Program> Create(string connectionString, FakeGateway gateway, IDictionary<string, string?>? settings = null, Action<IServiceCollection>? services = null,
+        bool fresh = false)
+    {
+        if (!fresh && connectionString != AppConnectionString)
+        {
+            FromTemplate(new Npgsql.NpgsqlConnectionStringBuilder(connectionString).Database!);
+        }
+        return Build(connectionString, gateway, settings, services);
+    }
+
+    private readonly Lock _templateLock = new();
+    private string? _template;
+
+    /// <summary>The database made as a copy of the migrated one, when it is not there yet.</summary>
+    private void FromTemplate(string database)
+    {
+        lock (_templateLock)
+        {
+            using var admin = new Npgsql.NpgsqlConnection(new Npgsql.NpgsqlConnectionStringBuilder(Server) { Database = "postgres", Pooling = false }.ConnectionString);
+            admin.Open();
+            bool Exists(string name)
+            {
+                using var q = new Npgsql.NpgsqlCommand("select 1 from pg_database where datname = @n", admin);
+                q.Parameters.AddWithValue("n", name);
+                return q.ExecuteScalar() is not null;
+            }
+            if (Exists(database))
+            {
+                return;
+            }
+            if (_template is null)
+            {
+                var name = "llmtemplate_test" + _run;
+                var cs = new Npgsql.NpgsqlConnectionStringBuilder(Server) { Database = name, Pooling = false }.ConnectionString;
+                var options = new DbContextOptionsBuilder<Llm.Core.Data.AppDbContext>();
+                options.UseNpgsql(cs);
+                options.UseOpenIddict<Guid>();
+                using (var db = new Llm.Core.Data.AppDbContext(options.Options))
+                {
+                    db.Database.Migrate();
+                }
+                _template = name;
+            }
+            using var create = new Npgsql.NpgsqlCommand($"create database \"{database}\" template \"{_template}\"", admin);
+            create.ExecuteNonQuery();
+        }
+    }
 
     /// <summary>The services of each app whose host is running: listed as it starts, gone as it stops.</summary>
     private readonly System.Collections.Concurrent.ConcurrentDictionary<IServiceProvider, byte> _apps = new();

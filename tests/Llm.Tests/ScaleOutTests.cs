@@ -37,7 +37,7 @@ public sealed class ScaleOutTests(AppFixture app)
         {
             settings[k] = v;
         }
-        var (a, b) = (app.Create(db, gateway, settings), app.Create(db, gateway, settings));
+        var (a, b) = (app.Create(db, gateway, settings, fresh: true), app.Create(db, gateway, settings, fresh: true));
         // Both start at once on a database that does not exist yet: one at a time through the first steps.
         await Task.WhenAll(Task.Run(() => a.Server), Task.Run(() => b.Server));
         await UntilAsync(() => Replicas(a).Count == 2 && Replicas(b).Count == 2, "both replicas counted");
