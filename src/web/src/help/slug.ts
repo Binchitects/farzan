@@ -16,3 +16,9 @@ export class Slugger {
     return slug
   }
 }
+
+/** Each heading under the root its anchor, as the contents and search link to it. */
+export function anchorHeadings(root: ParentNode) {
+  const slugger = new Slugger()
+  for (const h of root.querySelectorAll('h1, h2, h3, h4, h5, h6')) h.id = slugger.slug(h.textContent ?? '')
+}

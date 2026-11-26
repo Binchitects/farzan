@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { canRead, manualGroups, PAGES_ID, parseDoc, resolveLink, searchManual, type ManualDoc, type SearchHit } from '@/help/manual'
 import { pagesMarkdown, pagesTitle } from '@/help/pages-doc'
-import { Slugger } from '@/help/slug'
+import { anchorHeadings } from '@/help/slug'
 import type { Me } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Markdown } from './chat/markdown'
@@ -204,8 +204,7 @@ function PageView({ page, isAdmin }: { page: Page; isAdmin: boolean }) {
   useLayoutEffect(() => {
     const root = ref.current
     if (!root) return
-    const slugger = new Slugger()
-    for (const h of root.querySelectorAll('h1, h2, h3, h4, h5, h6')) h.id = slugger.slug(h.textContent ?? '')
+    anchorHeadings(root)
     for (const a of root.querySelectorAll('a[href]')) {
       const target = resolveLink(page.file, a.getAttribute('href') ?? '')
       if (target.kind === 'web') continue

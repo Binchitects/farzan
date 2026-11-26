@@ -1,8 +1,11 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { canRead, manualDocs, parseDoc } from '@/help/manual'
 import { pagesMarkdown } from '@/help/pages-doc'
+import { anchorHeadings } from '@/help/slug'
+import { makeQueryClient, Providers } from '@/app/providers'
+import { Markdown } from '@/pages/chat/markdown'
 import { admin, fakeApi, member, renderApp } from '@/test/utils'
 
 const contents = () => screen.findByRole('navigation', { name: 'Contents of the manual' })
@@ -110,15 +113,17 @@ describe('the manual', () => {
     expect(await screen.findByText('This page is not in the manual')).toBeInTheDocument()
   })
 
-  it('gives every heading of every page the anchor its contents and search link to', { timeout: 120_000 }, async () => {
-    const pages = [...manualDocs.filter((d) => canRead(d, true)).map((d) => ({ id: d.id, title: d.title, text: d.text })), { id: 'pages', title: 'Every page, explained', text: pagesMarkdown(true) }]
+  // Each page drawn by the chat's Markdown and anchored as the manual's page does (the page itself: the search test above).
+  it('gives every heading of every page the anchor its contents and search link to', { timeout: 60_000 }, () => {
+    const pages = [...manualDocs.filter((d) => canRead(d, true)).map((d) => ({ id: d.id, text: d.text })), { id: 'pages', text: pagesMarkdown(true) }]
     for (const page of pages) {
-      fakeApi(admin)
-      const view = renderApp(`/help/${page.id}`)
-      const article = await screen.findByRole('article', { name: page.title })
-      const expected = parseDoc(page.text).headings.map((h) => h.id)
-      await waitFor(() => expect(article.querySelectorAll('h1, h2, h3, h4, h5, h6')).toHaveLength(expected.length))
-      expect([...article.querySelectorAll('h1, h2, h3, h4, h5, h6')].map((h) => h.id), page.id).toEqual(expected)
+      const view = render(
+        <Providers client={makeQueryClient()}>
+          <Markdown text={page.text} />
+        </Providers>,
+      )
+      anchorHeadings(view.container)
+      expect([...view.container.querySelectorAll('h1, h2, h3, h4, h5, h6')].map((h) => h.id), page.id).toEqual(parseDoc(page.text).headings.map((h) => h.id))
       view.unmount()
     }
   })
