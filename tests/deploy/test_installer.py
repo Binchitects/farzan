@@ -2015,7 +2015,11 @@ class InstallerTests(unittest.TestCase):
         s = subprocess.run(installer + ["maintenance", "status"], env=quick, capture_output=True, text=True)
         self.assertIn("in maintenance since", s.stdout)
         self.assertIn("Back at <b>14:00</b> & then some", s.stdout)
-        self.assertIn("IN MAINTENANCE", subprocess.run(installer + ["status"], env=quick, capture_output=True, text=True).stdout)
+        st = subprocess.run(installer + ["status"], env=quick, capture_output=True, text=True)
+        # What maintenance stopped is meant to be down: status says so, and is not a failure.
+        self.assertEqual(st.returncode, 0, self.output(st))
+        self.assertIn("IN MAINTENANCE", st.stdout)
+        self.assertIn("In maintenance: the services it stopped stay down", st.stdout)
         # start with none named waits for maintenance off; one service may start in the meantime.
         r = subprocess.run(installer + ["start"], env=quick, capture_output=True, text=True)
         self.assertEqual(r.returncode, 3, self.output(r))

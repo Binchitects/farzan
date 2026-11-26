@@ -445,7 +445,8 @@ if [[ $OPERATIONS -eq 1 ]]; then
   grep -qF 'Back at 14:00 &lt;b&gt;sharp&lt;/b&gt;' <<<"$body" || fail "the maintenance page does not say its message (escaped): $(head -c 300 <<<"$body")"
   [[ "$(H docker inspect -f '{{.State.Running}}' app 2>/dev/null)" == false ]] || fail "in maintenance, the app still runs"
   [[ "$(H docker inspect -f '{{.State.Running}}' postgres 2>/dev/null)" == true ]] || fail "in maintenance, the database was stopped"
-  H "$I" status --dir /srv/arena 2>/dev/null | grep -q "IN MAINTENANCE" || fail "status does not say it is in maintenance"
+  st_out="$(H "$I" status --dir /srv/arena 2>&1)" || fail "status in maintenance failed (the services maintenance stopped must not count): $(tail -n 3 <<<"$st_out")"
+  grep -q "IN MAINTENANCE" <<<"$st_out" || fail "status does not say it is in maintenance"
   say "  maintenance on: every address 503 with the page and its message, the app stopped, the database up"
   H "$I" maintenance off --dir /srv/arena > "$LOG/maintenance-off.log" 2>&1 || { tail -n 20 "$LOG/maintenance-off.log"; fail "maintenance off failed"; }
   code="$(curl_in "https://$domain:$port/")"; [[ $code == 200 ]] || fail "after maintenance off, the site answered $code"
