@@ -15,6 +15,63 @@ Sections used:
   makes weaker (gone, a clause or a check dropped, fewer tests), by its id,
   and why ([compliance](docs/compliance/README.md#when-a-change-weakens-a-control))
 
+## v8.2.3 (2026-11-26)
+
+The dashboards' exports answer in under 2 s on a million requests, every model
+has its test, Accounting narrows to one person, group, project or model, and
+60 GPU panels that failed on live work again.
+
+### :rocket: Epics and highlights
+
+- **Every export under 2 s on a million requests.** The ledger is kept by hour
+  as well (`gateway.requests_hourly`, by person, model, source, kind, key,
+  state and project), and its times as a sketch by hour
+  (`gateway.requests_hourly_spread`: each request's time and its time to the
+  first token, in buckets 2% wide), both kept exact by triggers on the ledger.
+  The 38 panels that sum or count it and the 12 that show percentiles read
+  whole hours from them and the minutes either side from the rows, so a sum
+  is the rows' own and a percentile within 1% of them; a dashboard's export
+  asks its panels eight at once. Usage by person's export went from 6.8 s to
+  1.1 s, LLM and users' from 6.8 s to 0.8 s, Hardware's from 3.9 s to 1.2 s
+  (measured on a million rows: docs/measurements/million-rows.md).
+- **Every model has its test** (Admin → Models → Test). Chat models of any
+  source as before; a picture model makes a picture as big as asked, a video
+  model a clip, a speech model a sentence that a speech-to-text model hears
+  back, a speech-to-text model hears what a speech model said, each checked by
+  a rule; their capacity is so many a minute.
+
+### :sparkles: New features & Enhancements
+
+- **Accounting narrowed** to one person, group, project, model, source or kind
+  of work (and any of them together), from a funnel on each row, kept in the
+  address and in its exports. The machine's cost stays whole; the use
+  narrowed to gets its share of it. The usage exports narrow by model, source
+  and project, Usage by person's by the model chosen on it.
+- **The data export** has each API request of the prompt log whole (what it
+  sent, the tools' results among it, and the answer's thinking, words and
+  tool calls) and its pictures.
+- **Coverage per test**: `tools/coverage-per-test.sh` (dotnet-coverage, one
+  session, a snapshot after each test) and `tools/coverage-redundant.py`: of
+  1,752 tests, 1,007 run every line the suite runs.
+
+### :bug: Bugs fixed
+
+- **60 GPU panels failed** on live ("found duplicate series for the match
+  group"): the GPU exporter's update added labels, so across its restart a GPU
+  had two info series. Each panel reads the info one series a GPU.
+- **Automations' sweep of abandoned runs threw** on every look and never ended
+  a run left running: it orders what it takes.
+
+### :boom: Breaking changes & Deprecations
+
+- **Code workspaces' tables are dropped** on the upgrade (`studio_workspaces`,
+  `studio_ports`, and API keys' `workspace_id`); a workspace's key stays its
+  person's. The `workspaces` folder under DATA_DIR is left as it is.
+- **Percentile panels** (latency, time to the first token, p50 by model) rank
+  as `percentile_disc` within 1% instead of interpolating: a number may move by
+  up to 1%. Hour-of-day panels assume the database in UTC (or a whole-hour
+  zone).
+
 ## v8.2.2 (2026-11-26)
 
 The prompt log shows each tool call with what it gave back.
