@@ -634,7 +634,8 @@ services:
   # user, and each scan's files in memory, gone when it ends.
   scanners:
     <<: *service
-    build: ./services/scanners
+    # GOPROXY and GOSUMDB from the environment that builds it, where Google's answer 403 (services/scanners/Dockerfile).
+    build: { context: ./services/scanners, args: { GOPROXY: "${GOPROXY:-https://proxy.golang.org,direct}", GOSUMDB: "${GOSUMDB:-sum.golang.org}" } }
     image: arena-scanners
     container_name: scanners
     profiles: [scanners]
@@ -698,15 +699,14 @@ services:
     volumes: [./config/loki.yml:/etc/loki/loki.yml:ro, loki:/loki]
 
   # Grafana Alloy, Promtail's successor: each container's log through the engine's API into Loki (config/alloy.alloy).
-  # Where it has read to is kept in /tmp, as Promtail's was: a restart reads again from what Loki already has.
+  # Where it has read to is kept in its container (/var/lib/alloy, as Promtail kept its positions): a restart or a
+  # reboot goes on from there; only a new container (an upgrade) reads the logs again.
   alloy:
     <<: *service
     profiles: [monitoring]
     image: grafana/alloy:v1.22.0
     container_name: alloy
-    command: [run, --storage.path=/tmp/alloy, --disable-reporting, /etc/alloy/config.alloy]
-    read_only: true
-    tmpfs: [/tmp]
+    command: [run, --storage.path=/var/lib/alloy/data, --disable-reporting, /etc/alloy/config.alloy]
     volumes:
       - ./config/alloy.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

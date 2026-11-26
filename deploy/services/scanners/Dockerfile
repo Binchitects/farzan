@@ -11,9 +11,12 @@
 FROM golang:1.27-bookworm AS gitleaks
 ARG GITLEAKS_VERSION=8.30.1
 ARG GITLEAKS_COMMIT=83d9cd684c87d95d656c1458ef04895a7f1cbd8e
-# proxy.golang.org and sum.golang.org answer 403 from some networks: the modules through goproxy.cn, each checked
-# against Go's checksum database through its official mirror (sum.golang.google.cn).
-ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOFLAGS=-trimpath GOPROXY=https://goproxy.cn,direct GOSUMDB=sum.golang.google.cn
+# Go's module proxy and checksum database: Google's own by default; where they answer 403 (some networks),
+# GOPROXY=https://goproxy.cn,direct and GOSUMDB=sum.golang.google.cn (the checksum database's official mirror) as build
+# arguments: each module is checked against Go's checksums either way.
+ARG GOPROXY=https://proxy.golang.org,direct
+ARG GOSUMDB=sum.golang.org
+ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOFLAGS=-trimpath GOPROXY=${GOPROXY} GOSUMDB=${GOSUMDB}
 RUN git clone --quiet --branch "v${GITLEAKS_VERSION}" https://github.com/gitleaks/gitleaks /src \
  && cd /src && test "$(git rev-parse HEAD)" = "${GITLEAKS_COMMIT}" \
  && go get golang.org/x/crypto@v0.55.0 golang.org/x/text@v0.41.0 github.com/klauspost/compress@v1.18.7 \

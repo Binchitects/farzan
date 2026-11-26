@@ -4170,7 +4170,8 @@ http {
 EOF
   chmod 644 "$dir/index.html" "$dir/nginx.conf"
 }
-# Traefik's route to the page, over every other (the highest priority), for every name and path.
+# Traefik's route to the page, over every other, for every name and path: a router's own priority is its rule's length
+# (a few hundred at most), and Traefik keeps those near int32's top for its internal routers.
 maint_write_route() {
   local acme; acme="$(env_get ACME_EMAIL)"
   cat > "$DEPLOY/$MAINT_ROUTE_REL.tmp" <<EOF
@@ -4180,7 +4181,7 @@ http:
   routers:
     maintenance:
       rule: HostRegexp(\`.+\`)
-      priority: 2147483000
+      priority: 100000
       service: maintenance
       tls: $([[ -n "$acme" ]] && echo "{ certResolver: letsencrypt }" || echo "{}")
   services:

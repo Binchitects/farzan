@@ -103,12 +103,15 @@ from `arenactl`, and the logo: the A with its eyes.
   Alertmanager 0.35.1, Loki 3.7.10, node-exporter 1.13.1, pgvector 0.8.7
   (Postgres 16 on Debian bookworm, so the database's text keeps its
   collation; the vector extension is updated in place), Valkey 9.2, the GPU
-  exporter 2.0.0 and DCGM exporter 4.9.0, Trivy 0.76.2 and opengrep 1.33.1;
+  exporter 2.0.0 and DCGM exporter 4.9.0 (which refuses the clock-throttle bit
+  mask: the GPU Hardware dashboard shows the clock events by reason now),
+  vLLM 0.34.0, SGLang 0.5.23, Strata 0.2.22, Trivy 0.76.2 and opengrep 1.33.1;
   our own images bring their base's packages up to date as they are built.
   `tools/image-scan.py` runs Trivy over every image the stack runs before a
   release: a critical finding fails it unless
   `docs/compliance/accepted-vulnerabilities.yaml` accepts it, with why and
-  until when (four in Debian bookworm's packages have no fix, and are listed).
+  until when (those with no fix to apply, in Debian bookworm's packages, SGLang's
+  video generation and a lock file, are listed with why nothing reaches them).
 - **Grafana Alloy in place of Promtail**, which has reached its end of life:
   the same labels and parsing, through the engine's API.
 - **A speech image without its known vulnerabilities**: speaches 0.9.0-rc.3

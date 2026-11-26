@@ -10,7 +10,7 @@
 #   APT_MIRROR        a Debian mirror the admin names in place of deb.debian.org: empty (the default) keeps deb.debian.org
 #   PIP_INDEX_URL     a PyPI mirror the admin names in place of pypi.org: empty (the default) keeps pypi.org
 #
-# A base that already has a C compiler (gcc) skips apt. deb.debian.org and pypi.org are both served by Fastly: on a
+# A base that already has a C compiler (gcc) installs none, but its packages are brought up to date. deb.debian.org and pypi.org are both served by Fastly: on a
 # network where some of Fastly's addresses stall, apt waits on each file for minutes and then reports 404 for the plain
 # Packages file it falls back to, and pip times out; a mirror of each (APT_MIRROR, PIP_INDEX_URL) builds it there.
 #

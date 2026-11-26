@@ -2006,7 +2006,7 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("return 503;", (deploy / "config" / "maintenance" / "nginx.conf").read_text())
         route = (deploy / "config" / "traefik" / "maintenance.yml").read_text()
         self.assertIn("rule: HostRegexp(`.+`)", route)
-        self.assertIn("priority: 2147483000", route)
+        self.assertIn("priority: 100000", route)
         # The page, Traefik, the database and the monitoring run; the services people use stopped.
         now = self.running()
         self.assertIn("maintenance", now)
