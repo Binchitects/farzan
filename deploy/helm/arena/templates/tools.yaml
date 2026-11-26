@@ -162,6 +162,9 @@ spec:
           imagePullPolicy: {{ .Values.images.pullPolicy }}
           resources: {{- toYaml .Values.plugins.resources | nindent 12 }}
           ports: [{ name: rpc, containerPort: 7700 }]
+          # Ready when its port takes a connection, as compose's health check takes its socket's.
+          readinessProbe: { tcpSocket: { port: rpc }, periodSeconds: 10 }
+          livenessProbe: { tcpSocket: { port: rpc }, periodSeconds: 30, failureThreshold: 4 }
           env:
             - { name: PLUGINS_LISTEN, value: "tcp:0.0.0.0:7700" }
             - { name: PLUGINS_MOST_MEMORY_MB, value: {{ .Values.plugins.mostMemoryMb | quote }} }

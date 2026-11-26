@@ -180,6 +180,10 @@ public static class SettingsCatalog
             { Max = 1000 },
         new("Plugins:AllowUnsigned", PluginsGroup, "Allow unsigned plugins with code", "Plugins that run code or add pages install only when signed by a trusted publisher (Admin → Plugins → Trusted publishers). On: unsigned ones install too, each marked so on its card. For a test Arena, not a company's.", SettingType.Boolean, SettingScope.Live)
             { Default = "false" },
+        new("PluginRuntime:MostMemoryMb", PluginsGroup, "Most memory a plugin's worker may have", "Its manifest asks for its memory; it gets at most this. The runtime's own ceiling (PLUGINS_MOST_MEMORY_MB, 1024 unless said) still holds.", SettingType.WholeNumber, SettingScope.Live)
+            { Default = "512", Min = 16, Max = 4096, Unit = "MB", Optional = false },
+        new("PluginRuntime:MostTimeoutMs", PluginsGroup, "Longest call into a plugin", "Each call to a plugin's code (a tool, a route, a hook, an event, a job) ends at its manifest's deadline, and at this one at the most.", SettingType.WholeNumber, SettingScope.Live)
+            { Default = "60000", Min = 100, Max = 300000, Unit = "ms", Optional = false },
         new("Plugins:DevInstalls", PluginsGroup, "Developers' own installs", "People with Develop plugins (plugins.develop) may push a plugin they are making (arena-plugin dev) as an install only they see and use, never anyone else. For a test Arena.", SettingType.Boolean, SettingScope.Live)
             { Default = "false" },
         new("Mcp:Enabled", ArenaMcp, "Arena MCP", "Outside agents (Code Arena, Claude Code, Qwen Code, Continue) get each person's chat tools at https://DOMAIN/mcp, signed in with that person's API key: the tools they may use in the chat, run as them, each call audited (mcp.call).", SettingType.Boolean, SettingScope.Live)
