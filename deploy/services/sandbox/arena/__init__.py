@@ -3,7 +3,7 @@
     import arena
     arena.tools.search("find a symbol")        # which functions there are, by what they do
     help(arena.code-intel.find_symbol)              # its parameters and what it does
-    hits = arena.code-intel.find_symbol(name="DecodeFrame")
+    hits = arena.code-intel.find_symbol(name="DecodeFrame")   # or find_symbol("DecodeFrame"): the required first, in order
 
 Each function is one of the tools the chat has on in this answer, grouped by where it comes from (arena.web,
 arena.code-intel, arena.knowledge, ...). A call goes to the chat, which runs it as the person: their rights, the
@@ -83,19 +83,31 @@ def _identifier(name):
 
 
 def _function(definition):
-    """A function for one tool: keyword parameters from its JSON schema, its description as the docstring."""
+    """A function for one tool: parameters from its JSON schema (the required first, in their order, then the rest; by
+    position or by name), its description as the docstring."""
     name = definition["name"]
     schema = definition.get("parameters") or {}
     properties = schema.get("properties") or {}
-    required = set(schema.get("required") or [])
+    required_order = [k for k in (schema.get("required") or []) if k in properties]
+    required = set(required_order)
+    keys = required_order + sorted(k for k in properties if k not in required)
     params = []
-    for key in sorted(properties, key=lambda k: (k not in required, k)):
+    for key in keys:
         if not key.isidentifier() or keyword.iskeyword(key):
             continue
-        params.append(inspect.Parameter(key, inspect.Parameter.KEYWORD_ONLY, default=inspect.Parameter.empty if key in required else None))
+        params.append(inspect.Parameter(key, inspect.Parameter.POSITIONAL_OR_KEYWORD, default=inspect.Parameter.empty if key in required else None))
+    signature = inspect.Signature(params)
 
-    def tool(**args):
-        missing = [k for k in required if k not in args or args[k] is None]
+    def tool(*given, **args):
+        if given:
+            # web_search("asyncio") as web_search(query="asyncio"): the arguments by position, in the signature's order.
+            if len(given) > len(params):
+                raise ToolError(f"{name} takes at most {len(params)} arguments by position ({', '.join(p.name for p in params)}).")
+            for param, value in zip(params, given):
+                if param.name in args:
+                    raise ToolError(f"{name} was given {param.name} twice.")
+                args[param.name] = value
+        missing = [k for k in required_order if k not in args or args[k] is None]
         if missing:
             raise ToolError(f"{name} needs {', '.join(sorted(missing))}.")
         return call(name, **args)
@@ -106,7 +118,7 @@ def _function(definition):
         lines.append(f"{key}{'' if key in required else ' (optional)'}: {what}")
     tool.__name__ = tool.__qualname__ = _identifier(definition.get("function") or name)
     tool.__doc__ = "\n".join(lines).strip()
-    tool.__signature__ = inspect.Signature(params)
+    tool.__signature__ = signature
     return tool
 
 
@@ -150,6 +162,13 @@ class _Tools:
             if score:
                 scored.append((score, f"{d['path']}: {(d.get('description') or '').splitlines()[0][:120]}"))
         return [line for _, line in sorted(scored, key=lambda s: -s[0])[:most]]
+
+    def __getattr__(self, group):
+        # arena.tools.web as arena.web: a program may look for a group under tools.
+        module = _groups.get(group) or _groups.get(_identifier(group))
+        if module is None:
+            raise AttributeError(f"arena has no group {group!r}: arena.tools.list() says what there is")
+        return module
 
     def __repr__(self):
         return "\n".join(self.list())

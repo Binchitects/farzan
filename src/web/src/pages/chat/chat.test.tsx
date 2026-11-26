@@ -283,6 +283,21 @@ describe('chat', () => {
     expect(within(panel).getByRole('figure', { name: 'Code: src/parse.c' })).toHaveTextContent('return 0;')
   })
 
+  it('a program run with run_code says which of the chat\'s tools it called', async () => {
+    const messages = [
+      msg('q1', null, 'user', { content: 'search it' }),
+      msg('a1', 'q1', 'assistant', { toolCalls: [{ id: 'c1', function: { name: 'run_code', arguments: JSON.stringify({ code: 'import arena\nprint(arena.web.web_search("x"))' }) } }] }),
+      msg('t1', 'a1', 'tool', { toolCallId: 'c1', toolName: 'run_code', content: JSON.stringify({ exit_code: 0, stdout: '{}', calls: 'web_search, fetch_page ×2' }), durationMs: 900 }),
+      msg('a2', 't1', 'assistant', { content: 'Found it.' }),
+    ]
+    backend({ start: conversation({ messages, currentLeafId: 'a2' }) })
+    renderApp('/chat/c1')
+    const a = await screen.findByRole('region', { name: 'Answer' })
+    const called = await within(a).findByLabelText('It called Web search, Fetch page')
+    expect(called).toHaveTextContent('called Web search, Fetch page ×2')
+    expect(a.querySelectorAll('.tool-called')).toHaveLength(2)
+  })
+
   it("a tool's error stays its own words, and without a GitLab address nothing links", async () => {
     const messages = [
       msg('q1', null, 'user', { content: 'find it' }),

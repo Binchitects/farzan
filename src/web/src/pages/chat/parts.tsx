@@ -206,6 +206,11 @@ export const ToolCard = memo(function ToolCard({
   const failed = result?.status === 'failed' || declined
   const value = useMemo(() => (result && !declined ? parseResult(result.content) : undefined), [result, declined])
   const count = resultCount(value)
+  // A program's calls of the chat's tools (run_code: "web_search, fetch_page ×2"), named as the tools are: what it did.
+  const called = useMemo(() => {
+    const calls = call.function.name === 'run_code' && value && typeof value === 'object' && !Array.isArray(value) ? (value as { calls?: unknown }).calls : null
+    return typeof calls === 'string' && calls ? calls.split(', ').map((c) => { const [name, times] = c.split(' ×'); return { title: toolTitle(name!), times: times ? Number(times) : 1 } }) : []
+  }, [call.function.name, value])
   // Sub-agents at work: how many of the parts are done, rather than just "Running".
   const parts = agentCall && running ? Math.max(agentParts(call.function.name, call.function.arguments).length, work?.length ?? 0) : 0
   // A canvas the call made or changed: opened beside the chat from here.
@@ -220,6 +225,18 @@ export const ToolCard = memo(function ToolCard({
           </span>
           <span className="tool-name shrink-0 font-medium">{toolTitle(call.function.name)}</span>
           <span className="min-w-0 truncate text-muted-foreground">
+            {called.length > 0 && (
+              <span className="mr-2" aria-label={`It called ${called.map((c) => c.title).join(', ')}`}>
+                called{' '}
+                {called.map((c, i) => (
+                  <span key={c.title}>
+                    {i > 0 && ', '}
+                    <span className="tool-called font-medium text-foreground">{c.title}</span>
+                    {c.times > 1 && ` ×${c.times}`}
+                  </span>
+                ))}
+              </span>
+            )}
             {lead !== null ? (
               <span className="font-mono text-xs">{lead}</span>
             ) : (
