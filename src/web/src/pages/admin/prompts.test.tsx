@@ -29,7 +29,7 @@ describe('prompt log', () => {
       source: 'api', id, at: '2026-11-26T10:00:00Z', model: 'Qwen3-4B', state: 'done', error: null, durationMs: 900, promptTokens: 2000, completionTokens: 40, chat: 'r1',
       kept: true, from: 2, total: 4, tools: ['read_file'], settings: { temperature: 0.2 },
       messages: [
-        { role: 'assistant', content: '', toolCalls: [{ id: 'call_1', name: 'read_file', arguments: '{"path":"src/a.cs"}' }] },
+        { role: 'assistant', content: '', toolCalls: [{ id: 'call_1', name: 'read_file', arguments: '{"path":"src/a.cs"}', result: 'class A { int x = ; }' }] },
         { role: 'tool', content: 'class A { int x = ; }', toolCallId: 'call_1' },
       ],
       answer: { finish: 'stop', reasoning: 'The semicolon is misplaced.', content: 'Fixed: `int x = 0;`', toolCalls: null },
@@ -43,7 +43,10 @@ describe('prompt log', () => {
         json: {
           chat: 'r1', title: 'Fix the build', kind: 'session', threads: [{ id: 't1', name: 'Main' }, { id: 't2', name: 'Sub-agent 1' }], questions: [],
           steps: [
-            { id: 's1', at: '2026-11-26T09:59:00Z', thread: 't1', model: 'Qwen3-4B', state: 'done', error: null, durationMs: 800, tokens: 1900, said: 'Called read_file' },
+            {
+              id: 's1', at: '2026-11-26T09:59:00Z', thread: 't1', model: 'Qwen3-4B', state: 'done', error: null, durationMs: 800, tokens: 1900, said: 'Called read_file',
+              calls: [{ id: 'call_1', name: 'read_file', arguments: '{"path":"src/a.cs"}', result: 'class A { int x = ; }' }],
+            },
             { id: 's2', at: '2026-11-26T10:00:00Z', thread: 't1', model: 'Qwen3-4B', state: 'done', error: null, durationMs: 900, tokens: 2040, said: 'Fixed' },
             { id: 's3', at: '2026-11-26T10:00:30Z', thread: 't2', model: 'Qwen3-4B', state: 'done', error: null, durationMs: 400, tokens: 300, said: 'In B.' },
           ],
@@ -56,15 +59,21 @@ describe('prompt log', () => {
     const sent = await within(dialog).findByRole('region', { name: 'What it sent' })
     expect(within(sent).getByText(/messages 3 to 4/)).toBeInTheDocument()
     expect(within(sent).getByLabelText('Arguments of read_file')).toHaveTextContent('"path": "src/a.cs"')
-    // The tool's result is folded until opened; the thinking too.
-    await userEvent.click(within(sent).getByRole('button', { name: /Result of a tool/ }))
-    expect(within(sent).getByText('class A { int x = ; }')).toBeInTheDocument()
+    // The tool's result is under its call, folded until opened, and not shown a second time; the thinking is folded too.
+    expect(within(sent).queryByRole('button', { name: /Result of a tool/ })).not.toBeInTheDocument()
+    await userEvent.click(within(sent).getByRole('button', { name: /What read_file gave back \(21 characters\)/ }))
+    expect(within(sent).getByLabelText('Result of read_file')).toHaveTextContent('class A { int x = ; }')
     const got = within(dialog).getByRole('region', { name: 'What it got' })
     await userEvent.click(within(got).getByRole('button', { name: /Thinking/ }))
     expect(within(got).getByText('The semicolon is misplaced.')).toBeInTheDocument()
     // Its run: each thread's steps; the sub-agent's step opens whole.
     await userEvent.click(within(dialog).getByRole('tab', { name: 'Its run' }))
-    const sub = await within(dialog).findByRole('region', { name: 'Sub-agent 1' })
+    // Each step lists its calls, their arguments and what they gave back.
+    const main = await within(dialog).findByRole('region', { name: 'Main' })
+    expect(within(main).getByLabelText('Arguments of read_file')).toHaveTextContent('"path": "src/a.cs"')
+    await userEvent.click(within(main).getByRole('button', { name: /What read_file gave back/ }))
+    expect(within(main).getByLabelText('Result of read_file')).toHaveTextContent('class A { int x = ; }')
+    const sub = within(dialog).getByRole('region', { name: 'Sub-agent 1' })
     await userEvent.click(within(sub).getByRole('button', { name: /In B\./ }))
     expect(await within(dialog).findByText('Find where A is used.')).toBeInTheDocument()
   })

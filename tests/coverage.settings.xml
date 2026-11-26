@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- dotnet-coverage's settings for coverage per test (tools/coverage-per-test.sh): the app's own code only. -->
+<Configuration>
+  <CodeCoverage>
+    <ModulePaths>
+      <Include>
+        <ModulePath>.*Llm\.Api\.dll$</ModulePath>
+        <ModulePath>.*Llm\.Core\.dll$</ModulePath>
+      </Include>
+    </ModulePaths>
+    <!-- EF's migrations and their designer files: generated, run by every test that makes a database. -->
+    <Sources>
+      <Exclude>
+        <Source>.*[/\\]Data[/\\]Migrations[/\\].*</Source>
+      </Exclude>
+    </Sources>
+    <IncludeTestAssembly>false</IncludeTestAssembly>
+  </CodeCoverage>
+</Configuration>

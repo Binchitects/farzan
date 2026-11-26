@@ -4017,107 +4017,6 @@ namespace Llm.Core.Data.Migrations
                     b.ToTable("security_scans", (string)null);
                 });
 
-            modelBuilder.Entity("Llm.Core.Code.StudioPort", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("Added")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Label")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<int>("Port")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("Stopped")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Visibility")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
-
-                    b.Property<Guid>("WorkspaceId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("WorkspaceId", "Port")
-                        .IsUnique();
-
-                    b.ToTable("studio_ports", (string)null);
-                });
-
-            modelBuilder.Entity("Llm.Core.Code.StudioWorkspace", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Branch")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("EngineKeyCipher")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("EnginePort")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("EngineUrl")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Error")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<string>("KeyAlias")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("KeyCipher")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Project")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTimeOffset?>("StartedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset>("UsedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "UsedAt");
-
-                    b.ToTable("studio_workspaces", (string)null);
-                });
-
             modelBuilder.Entity("Llm.Core.Compliance.AccessReview", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5730,10 +5629,6 @@ namespace Llm.Core.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
-                    b.Property<Guid?>("WorkspaceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("workspace_id");
-
                     b.HasKey("Hash");
 
                     b.HasIndex("Alias")
@@ -5742,8 +5637,6 @@ namespace Llm.Core.Data.Migrations
                     b.HasIndex("ProjectId");
 
                     b.HasIndex("UserId");
-
-                    b.HasIndex("WorkspaceId");
 
                     b.ToTable("api_keys", "gateway");
                 });
@@ -9471,24 +9364,6 @@ namespace Llm.Core.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Llm.Core.Code.StudioPort", b =>
-                {
-                    b.HasOne("Llm.Core.Code.StudioWorkspace", null)
-                        .WithMany()
-                        .HasForeignKey("WorkspaceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Llm.Core.Code.StudioWorkspace", b =>
-                {
-                    b.HasOne("Llm.Core.Identity.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Llm.Core.Compliance.AccessReviewItem", b =>
                 {
                     b.HasOne("Llm.Core.Compliance.AccessReview", null)
@@ -9619,11 +9494,6 @@ namespace Llm.Core.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Llm.Core.Code.StudioWorkspace", null)
-                        .WithMany()
-                        .HasForeignKey("WorkspaceId")
-                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("Llm.Core.Gateway.GatewayRequest", b =>

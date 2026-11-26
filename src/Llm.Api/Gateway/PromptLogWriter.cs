@@ -315,7 +315,7 @@ public sealed partial class PromptLogWriter(IServiceScopeFactory scopes, TimePro
         return m;
     }
 
-    internal static byte[] Zip(JsonNode body)
+    public static byte[] Zip(JsonNode body)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(body.ToJsonString());
         if (bytes.Length > PromptLogBody.MaxBytes)

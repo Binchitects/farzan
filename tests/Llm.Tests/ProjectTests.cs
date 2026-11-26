@@ -734,6 +734,13 @@ public sealed class ProjectTests(AppFixture app)
         var mine = await ann.GetAsync($"/api/usage/me/export?format=csv&{window}");
         await StatusAssert.Is(HttpStatusCode.OK, mine);
         Assert.Contains("Cost,$1.50", System.Text.Encoding.UTF8.GetString(await mine.Content.ReadAsByteArrayAsync()), StringComparison.Ordinal);
+        // Narrowed: to a model no one used, nothing, and the file says what it was narrowed to; a project that is not an id, refused.
+        var noModel = System.Text.Encoding.UTF8.GetString(await (await ann.GetAsync($"/api/usage/me/export?format=csv&{window}&model=nobody-uses-this")).Content.ReadAsByteArrayAsync());
+        Assert.Contains("Cost,$0.00", noModel, StringComparison.Ordinal);
+        Assert.Contains("Narrowed to,model nobody-uses-this", noModel, StringComparison.Ordinal);
+        var inProject = System.Text.Encoding.UTF8.GetString(await (await admin.GetAsync($"/api/admin/usage/export?format=csv&{window}&project={id}")).Content.ReadAsByteArrayAsync());
+        Assert.Contains($"Narrowed to,project {id}", inProject, StringComparison.Ordinal);
+        await StatusAssert.Is(HttpStatusCode.BadRequest, await ann.GetAsync($"/api/usage/me/export?format=csv&{window}&project=not-an-id"));
         await StatusAssert.Is(HttpStatusCode.Forbidden, await ann.GetAsync($"/api/admin/usage/export?format=pdf&{window}"));
         var everyone = await admin.GetAsync($"/api/admin/usage/export?format=xlsx&{window}");
         await StatusAssert.Is(HttpStatusCode.OK, everyone);

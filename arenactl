@@ -683,6 +683,12 @@ def cmd_installer(a) -> int:
             on = ""
             if env and env.exists():
                 on = next((ln.split("=", 1)[1].strip().strip('"') for ln in env.read_text(encoding="utf-8").splitlines() if ln.startswith("COMPOSE_PROFILES=")), "")
+                # A feature this release no longer has (workspaces, after 8.2) goes, as the installer drops it.
+                known = {f["id"] for f in features()}
+                gone = [n for n in on.split(",") if n and n not in known]
+                if gone:
+                    warn(f"the features {', '.join(gone)} are not in {VERSION}: they go")
+                on = ",".join(n for n in on.split(",") if n in known)
             profiles = choose_features(on or None, option(rest, "--without")) if on else choose_features(None, option(rest, "--without"))
         else:
             profiles = choose_features(option(rest, "--with"), option(rest, "--without"), cpu_only="--cpu-only" in rest)

@@ -68,7 +68,33 @@ public sealed class DataExport(AppDbContext db, AccessService access)
 
         // The prompt log: what they asked with their API keys and the answers, as long as it keeps them (Retention:PromptLogDays).
         var prompts = await db.PromptLog.AsNoTracking().Where(l => l.UserId == user.Id).OrderBy(l => l.At).ToListAsync(ct);
-        await JsonAsync(zip, "api-prompts.json", prompts.Select(l => new { l.At, l.Model, l.Prompt, l.Answer, l.PromptTokens, l.CompletionTokens, l.Status }), ct);
+        var whole = new Dictionary<Guid, string>();
+        foreach (var l in prompts)
+        {
+            whole[l.Id] = $"api-prompts/{l.At:yyyy-MM-dd}-{l.Id.ToString("N")[..8]}";
+        }
+        await JsonAsync(zip, "api-prompts.json", prompts.Select(l => new
+        {
+            l.At, l.Model, l.Prompt, l.Answer, l.PromptTokens, l.CompletionTokens, l.Status, l.State, l.Error, l.DurationMs, run = l.ChatId, l.Tags,
+            whole = whole[l.Id] + ".json",
+        }), ct);
+        // Each request kept whole (Gateway:PromptLogFull): what it sent (its new messages, tool results among them, its tools and
+        // settings) and its answer (thinking, words, tool calls with their arguments); and its question's pictures. A hundred at a time.
+        foreach (var chunk in prompts.Select(l => l.Id).Chunk(100))
+        {
+            var bodies = await db.PromptLogBodies.AsNoTracking().Where(b => chunk.Contains(b.EntryId)).ToListAsync(ct);
+            foreach (var b in bodies)
+            {
+                await JsonAsync(zip, whole[b.EntryId] + ".json", new
+                {
+                    request = Gateway.PromptLogWriter.Unzip(b.Request), answer = Gateway.PromptLogWriter.Unzip(b.Response),
+                }, ct);
+            }
+            foreach (var f in await db.PromptLogFiles.AsNoTracking().Where(f => chunk.Contains(f.EntryId)).OrderBy(f => f.Id).ToListAsync(ct))
+            {
+                await BytesAsync(zip, $"{whole[f.EntryId]}-{Safe(f.Name)}", f.Data, ct);
+            }
+        }
 
         var names = new Dictionary<Guid, string>();
         foreach (var file in await db.ChatAttachments.AsNoTracking().Where(a => a.UserId == user.Id).OrderBy(a => a.CreatedAt).Select(a => new { a.Id, a.FileName }).ToListAsync(ct))
@@ -118,6 +144,8 @@ public sealed class DataExport(AppDbContext db, AccessService access)
         workflows.json  Automations' workflows, their trigger and steps (a webhook's address is a secret: only that it is set)
         chats/          every chat: .json has every branch and message, .md the branch on screen
         files/          every file: the file itself, and the text the model read (.txt)
+        api-prompts.json what they asked with their API keys and the answers (the prompt log, while it keeps them)
+        api-prompts/    each of those requests whole, when kept so: what it sent and the answer, with its pictures
         {(hidden ? "\nChats with a deletedAt were deleted by the person while on legal hold, and kept.\n" : "")}
         """;
 

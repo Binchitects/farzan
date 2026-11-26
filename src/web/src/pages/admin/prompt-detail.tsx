@@ -14,6 +14,8 @@ interface ToolCall {
   id: string | null
   name: string | null
   arguments: string | null
+  /** What the tool gave back: null while no later step of its thread carried it. */
+  result?: string | null
 }
 
 interface StepMessage {
@@ -54,6 +56,7 @@ interface ChatStep {
   reasoning: string | null
   toolCalls: ToolCall[] | null
   tool: string | null
+  toolCallId: string | null
   details: unknown
   promptTokens: number | null
   completionTokens: number | null
@@ -74,7 +77,18 @@ interface Run {
   title: string | null
   kind: 'chat' | 'session' | null
   threads: { id: string; name: string }[]
-  steps: { id: string; at: string; thread: string; model: string; state: string; error: string | null; durationMs: number | null; tokens: number; said: string | null }[]
+  steps: {
+    id: string
+    at: string
+    thread: string
+    model: string
+    state: string
+    error: string | null
+    durationMs: number | null
+    tokens: number
+    said: string | null
+    calls: ToolCall[] | null
+  }[]
   questions: { id: string; at: string; text: string }[]
 }
 
@@ -93,24 +107,43 @@ function Fold({ label, icon, children, open = false }: { label: ReactNode; icon?
   )
 }
 
-/** A tool call: its tool, and its arguments as JSON laid out (as the model wrote them when they are not JSON). */
-function Call({ call }: { call: ToolCall }) {
-  let args = call.arguments ?? ''
+/** Arguments as JSON laid out (as the model wrote them when they are not JSON). */
+function laidOut(text: string | null | undefined) {
+  const s = text ?? ''
   try {
-    args = JSON.stringify(JSON.parse(args), null, 2)
+    return JSON.stringify(JSON.parse(s), null, 2)
   } catch {
-    // not JSON: as written
+    return s
   }
+}
+
+/** A tool call: its tool, its arguments, and what the tool gave back (folded), when a later step carried it. */
+function Call({ call, children }: { call: ToolCall; children?: ReactNode }) {
+  const name = call.name ?? 'a tool'
   return (
-    <div className="grid gap-1">
+    <div className="grid gap-1 rounded-md border px-3 py-2">
       <p className="flex items-center gap-1.5 text-sm font-medium">
-        <Wrench className="size-3.5" aria-hidden="true" /> {call.name ?? 'a tool'}
+        <Wrench className="size-3.5" aria-hidden="true" /> {name}
+        {call.id && <span className="font-mono text-xs font-normal text-muted-foreground">{call.id}</span>}
       </p>
-      <pre className="max-h-80 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap" aria-label={`Arguments of ${call.name ?? 'the call'}`}>
-        {args || '(no arguments)'}
+      <pre className="max-h-80 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap" aria-label={`Arguments of ${name}`}>
+        {laidOut(call.arguments) || '(no arguments)'}
       </pre>
+      {call.result != null ? (
+        <Fold label={`What ${name} gave back (${call.result.length.toLocaleString()} characters)`}>
+          {() => <pre className="max-h-96 overflow-auto font-mono text-xs whitespace-pre-wrap" aria-label={`Result of ${name}`}>{call.result || '(nothing)'}</pre>}
+        </Fold>
+      ) : (
+        <p className="text-xs text-muted-foreground">Its result is not kept: no later step of this thread carried it.</p>
+      )}
+      {children}
     </div>
   )
+}
+
+/** The ids of the calls whose results are shown with them, so a result is not shown twice. */
+function paired(calls: (ToolCall[] | null | undefined)[]) {
+  return new Set(calls.flatMap((c) => c ?? []).filter((c) => c.id && c.result != null).map((c) => c.id as string))
 }
 
 function Thinking({ text }: { text: string | null | undefined }) {
@@ -122,7 +155,8 @@ function Thinking({ text }: { text: string | null | undefined }) {
 }
 
 /** A message the step sent: a question or the system's words in full, a tool's result folded. */
-function Sent({ m }: { m: StepMessage }) {
+function Sent({ m, shown }: { m: StepMessage; shown: Set<string> }) {
+  if (m.role === 'tool' && m.toolCallId && shown.has(m.toolCallId)) return null
   if (m.role === 'tool')
     return (
       <Fold label={`Result of ${m.name ?? 'a tool'}${m.toolCallId ? ` (${m.toolCallId})` : ''}`}>
@@ -161,7 +195,10 @@ function ApiStep({ d }: { d: ApiDetail }) {
               </p>
             )}
             {d.settings && Object.keys(d.settings).length > 0 && <p className="font-mono text-xs text-muted-foreground">{JSON.stringify(d.settings)}</p>}
-            {d.messages.map((m, i) => <Sent key={i} m={m} />)}
+            {(() => {
+              const shown = paired(d.messages.map((m) => m.toolCalls))
+              return d.messages.map((m, i) => <Sent key={i} m={m} shown={shown} />)
+            })()}
           </section>
           <section className="grid gap-2" aria-label="What it got">
             <h3 className="text-sm font-semibold">What it got{d.answer?.finish ? ` (it ended: ${d.answer.finish})` : ''}</h3>
@@ -176,6 +213,8 @@ function ApiStep({ d }: { d: ApiDetail }) {
   )
 }
 
+const shownInChat = (d: ChatDetail) => paired(d.steps.map((s) => s.toolCalls))
+
 function ChatAnswer({ d }: { d: ChatDetail }) {
   return (
     <div className="grid gap-3">
@@ -185,7 +224,7 @@ function ChatAnswer({ d }: { d: ChatDetail }) {
         </div>
       )}
       {d.steps.map((s) =>
-        s.role === 'tool' ? (
+        s.role === 'tool' && s.toolCallId && s.details == null && shownInChat(d).has(s.toolCallId) ? null : s.role === 'tool' ? (
           <Fold key={s.id} label={`Result of ${s.tool ?? 'a tool'}`}>
             {() => (
               <div className="grid gap-2">
@@ -224,13 +263,18 @@ function RunView({ chat, onOpen }: { chat: string; onOpen: (id: string) => void 
           <h3 className="text-sm font-semibold">{t.name}</h3>
           <ol className="grid gap-1">
             {r.steps.filter((s) => s.thread === t.id).map((s, i) => (
-              <li key={s.id}>
+              <li key={s.id} className="grid gap-1">
                 <button type="button" className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-accent" onClick={() => onOpen(s.id)}>
                   <span className="w-6 text-right text-xs text-muted-foreground tabular-nums">{i + 1}</span>
                   <Badge variant="outline">{s.state}</Badge>
                   <span className="min-w-0 flex-1 truncate">{s.said ?? s.error ?? '…'}</span>
                   <span className="text-xs text-muted-foreground tabular-nums">{s.tokens.toLocaleString()} tokens</span>
                 </button>
+                {s.calls && s.calls.length > 0 && (
+                  <div className="ml-8 grid gap-1">
+                    {s.calls.map((c, j) => <Call key={j} call={c} />)}
+                  </div>
+                )}
               </li>
             ))}
           </ol>

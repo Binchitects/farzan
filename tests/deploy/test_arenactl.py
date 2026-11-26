@@ -56,6 +56,33 @@ class FeatureTests(unittest.TestCase):
         with self.assertRaises(self.a.Stop):
             self.a.choose_features("no-such-feature", None)
 
+    def test_An_upgrade_builds_for_the_installations_features_leaving_out_those_this_release_dropped(self):
+        # An 8.1 installation ran workspaces; 8.2 has no such feature: it goes, and the rest are built for.
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "deploy" / "scripts").mkdir(parents=True)
+            (Path(d) / "deploy" / "scripts" / "installer.sh").write_text("")
+            (Path(d) / "deploy" / ".env").write_text("COMPOSE_PROFILES=chat-models,workspaces,code-studio,sandbox\n")
+            built = []
+
+            class Built(Exception):
+                pass
+
+            def build(engine, profiles):
+                built.extend(profiles)
+                raise Built()
+
+            self.a.linux_only = lambda *_: None
+            self.a.build_images = build
+            self.a.Engine = lambda *_: None
+            args = unittest.mock.Mock(command="upgrade", rest=["--dir", d], no_build=False)
+            with unittest.mock.patch("sys.stderr", io.StringIO()), unittest.mock.patch("sys.stdout", io.StringIO()):
+                with self.assertRaises(Built):
+                    self.a.cmd_installer(args)
+            self.assertIn("chat-models", built)
+            self.assertIn("sandbox", built)
+            self.assertNotIn("workspaces", built)
+            self.assertIn("code-studio", built)
+
 
 class CommandLineTests(unittest.TestCase):
     def run_it(self, *args: str) -> subprocess.CompletedProcess:

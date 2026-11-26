@@ -32,7 +32,7 @@ export function UsagePage() {
             <TabsTrigger value="mine">Mine</TabsTrigger>
           </TabsList>
           <TabsContent value="everyone">
-            <DashboardView uid="usage-by-user" actions={(query) => <ExportMenu path="/api/admin/usage/export" query={query} label="Export everyone's" />} />
+            <DashboardView uid="usage-by-user" actions={(query) => <ExportMenu path="/api/admin/usage/export" query={() => modelOnly(query())} label="Export everyone's" />} />
           </TabsContent>
           <TabsContent value="prompts">
             <PromptList everyone />
@@ -152,4 +152,12 @@ function MyUsage() {
       </Card>
     </div>
   )
+}
+
+/** The dashboard's query for the export: its window, and one model when one is chosen (the export's model); the other variables are the page's. */
+function modelOnly(q: URLSearchParams): URLSearchParams {
+  const models = q.getAll('var-model').filter((m) => m !== '$__all')
+  for (const k of [...q.keys()]) if (k.startsWith('var-')) q.delete(k)
+  if (models.length === 1) q.set('model', models[0])
+  return q
 }

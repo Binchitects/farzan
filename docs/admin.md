@@ -2008,8 +2008,19 @@ what running the models really cost over the time chosen, and shares it out.
   groups counts in both, and once in a cost centre. **By tag** counts a
   request under each tag of its chat and of its project (once each), so the
   tags can add up to more than the whole.
+- **Only this**: the funnel beside a person, group, project, model, source or
+  kind narrows the whole report to it (`?person=`, `group=`, `project=`,
+  `model=`, `source=`, `kind=`; a link opens the same report, and they can be
+  put together). The machine's running cost, power and idle time stay the
+  whole machine's; the use narrowed to gets its share of it, by the basis
+  chosen (**Only model qwen3: 25% of the use, $391 of the running cost of
+  $1,566**), and each row costs what it does in the whole report. The chats'
+  time narrows by person, group and project.
 - **Export**: a PDF report, an Excel workbook or a CSV with every figure,
-  chart and table, for the time and basis shown; each export is audited.
+  chart and table, for the time, basis and narrowing shown (it says what it
+  was narrowed to); each export is audited. The Usage exports (yours, and
+  everyone's by person) narrow the same way by `model`, `source` and
+  `project`; Usage by person's export takes the model chosen on it.
 
 The GPUs' busy time, idle time, energy and what held work back are on the
 Hardware dashboard's **GPU time and what holds work back, in the time window** section.
@@ -2154,6 +2165,17 @@ them itself. Each panel's query runs on the app's server:
   become series by Grafana's rule for the time-series format. Each query runs as
   a role that can only `SELECT`, in a read-only transaction, one statement, with
   a 15-second timeout and a 5,000-row cap.
+  A panel that sums or counts the ledger reads `from $__requests s` (count(*)
+  is `sum(s.requests)`): over a window with whole hours in it, those hours come
+  from `gateway.requests_hourly` (the ledger by hour, person, model, source,
+  kind, key, state and project, kept by triggers) and the minutes either side
+  from the rows, so its numbers are the rows' own; buckets shorter than an hour
+  read the rows alone. A percentile reads `from $__spread s` with
+  `sketch_quantile(0.95, array_agg(s.bucket), array_agg(s.n))`: each request's
+  time (`metric = 'd'`) and time to its first token (`'f'`), in ms, as a sketch
+  by hour (`gateway.requests_hourly_spread`, buckets 2% wide), within 1% of the
+  rows' own percentile_disc. Single requests and other columns read `requests`
+  itself.
 - **Prometheus and Loki**: the step Grafana would use (the panel's minimum
   interval, the scrape interval, Loki's 11,000-point limit), the range aligned to
   it, `$__rate_interval`, `$__auto` and the rest, the dashboard's variables

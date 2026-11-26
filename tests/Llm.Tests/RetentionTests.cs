@@ -190,7 +190,22 @@ public sealed class RetentionTests(AppFixture app)
         var (f, _) = NewApp();
         await using var __ = f;
         var admin = await new TestBrowser(f).SignedInAsync("admin", AppFixture.AdminPassword);
-        var (ann, _, annName) = await PersonAsync(f, admin);
+        var (ann, annId, annName) = await PersonAsync(f, admin);
+        // An API request of theirs kept whole in the prompt log: its tool call and result, its answer, its picture.
+        await using (var scope = f.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var line = new Llm.Core.Chat.PromptLogEntry { UserId = annId, Model = "m", Prompt = "Fix the build", Answer = "Fixed.", Status = 200, At = DateTimeOffset.UtcNow };
+            db.PromptLog.Add(line);
+            db.PromptLogBodies.Add(new Llm.Core.Chat.PromptLogBody
+            {
+                EntryId = line.Id,
+                Request = Llm.Api.Gateway.PromptLogWriter.Zip(System.Text.Json.Nodes.JsonNode.Parse("""{"messages":[{"role":"tool","tool_call_id":"call_1","content":"class A { int x = ; }"}],"tools":["read_file"]}""")!),
+                Response = Llm.Api.Gateway.PromptLogWriter.Zip(System.Text.Json.Nodes.JsonNode.Parse("""{"finish_reason":"stop","message":{"role":"assistant","content":"Fixed.","reasoning_content":"The semicolon."}}""")!),
+            });
+            db.PromptLogFiles.Add(new Llm.Core.Chat.PromptLogFile { EntryId = line.Id, Name = "picture-1.png", ContentType = "image/png", Data = [1, 2, 3] });
+            await db.SaveChangesAsync();
+        }
         var file = await UploadAsync(ann, "plan.txt", "step one, step two");
         await ChatAsync(ann, "Read my plan", [file]);
         await StatusAssert.Is(HttpStatusCode.OK, await ann.Http.PutAsJsonAsync(new Uri("/api/account/preferences", UriKind.Relative), new { compactAt = 60, colorTheme = "copper" }));
@@ -209,6 +224,13 @@ public sealed class RetentionTests(AppFixture app)
         Assert.Contains("Read my plan", md, StringComparison.Ordinal);
         Assert.Contains("## Assistant", md, StringComparison.Ordinal);
         Assert.Equal("step one, step two", zip.Single(e => e.Key.StartsWith("files/", StringComparison.Ordinal) && e.Key.EndsWith("plan.txt", StringComparison.Ordinal)).Value);
+        // The prompt log: each line, and the request whole beside it (the tool's result, the answer's thinking), with its picture.
+        Assert.Contains("Fix the build", zip["api-prompts.json"], StringComparison.Ordinal);
+        var whole = zip.Single(e => e.Key.StartsWith("api-prompts/", StringComparison.Ordinal) && e.Key.EndsWith(".json", StringComparison.Ordinal));
+        Assert.Contains(whole.Key, zip["api-prompts.json"], StringComparison.Ordinal);
+        Assert.Contains("class A { int x = ; }", whole.Value, StringComparison.Ordinal);
+        Assert.Contains("The semicolon.", whole.Value, StringComparison.Ordinal);
+        Assert.Contains(zip.Keys, k => k.StartsWith("api-prompts/", StringComparison.Ordinal) && k.EndsWith("-picture-1.png", StringComparison.Ordinal));
     }
 
     private static async Task<bool> HiddenAsync(WebApplicationFactory<Program> f, Guid chat)

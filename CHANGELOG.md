@@ -50,6 +50,36 @@ Sections used:
 - `plugin.yaml` needs `apiVersion: arena.plugins/v3` and a version like 1.2.3 (`arena-plugin migrate` makes a v2
   folder v3). Installed plugins are made v3 by the upgrade, their settings, grants and versions kept.
 
+## v8.2.2 (2026-11-26)
+
+The prompt log shows each tool call with what it gave back.
+
+### :bug: Bugs fixed
+
+- **The prompt log showed a tool call without its result.** A step's answer
+  had the call and its arguments, but the tool's output came only with the
+  thread's next request, a separate line of the log. Now each call carries
+  what the tool gave back, beside its arguments: in a step opened whole (its
+  own calls, and the calls among what it sent), in a chat's answer round by
+  round, and in a run, where every step lists its calls with their arguments
+  and results (short there; the step opened has them whole). A result is no
+  longer shown twice. Lines kept before 8.2.0 had only their question and
+  answer, and still do.
+
+## v8.2.1 (2026-11-26)
+
+An upgrade from a checkout to 8.2 no longer stops on the Code workspaces
+feature that 8.2.0 removed.
+
+### :bug: Bugs fixed
+
+- **`./arenactl upgrade` and `./arenactl repair` stopped at once** on an
+  installation whose `.env` still turned on `workspaces` (every 8.1 host that
+  ran Code workspaces): "--with/--without workspaces: no such feature". The
+  installer itself already dropped such a feature. Now arenactl drops it too,
+  says so, and builds the images for the features left. The offline bundle's
+  `upgrade` was not affected.
+
 ## v8.2.0 (2026-11-26)
 
 Numbers you can trust and fewer, clearer tools. The dashboards say what the

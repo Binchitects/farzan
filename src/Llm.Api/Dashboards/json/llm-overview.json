@@ -96,7 +96,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(*) AS \"Requests\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused'"
+          "rawSql": "SELECT coalesce(sum(requests), 0) AS \"Requests\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused'"
         }
       ],
       "fieldConfig": {
@@ -153,7 +153,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(sum(greatest(prompt_tokens - cached_tokens, 0)),0) AS \"In\", COALESCE(sum(cached_tokens),0) AS \"Cached\", COALESCE(sum(completion_tokens),0) AS \"Out\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model)"
+          "rawSql": "SELECT COALESCE(sum(greatest(prompt_tokens - cached_tokens, 0)),0) AS \"In\", COALESCE(sum(cached_tokens),0) AS \"Cached\", COALESCE(sum(completion_tokens),0) AS \"Out\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model)"
         }
       ],
       "fieldConfig": {
@@ -210,7 +210,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms),0) AS \"p50\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' AND surface <> 'media'"
+          "rawSql": "SELECT COALESCE(sketch_quantile(0.5, array_agg(s.bucket), array_agg(s.n)),0) AS \"p50\" from $__spread s WHERE $__timeFilter(s.started_at) AND $__filter(s.model, model) AND s.metric = 'd' AND NOT s.refused AND NOT s.media"
         }
       ],
       "fieldConfig": {
@@ -267,7 +267,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms),0) AS \"p95\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' AND surface <> 'media'"
+          "rawSql": "SELECT COALESCE(sketch_quantile(0.95, array_agg(s.bucket), array_agg(s.n)),0) AS \"p95\" from $__spread s WHERE $__timeFilter(s.started_at) AND $__filter(s.model, model) AND s.metric = 'd' AND NOT s.refused AND NOT s.media"
         }
       ],
       "fieldConfig": {
@@ -324,7 +324,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model)"
+          "rawSql": "SELECT COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model)"
         }
       ],
       "fieldConfig": {
@@ -382,7 +382,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT count(*) FILTER (WHERE status IN ('failed', 'stopped')) AS \"Failures\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused'"
+          "rawSql": "SELECT coalesce(sum(requests) FILTER (WHERE status IN ('failed', 'stopped')), 0) AS \"Failures\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused'"
         }
       ],
       "fieldConfig": {
@@ -444,7 +444,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, count(*) AS \"requests\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), model AS metric, coalesce(sum(requests), 0) AS \"requests\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1, 2 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -499,7 +499,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), (COALESCE(sum(greatest(coalesce(prompt_tokens,0) - cached_tokens,0)),0)) / ($__interval_ms / 1000.0) AS \"input, cache miss\", (COALESCE(sum(cached_tokens),0)) / ($__interval_ms / 1000.0) AS \"input, cache hit\", (COALESCE(sum(completion_tokens),0)) / ($__interval_ms / 1000.0) AS \"output\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), (COALESCE(sum(greatest(coalesce(prompt_tokens,0) - cached_tokens,0)),0)) / ($__interval_ms / 1000.0) AS \"input, cache miss\", (COALESCE(sum(cached_tokens),0)) / ($__interval_ms / 1000.0) AS \"input, cache hit\", (COALESCE(sum(completion_tokens),0)) / ($__interval_ms / 1000.0) AS \"output\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -554,7 +554,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms) AS \"p50\", percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms) AS \"p95\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' AND surface <> 'media' GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(s.started_at, $__interval), sketch_quantile(0.5, array_agg(s.bucket), array_agg(s.n)) AS \"p50\", sketch_quantile(0.95, array_agg(s.bucket), array_agg(s.n)) AS \"p95\" from $__spread s WHERE $__timeFilter(s.started_at) AND $__filter(s.model, model) AND s.metric = 'd' AND NOT s.refused AND NOT s.media GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -609,7 +609,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(started_at, $__interval), percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_token_at - started_at))*1000) AS \"p50 TTFT\", percentile_cont(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_token_at - started_at))*1000) AS \"p95 TTFT\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND first_token_at IS NOT NULL GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT $__timeGroupAlias(s.started_at, $__interval), sketch_quantile(0.5, array_agg(s.bucket), array_agg(s.n)) AS \"p50 TTFT\", sketch_quantile(0.95, array_agg(s.bucket), array_agg(s.n)) AS \"p95 TTFT\" from $__spread s WHERE $__timeFilter(s.started_at) AND $__filter(s.model, model) AND s.metric = 'f' GROUP BY 1 ORDER BY 1"
         }
       ],
       "fieldConfig": {
@@ -662,7 +662,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "nvidia_smi_utilization_gpu_ratio * 100 * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_utilization_gpu_ratio * 100 * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "compute {{gpu}}"
         }
       ],
@@ -716,7 +716,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "nvidia_smi_memory_used_bytes * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_memory_used_bytes * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "used {{gpu}}"
         },
         {
@@ -725,7 +725,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "nvidia_smi_memory_total_bytes * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) nvidia_smi_gpu_info, \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (nvidia_smi_gpu_info) > 1 or on (instance, uuid) nvidia_smi_gpu_info)",
+          "expr": "nvidia_smi_memory_total_bytes * on (instance, uuid) group_left (gpu) (label_replace(label_join(count_values by (instance, uuid) (\"gpu\", nvidia_smi_index) * on (instance, uuid) group_left (name) max by (instance, uuid, name) (nvidia_smi_gpu_info), \"gpu\", \" \", \"gpu\", \"name\"), \"gpu\", \"GPU $1 · $2\", \"gpu\", \"^([0-9]+) (?:NVIDIA )?(.+)$\") and on (instance) count by (instance) (max by (instance, uuid, name) (nvidia_smi_gpu_info)) > 1 or on (instance, uuid) max by (instance, uuid, name) (nvidia_smi_gpu_info))",
           "legendFormat": "total {{gpu}}"
         }
       ],
@@ -781,7 +781,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT model AS \"Model\", count(*) AS \"Requests\", COALESCE(sum(prompt_tokens),0) AS \"Prompt tokens\", COALESCE(sum(completion_tokens),0) AS \"Completion tokens\", COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache hit %\", round(COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms),0)::numeric,0) AS \"p50 ms\", round(COALESCE(sum(cost),0)::numeric,4) AS \"Spend\" from requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1 ORDER BY 2 DESC"
+          "rawSql": "SELECT a.\"Model\", a.\"Requests\", a.\"Prompt tokens\", a.\"Completion tokens\", a.\"Cache hit %\", round(COALESCE(b.p50,0)::numeric,0) AS \"p50 ms\", a.\"Spend\" FROM (SELECT model AS \"Model\", coalesce(sum(requests), 0) AS \"Requests\", COALESCE(sum(prompt_tokens),0) AS \"Prompt tokens\", COALESCE(sum(completion_tokens),0) AS \"Completion tokens\", COALESCE(round(100.0*sum(cached_tokens)/NULLIF(sum(coalesce(prompt_tokens,0)),0),1),0) AS \"Cache hit %\", round(COALESCE(sum(cost),0)::numeric,4) AS \"Spend\" from $__requests requests WHERE $__timeFilter(started_at) AND $__filter(model, model) AND status <> 'refused' GROUP BY 1) a LEFT JOIN (SELECT s.model, sketch_quantile(0.5, array_agg(s.bucket), array_agg(s.n)) AS p50 FROM $__spread s WHERE $__timeFilter(s.started_at) AND $__filter(s.model, model) AND s.metric = 'd' AND NOT s.refused GROUP BY 1) b ON b.model = a.\"Model\" ORDER BY 2 DESC"
         }
       ],
       "fieldConfig": {

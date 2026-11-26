@@ -193,13 +193,13 @@ public sealed partial class StudioRuns(IServiceScopeFactory scopes, TimeProvider
     }
 
     /// <summary>Runs left "running" long after their last step (the app that ran them stopped): ended, saying so.</summary>
-    private async Task AbandonedAsync(CancellationToken ct)
+    public async Task AbandonedAsync(CancellationToken ct)
     {
         await using var scope = scopes.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var before = clock.GetUtcNow() - Abandoned;
         var stale = await db.WorkflowRuns.Where(r => r.Status == WorkflowRun.Running && r.StartedAt < before
-            && !db.WorkflowRunSteps.Any(s => s.RunId == r.Id && s.StartedAt >= before)).Take(50).ToListAsync(ct);
+            && !db.WorkflowRunSteps.Any(s => s.RunId == r.Id && s.StartedAt >= before)).OrderBy(r => r.StartedAt).Take(50).ToListAsync(ct);
         foreach (var r in stale.Where(r => !_running.ContainsKey(r.Id)))
         {
             r.Status = WorkflowRun.Failed;
