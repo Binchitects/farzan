@@ -273,6 +273,85 @@ Headlines: **dashboards whose numbers are right, per GPU and per model**; **a pr
 between; then every suite, the compliance check, release-scan, the upgrade from 7.x and 8.x, and (when the installer,
 compose or the bundle changed) the offline scenarios, before 8.2.0.
 
+## v8.3 (asked 2026-11-26)
+
+Branch `v8.3` from `origin/v8.2`; `origin/v8.2` (then `origin/main` once 8.2.0 is tagged) merged in often. The
+framework is its own repository, `Binchitects/farzan-arena-plugin-framework` (MIT): the manifest's schema, the host
+API's contract, the SDKs (TypeScript for the UI and for plugins' servers on Node 22), the CLI (`arena-plugin`: init,
+build, test, package, sign, verify, publish, dev), docs, examples and a conformance suite. Its plan,
+`docs/plan.md` there, holds the architecture, the isolation and security models and the API's versioning; this
+section is Arena's side of it.
+
+Headlines: **plugins with code, pages and access to Arena, installed like today's**; **a plugin that breaks takes
+only itself down** (the chaos plugin crashes, hangs and eats memory while everything else answers, then is turned
+off by itself); **grants an admin can read**: what each plugin may reach, for which groups, and everything it did.
+
+### Plugins v2 extended, not replaced
+
+- **Today.** Plugins v2 is declarative: an OpenAPI document or an MCP server (remote, or Python run per call in the
+  sandbox), sign-in, writes, settings, skills, assistants, safeguard rules, toolsets, task templates; catalog with
+  SHA-256 and a signed index, grants at install and at updates, group settings, pinning, rollback, health, a tool off
+  after 25 failures. An install is an `McpServer` row (`Plugin`, `Manifest`, `PluginSettings`, `PluginPermissions`).
+  No plugin code runs, and there is no UI, event, hook, job or data API for plugins.
+- **Fix.** One manifest (`apiVersion: arena.plugins/v3`, a superset of v2), one installer, one admin page. New tables
+  (not more columns on `McpServer`, which 8.2 is reworking): `Plugins` (the install: name, version, state, the
+  reason it is off, signer), `PluginGrants` (scope, granted by, when), `PluginEnablement` (group or everyone),
+  `PluginManagers`, `PluginStore` (key-value, plugin-wide or per person, with quotas), `PluginEventOutbox`
+  (at-least-once delivery), `PluginJobRuns` (claimed as Automations claim theirs, so one replica runs each). The
+  v2 plugin's tool stays an `McpServer` row owned by its `Plugins` row. A migration moves every installed v2 plugin
+  into them (manifest rewritten with `apiVersion`, grants carried), with an upgrade test from 7.x and 8.x data.
+
+### The runtime: `plugins`, a service with no network
+
+- A new feature `plugins` (deploy/features, its compose profile; on by default) runs `deploy/services/plugins`: a
+  supervisor on `node:22-alpine` (already on this machine), `network_mode: none`, a read-only root, no capabilities
+  but SETUID, SETGID and KILL, its memory, CPU and process caps, no Docker socket. The app reaches it over a unix
+  socket on the `plugins` volume (Kubernetes: TCP with a key, and a NetworkPolicy with no egress).
+- One worker process a plugin, its own uid, its own 0700 folder, rlimits (CPU seconds, processes, open files, file
+  size, no core), a V8 heap cap and a resident-memory watchdog, a deadline per call, a bounded queue; started again
+  with backoff after a crash. Probed 2026-11-26 in `node:22-alpine`: a heap past its cap aborts, a busy loop is
+  killed at its CPU limit, `fetch` fails with ENETUNREACH, the worker runs as its own uid.
+- The breaker: 5 failures in a row, or half of the last 20 calls in 10 minutes, turns the plugin off, tells its
+  admins, audits `plugin.auto_disabled`.
+
+### The host API, and access
+
+- `/api/plugins` (admin) and the runtime's calls into the app reach one dispatcher: the plugin's granted scopes ∩ the
+  acting person's permissions and features ∩ the plugin enabled for their groups. Areas in v1: chats, projects,
+  models (through the gateway, as the person), knowledge, files, people and groups, settings, storage, `http.fetch`
+  (by the app, to granted hosts only), notify, audit. Events and hooks (observe, or modify with its own grant) with
+  deadlines; jobs on cron; code-defined tools for models (they ask first when they write); routes under
+  `/api/p/{plugin}/...`, each declaring its access as every route does (EndpointAccessTests).
+- New permissions: `plugins.grant`, `plugins.enable`, `plugins.develop` (dev installs, one's own only). Plugin scopes
+  are their own catalogue, not entries of `Permissions.All`.
+- Every install, grant, enable, disable, auto-disable, setting, outward call, write and denial is audited `plugin.*`.
+
+### The UI
+
+- Slots in the web: pages (`/p/{plugin}/{page}`) and their menu items, panels (chat sidebar, project, admin), settings
+  screens, chat composer and message actions, Code Studio and Code Arena panels. Each is an iframe served by the app
+  under `/plugin-ui/{plugin}/{version}/` with the preview's CSP (an opaque origin, `connect-src 'none'`), reaching
+  Arena only through a checked `postMessage` bridge, inside an error boundary with a load deadline, a heartbeat and
+  a rate limit.
+- Admin → Plugins: what each plugin asks for and was granted (in words), per-group enablement, managers, state and
+  the reason it is off, health, its audit, the trusted publisher keys and whether unsigned packages may install.
+
+### Proof
+
+Tests that break a plugin on purpose, one per item: isolation (another plugin's folder, the network, the socket),
+timeouts, resource limits (heap, CPU, fork bomb, file size, open files), crash containment (exit, throw, garbage on
+its output), automatic disable (and turning it back on), UI error boundaries (throws, never loads, floods the bridge,
+tries the top window, cookies and the API). The framework's conformance suite run against Arena. The upgrade from 7.x
+and 8.x with installed v2 plugins. The offline scenarios, since compose, the features and the bundle change.
+
+### Order
+
+1. The framework's contract and CLI (its repository). 2. Its server SDK and harness. 3. The runtime service and its
+chaos tests. 4. The registry, the tables and the v2 migration, the host API, tools, routes, events, hooks, jobs,
+audit. 5. The UI slots, the bridge, the error boundaries, the admin pages. 6. The UI SDK, `arena-plugin dev` and
+`publish`. 7. Compose, the feature, Helm, the offline bundle, docs; every suite, the compliance check, release-scan,
+image-scan, the upgrade from 7.x and 8.x, the offline scenarios; then framework 1.0.0 and, after 8.2.0, Arena 8.3.0.
+
 ## Next
 
 1. **Farzan Graph's code graphs.** Who calls a method, what implements an interface,
