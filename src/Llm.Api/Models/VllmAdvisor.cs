@@ -62,8 +62,9 @@ public static class VllmAdvisor
     public static readonly int[] TpSizes = [1, 2, 4, 8, 16];
 
     /// <summary>
-    /// The GGUF architectures (general.architecture) each engine reads, as its image has it: vLLM 0.31.0 through transformers 5.17
-    /// and vllm-gguf-plugin 0.0.5 (services/vllm.Dockerfile), SGLang 0.5.21 through its own loader. Tried on the library's files
+    /// The GGUF architectures (general.architecture) each engine reads, as its image has it: vLLM through transformers (5.17 in
+    /// vLLM 0.31.0, where these were tried; vLLM 0.34.0's 5.22 maps each of them still, and more not tried here) and
+    /// vllm-gguf-plugin 0.0.5 (services/vllm.Dockerfile), SGLang (0.5.21, and 0.5.23 now) through its own loader. Tried on the library's files
     /// (llama, qwen2 and qwen3 on both; llama with llama.cpp's rotary layout, which services/vllm-gguf-rope.py and SGLang's
     /// launcher set) and, for vLLM, on each architecture's own config; the others fail as they load (qwen35, qwen3vlmoe and
     /// gemma4 among them: transformers or the plugin cannot map them, nor MoE ones such as qwen3moe).
