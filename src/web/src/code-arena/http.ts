@@ -1,18 +1,18 @@
 import { api as arenaApi, ApiError } from '@/lib/api'
 
-// Where the IDE's own requests go. In code-arena's page, its own server (/api/…); in Arena's Code Studio, the workspace's
+// Where the IDE's own requests go. In code-arena's page, its own server (/api/…); in Arena's Code, the workspace's
 // engine through Arena (/api/studio/w/<id>/…), which signs the person in and passes each on with the workspace's key.
 let base = ''
 
-/** The IDE's requests from now on go under this prefix (Code Studio's workspace); '' for code-arena's own page. */
+/** The IDE's requests from now on go under this prefix (Code's workspace); '' for code-arena's own page. */
 export function setIdeBase(prefix: string) {
   base = prefix.replace(/\/+$/, '')
 }
 
-/** True on code-arena's own page, false in Arena's Code Studio (the IDE in the person's own page). */
+/** True on code-arena's own page, false in Arena's Code (the IDE in the person's own page). */
 export const ownPage = () => !base
 
-/** The Code Studio workspace the IDE shows (its id), null on code-arena's own page. */
+/** The Code workspace the IDE shows (its id), null on code-arena's own page. */
 export const studioWorkspace = () => /^\/api\/studio\/w\/([0-9a-f-]+)$/i.exec(base)?.[1] ?? null
 
 /** An address of the IDE's API (/api/…) as it is reached from this page. */

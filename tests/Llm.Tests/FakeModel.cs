@@ -279,7 +279,7 @@ public sealed class FakeModel : HttpMessageHandler
             chunks = [Delta(new JsonObject { ["content"] = $$"""{"real": {{(real ? "true" : "false")}}, "why": "{{(real ? "The id goes into the text." : "The value is a constant.")}}"}""" }), Finish("stop"), Usage(200, 0, 20)];
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new SseContent(chunks, delay) };
         }
-        // Asked for JSON only (Agent Studio's ask step): the JSON a "[json:…]" marker in the question holds.
+        // Asked for JSON only (Automations' ask step): the JSON a "[json:…]" marker in the question holds.
         if (system0.EndsWith("Answer with JSON only, no other words.", StringComparison.Ordinal)
             && System.Text.RegularExpressions.Regex.Match(lastUser, @"\[json:(.*)\]", System.Text.RegularExpressions.RegexOptions.Singleline) is { Success: true } jsonMarker)
         {

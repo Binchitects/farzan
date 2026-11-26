@@ -24,7 +24,7 @@ const waitingRun: Run = {
 
 afterEach(() => vi.restoreAllMocks())
 
-describe('Agent Studio', () => {
+describe('Automations', () => {
   it('a template becomes a workflow of one\'s own, opened on its canvas', async () => {
     const calls = fakeApi(member, {
       'GET /api/studio': () => ({ json: [] }),

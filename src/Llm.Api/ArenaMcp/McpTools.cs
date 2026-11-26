@@ -169,7 +169,7 @@ public sealed partial class McpTools(
     /// <summary>
     /// Tools as code (/mcp/code): in place of every function, search_tools and run_code, so an agent reads a few
     /// definitions and writes one program for many calls; those a program may not call (that ask first, deep research,
-    /// Python...) are listed as they are. Without run_code for the person (the Tools as code tool off, or no sandbox),
+    /// Python...) are listed as they are. Without run_code for the person (Calling tools from code off for them, or no sandbox),
     /// every function is listed, and the notes say why.
     /// </summary>
     public async Task<McpCatalog> CodeCatalogAsync(AppUser user, bool fresh, CancellationToken ct)
@@ -179,7 +179,7 @@ public sealed partial class McpTools(
         {
             return all with
             {
-                Instructions = "Tools as code is not on for you here (an admin turns on its tool, Tools as code, with the sandbox): every tool is listed as it is.\n\n" + all.Instructions,
+                Instructions = "Tools as code is not on for you here (an admin turns on Calling tools from code, with the sandbox): every tool is listed as it is.\n\n" + all.Instructions,
             };
         }
         var tools = new JsonArray(SearchDefinition());

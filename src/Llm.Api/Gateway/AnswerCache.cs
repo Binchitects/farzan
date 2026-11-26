@@ -895,7 +895,7 @@ public static class AnswerCacheEndpoints
     }
 
     /// <summary>
-    /// Who an API key's request is for, as the ledger books it: the key's person, a workspace's key as Code Studio's, its tag,
+    /// Who an API key's request is for, as the ledger books it: the key's person, a workspace's key as Code's, its tag,
     /// chat and project (Code Arena names them: chat:ID, project:ID); its tokens count to the key's minute once it ends.
     /// </summary>
     private static GatewayCaller OwnCaller(Admitted a, JsonObject json, IServiceScopeFactory scopes)

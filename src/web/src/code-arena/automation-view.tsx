@@ -94,7 +94,7 @@ export function AutomationView() {
               {data.agentsProblem ? (
                 <p className="text-muted-foreground">{data.agentsProblem}</p>
               ) : (data.agents ?? []).length === 0 ? (
-                <p className="text-muted-foreground">You have no agents yet: make them in Arena, under Agent Studio.</p>
+                <p className="text-muted-foreground">You have no agents yet: make them in Arena, under Automations.</p>
               ) : (
                 <ul className="grid gap-1">
                   {(data.agents ?? []).map((a) => (

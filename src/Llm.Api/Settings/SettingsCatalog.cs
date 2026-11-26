@@ -37,7 +37,7 @@ public static class SettingsCatalog
     private const string SecurityGroup = "Security alerts";
     private const string RoomsGroup = "Rooms and calls";
     private const string MeetingsGroup = "Meetings";
-    private const string StudioGroup = "Code Studio";
+    private const string StudioGroup = "Code workspaces";
     private const string LabGroup = "Science lab and 3D";
     private const string DashboardsGroup = "Dashboards";
     private const string ReplicasGroup = "Replicas";
@@ -466,7 +466,7 @@ public static class SettingsCatalog
             { Default = "*/15 * * * *" },
         new("CodeIntelIndex:TimeZone", CodeIntel, "Time zone of the index schedule", "An IANA name such as Europe/Berlin.", SettingType.Text, SettingScope.Live)
             { Default = "UTC", Pattern = @"^(UTC|[A-Za-z]+(/[A-Za-z0-9_+\-]+){1,2})$", PatternHelp = "An IANA time zone, e.g. Europe/Berlin, or UTC." },
-        new("Tls:CompanyCa", CodeIntel, "GitLab's CA (a company CA)", $"When GitLab's certificate comes from your company's own CA (or is self-signed): that CA's certificate (PEM, -----BEGIN CERTIFICATE-----; a bundle for an issuing CA with its root). Trusted besides the public CAs by everything that reaches GitLab: sign-in with it, people's GitLab tokens and apps linked, Fix it, scheduled tasks, knowledge sources, {Brand.CodeIntel}'s index and reviews, and Code Studio's workspaces (git clone and push). A certificate must still be for GitLab's name and within its dates. At install: GITLAB_CA_FILE.", SettingType.Text, SettingScope.Live)
+        new("Tls:CompanyCa", CodeIntel, "GitLab's CA (a company CA)", $"When GitLab's certificate comes from your company's own CA (or is self-signed): that CA's certificate (PEM, -----BEGIN CERTIFICATE-----; a bundle for an issuing CA with its root). Trusted besides the public CAs by everything that reaches GitLab: sign-in with it, people's GitLab tokens and apps linked, Fix it, scheduled tasks, knowledge sources, {Brand.CodeIntel}'s index and reviews, and Code's workspaces (git clone and push). A certificate must still be for GitLab's name and within its dates. At install: GITLAB_CA_FILE.", SettingType.Text, SettingScope.Live)
             { Max = global::Llm.Api.Chat.Tools.ServerTls.MaxCaChars, Lines = 6 },
         new("Chat:GitlabLinkUrl", CodeIntel, "GitLab address for links", $"Where people's browsers open GitLab, for the files and lines in {Brand.CodeIntel}'s answers. Empty: the GitLab address above. Set it when {Brand.CodeIntel} reaches GitLab by an internal name.", SettingType.Url, SettingScope.Live)
             { Pattern = @"https?://\S+", PatternHelp = "http(s)://…" },
@@ -534,7 +534,7 @@ public static class SettingsCatalog
         new("Meetings:MostPerPerson", MeetingsGroup, "Meetings one person keeps", "Past it, they delete one before adding another.", SettingType.WholeNumber, SettingScope.Live)
             { Default = "500", Min = 1, Max = 100_000, Optional = false },
 
-        new("Workspaces:Idle", StudioGroup, "A workspace sleeps after", "A Code Studio workspace unused this long sleeps: its engine stops, its files stay.", SettingType.Duration, SettingScope.Live)
+        new("Workspaces:Idle", StudioGroup, "A workspace sleeps after", "A Code workspace unused this long sleeps: its engine stops, its files stay.", SettingType.Duration, SettingScope.Live)
             { Default = "00:30:00", Unit = "minutes", Min = 5, Max = 10_080, Optional = false },
         new("Workspaces:MostPerPerson", StudioGroup, "Workspaces one person keeps", "On the server.", SettingType.WholeNumber, SettingScope.Live)
             { Default = "8", Min = 1, Max = 100, Optional = false },

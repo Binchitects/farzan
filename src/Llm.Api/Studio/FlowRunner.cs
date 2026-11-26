@@ -359,7 +359,7 @@ public sealed class FlowRunner(AppDbContext db, OneQuestion one, AnswerJobs jobs
                 var subject = FlowModel.Fill(step.Subject, values) is { Length: > 0 } s ? s : _workflow.Name;
                 try
                 {
-                    await mailer.SendAsync(email, subject, $"{FlowModel.Fill(step.Text, values)}\n\n--\nThe workflow \"{_workflow.Name}\" sent this (Agent Studio).", ct);
+                    await mailer.SendAsync(email, subject, $"{FlowModel.Fill(step.Text, values)}\n\n--\nThe workflow \"{_workflow.Name}\" sent this (Automations).", ct);
                 }
                 catch (Exception ex) when (ex is System.Net.Mail.SmtpException or InvalidOperationException or IOException or FormatException)
                 {

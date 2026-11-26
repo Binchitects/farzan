@@ -41,7 +41,7 @@ export function openChannel(): BroadcastChannel | null {
   return typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(channelName)
 }
 
-/** The IDE's address with the window's own part: what is there (a Code Studio prefix, a key) stays. */
+/** The IDE's address with the window's own part: what is there (a Code prefix, a key) stays. */
 export function windowUrl(view: Exclude<Detached, null>, href: string = window.location.href): string {
   const url = new URL(href)
   url.searchParams.delete('path')

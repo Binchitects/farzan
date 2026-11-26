@@ -17,7 +17,7 @@ using Microsoft.Extensions.Hosting;
 namespace Llm.Tests;
 
 /// <summary>
-/// Code Studio's forwarded ports: what a workspace's dev server listens on, listed in its Ports view, and reached at its own
+/// Code's forwarded ports: what a workspace's dev server listens on, listed in its Ports view, and reached at its own
 /// host under Arena's domain (ws-&lt;workspace&gt;-&lt;port&gt;.&lt;domain&gt;) with the person's Arena session — by its owner, or by
 /// everyone signed in once shared — WebSockets included, Arena's cookies never passed to it nor set by it.
 /// </summary>

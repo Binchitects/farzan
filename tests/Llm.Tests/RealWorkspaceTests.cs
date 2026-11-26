@@ -34,7 +34,7 @@ public sealed class RealWorkspaceFactAttribute : FactAttribute
 }
 
 /// <summary>
-/// A Code Studio workspace end to end, in throwaway containers: the workspaces service as compose runs it (its security
+/// A Code workspace end to end, in throwaway containers: the workspaces service as compose runs it (its security
 /// options), a code host (GitLab's API and git over HTTP, with the person's token) that is also the agent's model API.
 /// Started (cloned as the person), a dev server run in its terminal and opened through its forwarded address (its
 /// WebSocket too), the agent's command sandboxed, a commit pushed, put to sleep and started again.

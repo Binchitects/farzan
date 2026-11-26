@@ -40,12 +40,12 @@ describe('nav', () => {
 
   it('leaves out the pages whose feature permissions a person holds none of', () => {
     const titles = (denied: string[]) => visibleNavigation({ isAdmin: false, denied }).flatMap((s) => s.items.map((i) => i.title))
-    expect(titles([])).toEqual(expect.arrayContaining(['Chat', 'Decks', 'Code Studio', 'Scheduled tasks']))
+    expect(titles([])).toEqual(expect.arrayContaining(['Chat', 'Decks', 'Code', 'Scheduled tasks']))
     const without = titles(['feature.chat', 'feature.decks', 'feature.tasks', 'code.studio'])
     for (const t of ['Chat', 'Decks', 'Scheduled tasks']) expect(without).not.toContain(t)
-    // Code Studio is for reviews too: shown while any of its permissions is held.
-    expect(without).toContain('Code Studio')
-    expect(titles(['code.studio', 'code.read', 'review.run'])).not.toContain('Code Studio')
+    // Code is for reviews too: shown while any of its permissions is held.
+    expect(without).toContain('Code')
+    expect(titles(['code.studio', 'code.read', 'review.run'])).not.toContain('Code')
     expect(findNavItem('/decks/d1')?.may).toEqual(['feature.decks'])
   })
 

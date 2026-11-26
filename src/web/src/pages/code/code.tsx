@@ -33,7 +33,7 @@ export function ReviewState({ r }: { r: Pick<ReviewBrief, 'status' | 'step' | 'v
 type Tab = 'workspaces' | 'review' | 'ask'
 
 /**
- * Code Studio, in three parts each its permission's (Admin → Access): Workspaces (code.studio), Review (review.run starts
+ * Code, in three parts each its permission's (Admin → Access): Workspaces (code.studio), Review (review.run starts
  * them: a merge request, a branch, a whole repository or several; code.read lists merge requests) and Ask and explore
  * (code.read: questions, code-intel's tools across repositories, business maps). Fix it and Security review are a button away.
  */
@@ -53,7 +53,7 @@ export function CodePage() {
   return (
     <>
       <PageHeader
-        title="Code Studio"
+        title="Code"
         description={`Code in an IDE like VS Code, on the server or your own machine; review a change, a whole repository or several with the model; and ask ${codeIntelName} about your code across repositories. Reviews read with your own access and write nothing; workspaces and Fix it push and open merge requests as you, with your own token.`}
         actions={
           <>

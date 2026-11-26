@@ -392,11 +392,11 @@ of them). `code-arena --help` ends with its path, and **Help → About Code
 Arena** shows it. The conversation in a terminal (`code-arena chat`, `-p`)
 keeps no log: what it says is in the terminal and its session.
 
-**In Code Studio** (`code-arena web --connect`, signed in with `code-arena
-login`): the folder shows in Arena's **Code Studio** too, as *the folder on
+**In Code** (`code-arena web --connect`, signed in with `code-arena
+login`): the folder shows in Arena's **Code** too, as *the folder on
 this machine*, while code-arena runs, and opens there in the browser, from any
 computer you sign in to Arena on. code-arena dials Arena (a WebSocket, with
-your API key) and Code Studio's IDE reaches this run through it: each of its
+your API key) and Code's IDE reaches this run through it: each of its
 calls and WebSockets (terminals, language servers, the debugger) is answered
 by this run's own web server, with this run's own key, which never leaves the
 machine; nothing but the IDE's calls (`/api/…`) goes through. Only you reach
@@ -454,7 +454,7 @@ The page is laid out as VS Code is, in Farzan Arena's design system:
   Code Arena then starts again on that folder in the same window, at the same
   address with the same key (its terminal says so): the session, the
   terminals and the language servers are that folder's. The last session of
-  the folder left is saved, as when it stops. Not offered in Code Studio,
+  the folder left is saved, as when it stops. Not offered in Code,
   whose workspace is the server's.
 - **Add Folder to Workspace…** (the Explorer's button, or the command)
   chooses a folder the same way: the agent's tools may use it from then on,
@@ -935,7 +935,7 @@ under **Color theme**: choosing one makes its dark and light modes the
 preferred ones, so light, dark and the system's keep it, and **Light** or
 **Dark** goes to the same theme's other mode. In Code Arena's own window the
 browser keeps it, so the next page opens in its colours at once (one only
-previewed in the picker is not kept). In Code Studio the IDE shows
+previewed in the picker is not kept). In Code the IDE shows
 its theme's colours while it is open; going back, Arena's pages wear the
 person's own colour theme again (Your account → Appearance). Visual Studio's
 themes and an extension's themes keep Arena's own colours under what they set.
@@ -1733,7 +1733,7 @@ The shell is `"terminalShell"` in `config.json` (a path, or a name found on
 `PATH`), else `$SHELL` (a login shell on macOS, as Terminal.app starts it),
 else bash or sh; on Windows PowerShell 7, Windows PowerShell, else `cmd.exe`.
 It starts in the working directory with code-arena's environment, without
-`ARENA_API_KEY` (nor, in Code Studio, the key Arena reaches the engine with), with `TERM=xterm-256color`, `COLORTERM=truecolor` and
+`ARENA_API_KEY` (nor, in Code, the key Arena reaches the engine with), with `TERM=xterm-256color`, `COLORTERM=truecolor` and
 `TERM_PROGRAM=code-arena`, every signal at its default and none blocked. Ten
 run at once at most. A page that comes back, or a second tab, sees the last
 256 KB of each one's output. Closing one sends what runs in it SIGHUP, and
@@ -1751,7 +1751,7 @@ That is why everything below is behind this run's key.
 
 ### Ports
 
-In a Code Studio workspace on the server, the panel's **Ports** (beside
+In a Code workspace on the server, the panel's **Ports** (beside
 Terminal; **Ports: Focus on Ports View** in the command palette) lists what
 the workspace's programs listen on, as VS Code's does for a remote folder:
 each port with its **Forwarded Address**, its own
@@ -1838,7 +1838,7 @@ status (403 `outside` for a path outside the folder).
 | `POST /api/folders/remove` `{path}` | takes an added folder out again: `{added}`; 404 `not_added` |
 | `GET /api/workspace-file` | the `.code-workspace` file the folder was opened with: `{path, name, dir, text, version, settings, folders: [{path, full, name, exists, root}], rootInIt, problems}` (`path` null without one); read, its folders become those added |
 | `POST /api/workspace-file` `{text, version}` | writes it (the page's edit: folders, settings), then applies its folders; 400 `invalid` for a text with no `folders` list, 409 `changed` for a stale version, 404 `no_workspace` without one |
-| `POST /api/workspace-file/open` `{path}` | opens a `.code-workspace` file: `{folder, restart, workspace}`; with `restart`, code-arena starts again on its first folder there (as `folders/open`); 400 for another file, 404 when it is not there, 409 `not_here` in Code Studio |
+| `POST /api/workspace-file/open` `{path}` | opens a `.code-workspace` file: `{folder, restart, workspace}`; with `restart`, code-arena starts again on its first folder there (as `folders/open`); 400 for another file, 404 when it is not there, 409 `not_here` in Code |
 | `POST /api/workspace-file/save-as` `{path, replace}` | the folder open and those added, in a new file (`.code-workspace` added to the name); 409 `exists` unless `replace` |
 | `POST /api/workspace-file/close` | the folder open alone again: `{path: null}` |
 | `GET /api/snippets` | the project's `.vscode/*.code-snippets` (the folder's and each added folder's) and the person's `snippets/*.json` and `*.code-snippets`: `{files: [{source, path, language, text, version}], problems}` |
@@ -1846,7 +1846,7 @@ status (403 `outside` for a path outside the folder).
 | `POST /api/notebook/execute` `{path, code}` | runs a cell in the notebook's kernel (started at the first): `{run}`; 409 `untrusted` in a folder not trusted, `no_python` when Python cannot start, `too_many` past ten kernels |
 | `GET /api/notebook/run?id=&since=` | a run's outputs, once its version is past `since` (or within 25 s): `{version, outputs, done, ok, count}` (`outputs`: nbformat's, all of them) |
 | `POST /api/notebook/interrupt` `{path}`, `POST /api/notebook/restart` `{path}` | a KeyboardInterrupt to the cell running (on Windows, a restart); the kernel ended, the next cell starting another: the kernel's state |
-| `POST /api/folders/open` `{path}` | opens that folder (`~` is the home folder; relative to the one open now): answers `{folder}` with its full path, then code-arena starts again on it at the same address with the same key; 404 `not_found` when it is not a folder, 409 `not_here` in Code Studio |
+| `POST /api/folders/open` `{path}` | opens that folder (`~` is the home folder; relative to the one open now): answers `{folder}` with its full path, then code-arena starts again on it at the same address with the same key; 404 `not_found` when it is not a folder, 409 `not_here` in Code |
 | `GET /api/projects` | the projects in Arena the person may add to: `{projects: [{id, name}], suggested, problem}` (`suggested`: the repository's; `projects` null with `problem` when Arena cannot say) |
 | `POST /api/project` | `{project}`: the session (and the folder's next ones) in it, by its id, name or number, or `none`; `{said}`, 400 `project` with why when it is not one the person may add to |
 | `GET /api/sessions` | this folder's sessions, newest first: `[{id, title, updatedAt, messages, chat, unsent, waiting}]` (`chat`: the chat in Arena it is kept with; `unsent`: Arena lacks `waiting` of its messages) |
@@ -2685,10 +2685,10 @@ code-arena schedule remove nightly
 - Kept in `schedules.json` in the config folder; each run's output in a log
   under the data folder's `schedules/`, named in `schedule list`.
 
-**Agents in Arena.** Your agents in Arena's Agent Studio, and those shared
+**Agents in Arena.** Your agents in Arena's Automations, and those shared
 with you: `/agents` lists them, `/agents N TEXT` runs one with that text and
 says what each step gave when it ends; the view runs one and follows it.
-Arena's rules hold: Agent Studio is your role's, and an agent shared with you
+Arena's rules hold: Automations is your role's, and an agent shared with you
 shows how it went, not what each step was given.
 
 **Scheduled tasks in Arena.** Yours, as Arena's Scheduled tasks lists them:
@@ -3128,7 +3128,7 @@ message, without starting Code Arena again.
   only their `SKILL.md`. **New Skill** makes one for this project (at the
   repository's root) or for you, from a few lines to fill in, and opens it:
   yours is one of your skills in Arena when signed in to it (on its Skills
-  page, in the web chat, Code Studio and Code Arena on any machine), else in
+  page, in the web chat, Code and Code Arena on any machine), else in
   the config folder, on this computer only. **Refresh** asks Arena at once
   for its skills. In the chat, **/** at the start of the box lists
   `/compact`, `/clear`, your commands and the skills; ↑ and ↓ choose, Tab
@@ -3233,7 +3233,7 @@ session says why), `"on"` (refuse to start without one), `"off"`.
 `"sandboxWritable": [...]` adds folders they may write. Windows has no sandbox
 Code Arena can use. The IDE's terminals are the person's own: no sandbox.
 `/sandbox` says what applies. In a container, bubblewrap needs the container
-to allow user namespaces (Code Studio's workspaces do); where it cannot make
+to allow user namespaces (Code's workspaces do); where it cannot make
 one with its own `/proc`, the sandbox is off and the session says why.
 
 ## Chats in Arena
@@ -3449,7 +3449,7 @@ code-arena (which sends on only those routes, after its own checks, and never
 gives the page the key); Arena checks each call as for its page, and lets the
 key in only when you may use Code Arena. What you may see and change is what
 Arena's page lets you: nothing about a project is decided in Code Arena. In
-Arena's Code Studio the IDE is in your own page, and calls Arena directly.
+Arena's Code the IDE is in your own page, and calls Arena directly.
 
 ## Other providers' models
 

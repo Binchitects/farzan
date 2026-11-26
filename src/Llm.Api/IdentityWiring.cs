@@ -360,7 +360,7 @@ public static class IdentityWiring
         services.AddScoped<Insights.DataQuestions>();
         services.AddScoped<Decks.DeckMaker>();
         services.AddScoped<Decks.SlideCanvases>();
-        // Agent Studio: its runs (a singleton that runs them in the background, and its schedules), and the step runner.
+        // Automations: its runs (a singleton that runs them in the background, and its schedules), and the step runner.
         services.AddSingleton<Studio.StudioRuns>();
         if (Operations.Features.On(config, "agents"))
         {

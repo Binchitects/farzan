@@ -58,7 +58,7 @@ every definition, two tools.
 
 The agent chooses by its address: **Connect your tools** has a switch, **Tools
 as code**, that puts `/mcp/code` in the setups (one key can serve two agents,
-each its own way). It is there while the person has the **Tools as code** tool
+each its own way). It is there while the person may use **Calling tools from code**
 (Admin → Tools, with the sandbox); without it, `/mcp/code` lists every tool, and
 the notes for the agent say why. Code suits strong models and many tools (two
 short definitions read, one program for many calls); small models do better

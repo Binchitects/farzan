@@ -22,7 +22,7 @@ public sealed record AiSystemSuggestion(string Source, string Name, string Kind)
 /// affects, its class under the EU AI Act (a prohibited practice is never put into use) and the company's role, its impact
 /// assessment (ISO 42001 6.1.4; the AI Act's assessment of fundamental rights where it applies), its human oversight and
 /// evaluation. A system is put into use only once what its class needs is said; reviewed each year (a high-risk one every six
-/// months). The shared assistants, Agent Studio's workflows, the shared apps and the models are offered until registered.
+/// months). The shared assistants, Automations' workflows, the shared apps and the models are offered until registered.
 /// </summary>
 public sealed class AiSystems(AppDbContext db, Identity.Audit audit, TimeProvider clock)
 {

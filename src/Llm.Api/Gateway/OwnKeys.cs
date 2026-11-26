@@ -8,7 +8,7 @@ namespace Llm.Api.Gateway;
 
 /// <summary>A key as its person sees it on Account → API keys: what it is, what it spent, and its limits.</summary>
 /// <param name="Id">The key's hash at the gateway (never the key): what changes and revokes it.</param>
-/// <param name="Kind">"own" (made here, with a name and limits), "main" (the key Rotate replaces), "studio" (a Code Studio workspace's, which it revokes itself) or "other".</param>
+/// <param name="Kind">"own" (made here, with a name and limits), "main" (the key Rotate replaces), "studio" (a Code workspace's, which it revokes itself) or "other".</param>
 /// <param name="Limits">The limits set on the key itself (own keys); null for another kind.</param>
 /// <param name="Effective">What the gateway holds the key to: the tighter of the person's limits and the key's own.</param>
 /// <param name="ProjectId">A project's key: the project its requests count to (those naming no other).</param>
@@ -72,7 +72,7 @@ public sealed class OwnKeys(AppDbContext db, ApiKeys keys, RateLimits rateLimits
         var kind = own is not null ? "own"
             : row?.Kind == ApiKey.Studio || k.Alias.StartsWith("studio:", StringComparison.Ordinal) ? "studio"
             : k.Alias == PeopleService.KeyAlias(user) ? "main" : "other";
-        var name = own?.Name ?? kind switch { "main" => "Your key", "studio" => "Code Studio workspace", _ => k.Alias };
+        var name = own?.Name ?? kind switch { "main" => "Your key", "studio" => "Code workspace", _ => k.Alias };
         var effective = Tighter(rate, own);
         return new KeyView(k.Token, name, kind, k.Preview, k.Spend, k.Blocked, k.CreatedAt,
             own is null ? null : new KeyLimitsSet(own.RequestsPerMinute, own.TokensPerMinute, own.Parallel, own.MonthlyBudget),
@@ -143,7 +143,7 @@ public sealed class OwnKeys(AppDbContext db, ApiKeys keys, RateLimits rateLimits
         var own = await db.ApiKeys.SingleOrDefaultAsync(k => k.Hash == token && k.UserId == user.Id, ct);
         if (own?.Kind == ApiKey.Studio || key.Alias.StartsWith("studio:", StringComparison.Ordinal))
         {
-            throw new OwnKeyException(409, "studio", "A Code Studio workspace's key is the workspace's: it goes when the workspace does.");
+            throw new OwnKeyException(409, "studio", "A Code workspace's key is the workspace's: it goes when the workspace does.");
         }
         if (own is null)
         {
@@ -174,14 +174,14 @@ public sealed class OwnKeys(AppDbContext db, ApiKeys keys, RateLimits rateLimits
         return View(user, (await keys.KeysAsync(user, ct)).First(k => k.Token == token), own, (await rateLimits.ForAsync(user, ct)).Key);
     }
 
-    /// <summary>A key of theirs revoked: the gateway refuses it from now on. A Code Studio workspace's is the workspace's to revoke.</summary>
+    /// <summary>A key of theirs revoked: the gateway refuses it from now on. A Code workspace's is the workspace's to revoke.</summary>
     public async Task RevokeAsync(AppUser user, string token, CancellationToken ct = default)
     {
         var key = await KeyOfAsync(user, token, ct);
         var own = await db.ApiKeys.AsNoTracking().SingleOrDefaultAsync(k => k.Hash == token && k.UserId == user.Id, ct);
         if (own?.Kind == ApiKey.Studio || key.Alias.StartsWith("studio:", StringComparison.Ordinal))
         {
-            throw new OwnKeyException(409, "studio", "A Code Studio workspace's key is the workspace's: it goes when the workspace does.");
+            throw new OwnKeyException(409, "studio", "A Code workspace's key is the workspace's: it goes when the workspace does.");
         }
         await keys.RevokeAsync([token], ct);
         places.Forget(token);

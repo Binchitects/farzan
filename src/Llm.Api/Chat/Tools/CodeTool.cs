@@ -71,8 +71,8 @@ public sealed partial class CodeTool(SandboxClient sandbox, PythonTool files, Ap
     }
 
     public string Id => ToolId;
-    public string Title => "Tools as code";
-    public string Description => "Writes a short Python program that calls the chat's other tools as functions: many calls, filtered and joined there, and only what it prints comes back.";
+    public string Title => "Calling tools from code";
+    public string Description => "Who may have the model call the chat's other tools from a short Python program (many calls, filtered and joined there; only what it prints comes back). Whether a model does is its tool mode (Admin → Models → Tools: direct, both or code), not a chat's switch.";
     public string Icon => "square-code";
 
     public Task<string?> UnavailableAsync(CancellationToken ct) => Task.FromResult(sandbox.Unavailable());

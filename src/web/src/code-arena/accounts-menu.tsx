@@ -151,7 +151,7 @@ export function AccountsMenu({ edge, compact = false }: { edge: 'left' | 'right'
         </Tooltip>
         <DropdownMenuContent side={compact ? 'bottom' : edge === 'left' ? 'right' : 'left'} align="end" className="w-80 [&_[role=menuitem]]:whitespace-nowrap">
           <DropdownMenuLabel className="grid gap-0.5 font-normal">
-            <span className="truncate text-sm font-medium">{a?.codeStudio ? "Code Studio's workspace" : who ? who : a?.signedIn ? 'Signed in' : 'Not signed in'}</span>
+            <span className="truncate text-sm font-medium">{a?.codeStudio ? "Code's workspace" : who ? who : a?.signedIn ? 'Signed in' : 'Not signed in'}</span>
             {host && <span className="truncate text-xs text-muted-foreground">on {host}</span>}
             {a?.error && <span className="text-xs text-warning-ink">{a.error}</span>}
           </DropdownMenuLabel>

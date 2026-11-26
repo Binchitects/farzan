@@ -8,7 +8,7 @@ using System.Threading.Channels;
 namespace Llm.Api.Code.Studio;
 
 /// <summary>
-/// The tunnels of people's own machines (code-arena web --connect), held by the replica each one dialled: Code Studio's
+/// The tunnels of people's own machines (code-arena web --connect), held by the replica each one dialled: Code's
 /// IDE reaches the folder that Code Arena opened there through it, as it reaches a workspace's engine on the server.
 /// Each request is a frame of JSON over the tunnel's WebSocket, and its answer frames back as it comes (an agent's turn
 /// streams); the IDE's own WebSockets (terminals, language servers, the debugger) travel the same way, message by

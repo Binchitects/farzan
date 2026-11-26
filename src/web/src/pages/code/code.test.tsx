@@ -73,7 +73,7 @@ describe('code', () => {
     await waitFor(() => expect(calls.some((c) => c.path === '/api/code/rules/r1/check')).toBe(true))
   })
 
-  it('shows each part of Code Studio only to one who holds its permission', async () => {
+  it('shows each part of Code only to one who holds its permission', async () => {
     // Reviews alone: no workspaces, merge requests, business maps, questions, automatic reviews or fixes.
     const calls = fakeApi({ ...member, denied: ['code.studio', 'code.read', 'review.policy', 'feature.fixit'] }, {
       'GET /api/code/reviews': () => ({ json: [{ review: brief, open: 1, mine: false, sharedBy: 'Ana' }] }),

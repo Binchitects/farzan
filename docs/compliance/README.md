@@ -303,7 +303,7 @@ service is missing, a review is past due, or an agreement is.
 
 Admin → Compliance → AI systems is the register of the company's AI systems
 that ISO/IEC 42001, the EU AI Act and NIST's AI RMF ask for (GOV-09): the
-assistants, agents (Agent Studio's workflows), apps and models people use.
+assistants, agents (Automations' workflows), apps and models people use.
 Each has its purpose, intended use and whom it affects; its class under the
 AI Act (minimal, limited, high-risk with its Annex III area, or a prohibited
 practice) and the company's role (deployer, provider, or both); its impact
@@ -377,7 +377,7 @@ or with a request unanswered for a fortnight.
 
 ## Vulnerabilities
 
-Code Studio → Security (VUL-01) reviews a repository at a commit, read with
+Code → Security (VUL-01) reviews a repository at a commit, read with
 the person's own access:
 
 - **its packages**: the lock files and manifests read and each pinned

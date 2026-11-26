@@ -14,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Llm.Tests;
 
 /// <summary>
-/// Code Studio: a person's workspaces made from their GitLab project (read with their own token), started on the
+/// Code: a person's workspaces made from their GitLab project (read with their own token), started on the
 /// workspaces service with a key of their own at the gateway, and the IDE's requests passed on to the workspace's engine
 /// with its key — streamed answers, WebSockets — only for its owner; asleep, stopped and deleted with its key.
 /// </summary>

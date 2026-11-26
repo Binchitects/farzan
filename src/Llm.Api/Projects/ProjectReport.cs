@@ -212,7 +212,7 @@ public static class ProjectReport
         "chat" => "Chat",
         "api" => "API keys and Code Arena",
         "app" => "The app's own work (titles, summaries)",
-        "studio" => "Code Studio",
+        "studio" => "Code",
         "media" => "Pictures, video and speech",
         _ => s ?? "",
     };

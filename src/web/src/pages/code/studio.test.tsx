@@ -30,7 +30,7 @@ describe('code studio', () => {
       'POST /api/studio/workspaces/w2/start': () => ({ status: 503, json: { status: 'workspace', error: 'The workspaces service is busy.' } }),
     })
     const { router } = renderApp('/code')
-    expect(await screen.findByRole('heading', { name: 'Code Studio' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Code' })).toBeInTheDocument()
     const mine = await screen.findByRole('list', { name: 'Your workspaces' })
     expect(within(mine).getByRole('link', { name: 'shop (main)' })).toHaveAttribute('href', '/code/w/w1')
     expect(within(mine).getByText('Asleep')).toBeInTheDocument()
@@ -62,7 +62,7 @@ describe('code studio', () => {
     renderApp('/code/w/w1')
     expect(await screen.findByText(/could not be cloned/)).toBeInTheDocument()
     expect(calls.filter((c) => c.path === '/api/studio/workspaces/w1/start')).toHaveLength(1)
-    expect(screen.getByRole('link', { name: /Code Studio/ })).toHaveAttribute('href', '/code')
+    expect(screen.getByRole('link', { name: /Code/ })).toHaveAttribute('href', '/code')
   })
 
   it('lists one’s own machine, connected or offline, and opens an offline one with how to connect it, never starting it', async () => {

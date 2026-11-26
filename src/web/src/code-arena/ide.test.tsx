@@ -3387,9 +3387,9 @@ describe('Code Arena, the IDE', () => {
     await waitFor(() => expect(document.documentElement.dataset.colorTheme).toBe('copper'))
   })
 
-  it("in Code Studio shows the app's colour theme without keeping it, and the person's own again once closed", async () => {
+  it("in Code shows the app's colour theme without keeping it, and the person's own again once closed", async () => {
     backend({}, {}, { 'settings.json': '{\n  "window.autoDetectColorScheme": false,\n  "workbench.colorTheme": "Sakura Dark"\n}\n' })
-    // As Code Studio opens the IDE: its requests under the workspace's address, answered by the same fake.
+    // As Code opens the IDE: its requests under the workspace's address, answered by the same fake.
     setIdeBase('/api/studio/w/w1')
     onTestFinished(() => setIdeBase(''))
     const answer = vi.mocked(globalThis.fetch).getMockImplementation()!
@@ -3400,7 +3400,7 @@ describe('Code Arena, the IDE', () => {
     await waitFor(() => expect(document.documentElement.dataset.colorTheme).toBe('sakura'))
     expect(localStorage.getItem('color-theme')).toBe('forest')
 
-    // Closed (Code Studio's back button): the person's own colour theme again.
+    // Closed (Code's back button): the person's own colour theme again.
     rerender(<Providers client={client}>{null}</Providers>)
     expect(document.documentElement.dataset.colorTheme).toBe('forest')
   })
@@ -4762,7 +4762,7 @@ describe('Code Arena, the help', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Output' }))
     await screen.findByRole('region', { name: 'Output' })
     for (const r of regionsShown()) seen.add(r)
-    // The Ports panel is Code Studio's (no tab of it on code-arena's own page): drawn on its own.
+    // The Ports panel is Code's (no tab of it on code-arena's own page): drawn on its own.
     const ports = render(
       <Providers client={makeQueryClient()}>
         <PortsPanel shown={false} />

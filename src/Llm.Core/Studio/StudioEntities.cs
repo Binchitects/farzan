@@ -1,7 +1,7 @@
 namespace Llm.Core.Studio;
 
 /// <summary>
-/// An agent workflow (Agent Studio): a trigger and the steps it runs, as JSON, run as its owner (their model, tools, credit
+/// An agent workflow (Automations): a trigger and the steps it runs, as JSON, run as its owner (their model, tools, credit
 /// and safeguards). Its form, when it has one, may be shared.
 /// </summary>
 public sealed class Workflow

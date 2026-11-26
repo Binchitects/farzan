@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Llm.Tests;
 
 /// <summary>
-/// Agent Studio's GitLab events (merged, comments, pushes; filtered by branch, label and words, never its own comments)
+/// Automations' GitLab events (merged, comments, pushes; filtered by branch, label and words, never its own comments)
 /// and its acts in GitLab; and its other steps: JSON text, a wait that goes on later, notify, stop, a web address, a data source.
 /// </summary>
 [Collection(nameof(AppCollection))]

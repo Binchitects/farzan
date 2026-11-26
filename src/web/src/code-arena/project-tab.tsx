@@ -12,7 +12,7 @@ import { chooseProject, openWebChat, stateQuery } from './api'
 import { runCommand } from './commands'
 import { ownPage } from './http'
 
-/** Arena's address for a link out of the IDE: the one signed in to (code-arena's page), or this page's own (Code Studio). */
+/** Arena's address for a link out of the IDE: the one signed in to (code-arena's page), or this page's own (Code). */
 function useArena(): string | null {
   const manual = useQuery(stateQuery).data?.manual
   if (!ownPage()) return ''

@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Llm.Tests;
 
 /// <summary>
-/// A GitLab on the company's own CA: a person links their GitLab token (and with it Fix it, Code Studio, their apps)
+/// A GitLab on the company's own CA: a person links their GitLab token (and with it Fix it, Code, their apps)
 /// over a real TLS connection once the CA is given, in Settings or at install, without a restart; code-intel is given the
 /// same CA in the file it reads; and a certificate of another CA, or for another name, is still refused.
 /// </summary>

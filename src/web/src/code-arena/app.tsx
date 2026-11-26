@@ -689,7 +689,7 @@ function Workbench({
     if (view === 'memory') setMemoryUsed(true)
     if (view === 'review') setReviewUsed(true)
   }, [])
-  /** The panel's Ports (Code Studio's forwarded ports). */
+  /** The panel's Ports (Code's forwarded ports). */
   const showPorts = useCallback(() => change({ panelOpen: true, panelTab: 'ports' }), [change])
   /** A view shown where it is: in the side bar, or (moved there) in the panel. */
   const show = useCallback(
@@ -1682,7 +1682,7 @@ function Workbench({
         }}
       >
         <PanelTabStrip
-          // Ports are Code Studio's (a workspace on the server or a machine); code-arena's own page is on the machine already.
+          // Ports are Code's (a workspace on the server or a machine); code-arena's own page is on the machine already.
           tabs={layout.panelTabs.filter((t) => t !== 'ports' || !ownPage())}
           layout={layout}
           change={arrange}

@@ -589,7 +589,7 @@ public sealed class ComplianceChecks(AppDbContext db, UserManager<AppUser> users
     }
 
     /// <summary>
-    /// Code Studio's security reviews: one within 30 days, against advisories no older than a week; each open finding fixed
+    /// Code's security reviews: one within 30 days, against advisories no older than a week; each open finding fixed
     /// within its severity's time (critical 7 days, high 30, medium 90, low 180) or accepted until a date not past. An overdue
     /// critical or high finding fails; the rest warns.
     /// </summary>
@@ -599,7 +599,7 @@ public sealed class ComplianceChecks(AppDbContext db, UserManager<AppUser> users
         var last = await db.SecurityScans.AsNoTracking().Where(s => s.Status == Llm.Core.Code.SecurityScan.Done).OrderByDescending(s => s.FinishedAt).FirstOrDefaultAsync(ct);
         if (last is null)
         {
-            return (Warn, "No repository has been reviewed for security: review the company's repositories in Code Studio → Security, and fix or accept what is found in time (ISO 27001 A.8.8, SOC 2 CC7.1).");
+            return (Warn, "No repository has been reviewed for security: review the company's repositories in Code → Security, and fix or accept what is found in time (ISO 27001 A.8.8, SOC 2 CC7.1).");
         }
         var open = await db.SecurityFindings.AsNoTracking().Where(f => f.Verified != false && (f.State == Llm.Core.Code.SecurityFinding.Open
                 || (f.State == Llm.Core.Code.SecurityFinding.Accepted && f.Until != null && f.Until < now)))

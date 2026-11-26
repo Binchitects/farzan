@@ -154,7 +154,7 @@ public sealed class PromptUsage(AppDbContext db, Gateway.LedgerSql sql)
         return (rows, totals, models);
     }
 
-    /// <summary>The requests made with API keys in the range (people's and Code Studio's), the master key's too (attributed to nobody), from the app's ledger.</summary>
+    /// <summary>The requests made with API keys in the range (people's and Code's), the master key's too (attributed to nobody), from the app's ledger.</summary>
     private async Task<(List<PromptRow>, PromptTotals, List<string>)> ApiAsync(PromptFilter f, int limit, CancellationToken ct)
     {
         var p = new Dictionary<string, object> { ["from"] = f.From.ToUniversalTime(), ["to"] = f.To.ToUniversalTime(), ["limit"] = limit + 1 };

@@ -98,10 +98,10 @@ The addresses, all on port 443:
 | `https://DOMAIN` | the app |
 | `https://gateway.DOMAIN/v1` | the API (OpenAI and Anthropic protocols), with a person's key |
 | `https://code-intel.DOMAIN/mcp` | Farzan Graph for coding agents, with a person's API key (not a GitLab token) |
-| `https://ws-<workspace>-<port>.DOMAIN` | with Code Studio's workspaces: a dev server in a workspace, for its owner ([chat.md](chat.md#forwarded-ports)) |
+| `https://ws-<workspace>-<port>.DOMAIN` | with Code's workspaces: a dev server in a workspace, for its owner ([chat.md](chat.md#forwarded-ports)) |
 
 `*.localhost` resolves to this machine in browsers; for other tools,
-`./arenactl hosts` adds the names to `/etc/hosts`. With Code Studio's
+`./arenactl hosts` adds the names to `/etc/hosts`. With Code's
 workspaces, a forwarded port has a name of its own under `DOMAIN`: the
 company's DNS needs a wildcard record (`*.DOMAIN`) for this machine, and
 the certificate must cover `*.DOMAIN` (the one `./arenactl cert` makes does;
@@ -225,7 +225,7 @@ on; its API answers 404; and its background work does not run.
 | `3d` | no | `blender` | |
 | `lean` | no | `lean` (an image of about 13 GB) | the lab |
 | `studio` | no | `studio` | a GPU; the media studio |
-| `workspaces` | no | `workspaces` | Code Studio |
+| `workspaces` | no | `workspaces` | Code |
 | `laya` | no | `laya` | |
 | `scanners` | no | `scanners` (an image of about 700 MB) | Farzan Graph |
 | `monitoring` | yes | `prometheus`, `alertmanager`, `loki`, `alloy`, `node-exporter`, `cpu-temp-exporter` | |
@@ -451,7 +451,7 @@ the power limits run with compose only.
    defaults to the app's version).
 2. Make a TLS Secret for `DOMAIN`, `gateway.DOMAIN` and `code-intel.DOMAIN` (a
    wildcard, or the files `./arenactl cert` makes; with `workspaces.enabled`,
-   `*.DOMAIN` too, for Code Studio's forwarded ports): `kubectl create secret tls
+   `*.DOMAIN` too, for Code's forwarded ports): `kubectl create secret tls
    arena-tls --cert=... --key=...`.
 3. Install:
 
@@ -819,11 +819,11 @@ ways, both kept:
 
 Everything that reaches GitLab then trusts it besides the public CAs: a
 person signing in with GitLab or the company's provider, linking their
-GitLab token and apps (Fix it, Code Studio, scheduled tasks, knowledge
+GitLab token and apps (Fix it, Code, scheduled tasks, knowledge
 sources), every other HTTP client the app makes without a check of its own,
 Farzan Graph's API client and its git clones (the app writes the CA to
 `company-ca.pem` beside the directory file, which Farzan Graph reads again whenever
-it changes: `CODE_INTEL_GITLAB_CA_EXTRA`), and Code Studio's workspaces (their
+it changes: `CODE_INTEL_GITLAB_CA_EXTRA`), and Code's workspaces (their
 clone, `git push` in their terminals, curl, Python, pip, .NET and Node.js).
 A certificate must still be for GitLab's name and within its dates; one of
 another CA is still refused. Before the CA is given, linking a token says
@@ -1300,7 +1300,7 @@ back the list there was.
    run the new release.
 6. **From before 8.0, LiteLLM's database goes.** 8.0 has no LiteLLM: the app's
    own gateway takes its place. At its first start the app brings LiteLLM's
-   people's keys (so every API key, Code Arena machine and Code Studio
+   people's keys (so every API key, Code Arena machine and Code
    workspace keeps working) and its whole request log (so the month's credit
    carries on) into its own tables, then marks it done. The installer then has
    the app drop the `litellm` database (`drop-litellm-database`, waiting up to

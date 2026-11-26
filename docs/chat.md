@@ -440,7 +440,7 @@ chat tools too, with the same key: [Arena MCP](mcp.md) at `https://DOMAIN/mcp`.
     open or download, and a plotly chart saved as HTML opens running. Each run
     starts afresh, has one CPU and no network, and stops at its time limit (60 s
     unless changed).
-  - **Tools as code** (`run_code`): instead of calling tools one by one, each
+  - **Tools as code** (`run_code`; not in the chat's **Tools** menu, as the model's tool mode decides it): instead of calling tools one by one, each
     result filling the model's window, the model writes a short Python program
     in the same sandbox that calls the chat's other tools as functions
     (`import arena`; `arena.tools.search("…")` finds them,
@@ -455,9 +455,10 @@ chat tools too, with the same key: [Arena MCP](mcp.md) at `https://DOMAIN/mcp`.
     itself, vector pictures and plugins that run in the sandbox are not
     callable from code. It needs **Python**'s permission. How each model gets
     it is the admins' choice (Admin → Models → **Tools**): direct (no
-    `run_code`, for small models), as code (`run_code`, even in a chat without
-    it, and the other tools named for it in place of their definitions: the
-    automatic choice for larger models), or both. Questions to you, plans,
+    `run_code`, for small models), as code (`run_code`, and the other tools
+    named for it in place of their definitions: the automatic choice for larger
+    models), or both (`run_code` beside the tools). Who may have it at all is
+    **Calling tools from code** under Admin → Tools. Questions to you, plans,
     memory, the canvas and the browser are always called directly; a picture a
     program makes comes to you under its card.
   - **Science lab** (off in new chats): exact mathematics checked by SymPy
@@ -1189,7 +1190,7 @@ upload. **Settings → Meetings** sets the limits: the largest recording
 
 ## Code review
 
-**Code Studio** (in the sidebar) has three parts, each shown to those who
+**Code** (in the sidebar) has three parts, each shown to those who
 may use it: **Workspaces** (`code.studio`), **Review** (`review.run` starts
 reviews; `code.read` lists merge requests) and **Ask and explore**
 (`code.read`); **Security review** and **Fix it** are the buttons at the top.
@@ -1486,9 +1487,9 @@ needs the `feature.fixit` permission. Everyone holds it unless an admin
 denies it. Tests in other languages cannot run here yet: the agent says so,
 and you run them in your pipeline.
 
-### Code Studio workspaces
+### Code workspaces
 
-**Code → Code Studio** (`/code`) lists your workspaces: Code Arena's IDE in
+**Code → Code** (`/code`) lists your workspaces: Code Arena's IDE in
 the browser (the editor, terminals, search, Git, language servers, the
 debugger and its agent), on a project of yours that the server keeps.
 
@@ -1524,16 +1525,16 @@ debugger and its agent), on a project of yours that the server keeps.
 - **Asleep.** A workspace unused for 30 minutes stops; its files stay, and
   **Open** wakes it. **Delete** takes its files and its key away.
 - **Your own machine.** In a folder on your computer, `code-arena web
-  --connect` (signed in with `code-arena login`) puts it in Code Studio as
+  --connect` (signed in with `code-arena login`) puts it in Code as
   *the folder on that machine*, while it runs: **Open** shows its IDE here,
   from any browser you sign in on, through a tunnel code-arena dials with
   your API key ([code-arena.md](code-arena.md#the-ide)). Only you reach it;
-  offline, Code Studio says how to connect it. Deleting it there disconnects
+  offline, Code says how to connect it. Deleting it there disconnects
   it; the folder stays. With several app replicas, the one it dialled holds
   it, and the others reach it through that one (at its own address on the
   stack's network, or `Workspaces__SelfUrl`), with the tunnel's own key.
 - **Where.** The workspaces service runs with the `workspaces` profile
-  ([deployment.md](deployment.md)); without it, Code Studio lists no
+  ([deployment.md](deployment.md)); without it, Code lists no
   server workspaces. It needs the `code.studio` permission, which everyone
   holds unless an admin denies it. At most 8 workspaces each.
 
@@ -1550,7 +1551,7 @@ that holds each port, and the ports you forwarded by hand.
   so and offers to open it.
 - **Only you reach it**, signed in to Arena (your session covers the
   domain's names; signed out, a page asks you to sign in first). **Share**
-  makes it reachable by everyone signed in who may use Code Studio, until
+  makes it reachable by everyone signed in who may use Code, until
   you make it private again (audited as `studio.port.share`). **Stop
   Forwarding** closes it to everyone, you too, until you forward it again.
 - **What it is sent.** Every request and WebSocket (a dev server's live
@@ -1567,7 +1568,7 @@ that holds each port, and the ports you forwarded by hand.
 
 ### The business map
 
-**Code Studio → Business map** keeps what each system does for the business,
+**Code → Business map** keeps what each system does for the business,
 so Farzan Graph can explain the business, not only the code.
 
 - **Mapping a project.** Type its path (group/project) and press **Map
@@ -1591,7 +1592,7 @@ so Farzan Graph can explain the business, not only the code.
   capabilities, rules, processes and terms that answer a question, with
   their sources, which it confirms in the code, the issues and the wiki
   before it answers, in business words first. **Ask Farzan Graph** on a map starts
-  that chat. In Code Studio's IDE, its agent has the same Farzan Graph.
+  that chat. In Code's IDE, its agent has the same Farzan Graph.
 
 ## 3D models
 

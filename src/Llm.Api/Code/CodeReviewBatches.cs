@@ -16,7 +16,7 @@ namespace Llm.Api.Code;
 public sealed record NewReviewBatch(string[] Projects, string? Ref = null, bool Cross = true, string? Title = null);
 
 /// <summary>
-/// Code reviews of several whole repositories at once (Code Studio → Review → Several repositories): each repository
+/// Code reviews of several whole repositories at once (Code → Review → Several repositories): each repository
 /// reviewed whole as its own review, as the person through code-intel, then looked at across them; seen by them and by
 /// reviews admins.
 /// </summary>

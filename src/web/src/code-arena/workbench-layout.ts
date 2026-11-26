@@ -6,7 +6,7 @@ export type View = 'explorer' | 'search' | 'git' | 'debug' | 'extensions' | 'cha
 
 export const allViews: readonly View[] = ['explorer', 'search', 'git', 'debug', 'extensions', 'changes', 'problems', 'review', 'plan', 'memory', 'skills', 'projects', 'automation', 'chat']
 
-/** The panel's own tabs: the terminals, the Debug Console, the Output (the language servers'), the Ports (Code Studio's forwarded ports). */
+/** The panel's own tabs: the terminals, the Debug Console, the Output (the language servers'), the Ports (Code's forwarded ports). */
 export type PanelPart = 'terminal' | 'console' | 'output' | 'ports'
 export const panelParts: readonly PanelPart[] = ['terminal', 'console', 'output', 'ports']
 

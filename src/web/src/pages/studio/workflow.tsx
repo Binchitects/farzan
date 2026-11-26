@@ -98,7 +98,7 @@ function SharedForm({ workflow }: { workflow: SharedWorkflow }) {
     <div className="mx-auto grid max-w-2xl gap-4">
       <Button variant="ghost" size="sm" className="w-fit" asChild>
         <Link to="/studio">
-          <ArrowLeft /> Agent Studio
+          <ArrowLeft /> Automations
         </Link>
       </Button>
       <div>
@@ -160,7 +160,7 @@ function Editor({ workflow }: { workflow: Workflow }) {
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="icon-sm" asChild>
-          <Link to="/studio" aria-label="Agent Studio">
+          <Link to="/studio" aria-label="Automations">
             <ArrowLeft />
           </Link>
         </Button>

@@ -81,7 +81,7 @@ public sealed class ComplianceDefaultsTests(AppFixture app)
         Assert.Equal(["audit-forwarding", "audits", "backups", "management", "notice", "policies", "risks", "soa", "two-factor", "vulnerabilities"], byState["warn"]);
         foreach (var id in byState["warn"])
         {
-            Assert.Matches(@"Settings →|Admin →|Code Studio|arenactl", checks[id].GetProperty("detail").GetString()!);
+            Assert.Matches(@"Settings →|Admin →|Code|arenactl", checks[id].GetProperty("detail").GetString()!);
         }
         // The first backup is due, not missed; the policies wait for a person's approval; the steps one click does have their button.
         Assert.Contains("the first is due within a day", checks["backups"].GetProperty("detail").GetString(), StringComparison.Ordinal);

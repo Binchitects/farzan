@@ -29,7 +29,7 @@ export interface KeyLimits {
 export interface OwnKey {
   id: string
   name: string
-  /** own: made here; main: the one New key replaces; studio: a Code Studio workspace's; other. */
+  /** own: made here; main: the one New key replaces; studio: a Code workspace's; other. */
   kind: 'own' | 'main' | 'studio' | 'other'
   preview: string | null
   spend: number
@@ -194,7 +194,7 @@ export function OwnKeys() {
                 <KeyRound className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <span className="truncate text-sm font-medium">{k.name}</span>
                 {k.kind === 'main' && <Badge variant="secondary">main</Badge>}
-                {k.kind === 'studio' && <Badge variant="secondary">Code Studio</Badge>}
+                {k.kind === 'studio' && <Badge variant="secondary">Code</Badge>}
                 {k.blocked && <Badge variant="destructive">Blocked</Badge>}
                 {k.projectId && <Badge variant="outline">A project&apos;s key</Badge>}
                 <span className="ml-auto flex shrink-0 items-center gap-1">

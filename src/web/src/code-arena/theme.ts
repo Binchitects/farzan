@@ -65,7 +65,7 @@ export function useShownTheme(): string {
  * Code Arena's accessibility settings on the page while the IDE is open: "window.zoomLevel" (each step 20%, as VS
  * Code's), and over any theme more contrast, larger text, strong focus rings, less motion ("workbench.reduceMotion") and
  * colour-blind safe colours (lib/seeing.ts's attributes; index.css draws them). Closed, the page is as the person's own
- * choices have it again (Your account → Appearance, in Code Studio).
+ * choices have it again (Your account → Appearance, in Code).
  */
 export function useSeeingSync() {
   const zoom = useSetting<number>('window.zoomLevel')
@@ -105,7 +105,7 @@ export function useSeeingSync() {
  * The colour theme the settings name: "workbench.colorTheme", or with "window.autoDetectColorScheme" the preferred light
  * or dark one as the system is. The page's own light or dark follows it (and the browser keeps it, for the next page's
  * first paint), and so do its colours: one of the app's colour themes (Sakura...) while the IDE is open, kept by the
- * browser only on code-arena's own page (Code Studio's IDE is in the person's own page, whose colour theme is theirs);
+ * browser only on code-arena's own page (Code's IDE is in the person's own page, whose colour theme is theirs);
  * an extension's theme is read, and its workbench colours become the page's. The file icon theme too.
  */
 export function useThemeSync() {

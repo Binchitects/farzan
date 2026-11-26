@@ -17,7 +17,7 @@ public static class StudioTemplates
                 new FlowStep { Id = "mail", Kind = "email", Name = "Email it", Subject = "Your digest, {{now}}", Text = "{{news.text}}" },
             ],
         }),
-        new("review", "Review each merge request", "When a merge request opens or changes in GitLab: Code Studio's review of it (each finding checked by a second reviewer), as a comment on it.", new Flow
+        new("review", "Review each merge request", "When a merge request opens or changes in GitLab: Code's review of it (each finding checked by a second reviewer), as a comment on it.", new Flow
         {
             Trigger = new FlowTrigger { Kind = "gitlab", Events = ["merge_request"] },
             Steps =

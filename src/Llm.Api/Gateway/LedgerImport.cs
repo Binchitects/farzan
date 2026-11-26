@@ -198,7 +198,7 @@ public sealed partial class LedgerImport(IServiceScopeFactory scopes, IConfigura
 
     /// <summary>
     /// People's keys as LiteLLM holds them, into gateway.api_keys: a key the app does not have yet comes over by its hash, of
-    /// its kind (a Code Studio workspace's, one of the person's own, else their main key); one it has keeps its kind, name
+    /// its kind (a Code workspace's, one of the person's own, else their main key); one it has keeps its kind, name
     /// and limits (the app's) and takes LiteLLM's alias, preview, expiry and what it spent. None of the app's keys is taken
     /// away. The chat's own key, and keys of no one with an account, stay out. How many LiteLLM's are kept.
     /// </summary>

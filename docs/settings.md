@@ -197,7 +197,7 @@ Every option the app reads has a place on this page, in one of three ways:
   (**Science lab and 3D**); STUN and TURN servers, the size of a call and the
   captions kept (**Rooms and calls**); the largest recording and meetings
   kept (**Meetings**); when a workspace sleeps and how many one person keeps
-  (**Code Studio**); push services and devices (Notifications); the languages
+  (**Code**); push services and devices (Notifications); the languages
   read in scans and how long an answer waits for its files (Company
   knowledge); the clean-up's round (Data retention); the waits for the
   gateway and a vLLM model, the engine's threads and the memory kept for the

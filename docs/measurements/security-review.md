@@ -1,6 +1,6 @@
 # The security review, measured
 
-The security review (Code Studio → Security, `SecurityReview.cs`) and the
+The security review (Code → Security, `SecurityReview.cs`) and the
 scanners image's rules, measured on three public test suites (2026-10-28,
 after v7.4.0):
 

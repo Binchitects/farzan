@@ -18,7 +18,7 @@ public sealed record WorkspaceRequest(string? Project, string? Branch, string? N
 public sealed record PortRequest(string? Label, string? Visibility, bool? Stopped);
 
 /// <summary>
-/// Code Studio: the person's workspaces (made from a GitLab project and branch, started, put to sleep, deleted), and the
+/// Code: the person's workspaces (made from a GitLab project and branch, started, put to sleep, deleted), and the
 /// IDE's way to a workspace's engine: every request of the IDE's page under /api/studio/w/{id}/… goes on to the engine's
 /// /api/… with the workspace's key (the page never has it), its answer streamed back as it comes (the agent's events),
 /// and a WebSocket (a terminal, a language server, the debugger) joined end to end. Only the workspace's owner reaches it.
@@ -125,7 +125,7 @@ public static class StudioEndpoints
         {
             return Results.NotFound();
         }
-        await tunnels.CloseAsync(w.Id, "Deleted from Code Studio.");
+        await tunnels.CloseAsync(w.Id, "Deleted from Code.");
         await workspaces.DeleteAsync(w, ct);
         await audit.WriteAsync("studio.workspace.delete", $"{w.Project}@{w.Branch}", actor: me);
         return Results.NoContent();
@@ -313,7 +313,7 @@ public static class StudioEndpoints
 
     /// <summary>
     /// A person's own machine connecting (code-arena web --connect, from the folder it opened): with their API key and
-    /// Code Studio's permission, as a WebSocket; its workspace (one a folder, by the id Code Arena keeps) is connected while
+    /// Code's permission, as a WebSocket; its workspace (one a folder, by the id Code Arena keeps) is connected while
     /// the tunnel stays open, held by this replica.
     /// </summary>
     private static async Task ConnectAsync(HttpContext http, ArenaMcp.McpPeople people, Access.AccessService access, StudioWorkspaces workspaces, MachineTunnels tunnels,
@@ -331,7 +331,7 @@ public static class StudioEndpoints
         if (!(await access.MembershipAsync(me, ct)).Has(Core.Access.Permissions.CodeStudio))
         {
             http.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await http.Response.WriteAsJsonAsync(new { status = "permission", error = "Code Studio is not among what you may use: ask an admin." }, ct);
+            await http.Response.WriteAsJsonAsync(new { status = "permission", error = "Code is not among what you may use: ask an admin." }, ct);
             return;
         }
         var q = http.Request.Query;
@@ -493,9 +493,9 @@ public sealed partial class StudioIdle(IServiceScopeFactory scopes, IOptionsMoni
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Code Studio: workspace {Id} slept (unused)")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Code: workspace {Id} slept (unused)")]
     private static partial void Slept(ILogger logger, Guid id);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Code Studio: putting idle workspaces to sleep failed")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Code: putting idle workspaces to sleep failed")]
     private static partial void Failed(ILogger logger, Exception ex);
 }

@@ -96,12 +96,12 @@ export function HomePage() {
 /** The first steps on Home: each of the main areas, in the order people usually start. */
 const starters: { to: string; title: string; description: string }[] = [
   { to: '/chat', title: 'Start a chat', description: `Ask the model, with ${codeIntelName} searching the code you can read, files, the web and the tools you turn on.` },
-  { to: '/code', title: 'Code Studio', description: 'A repository in an IDE in your browser: review a branch, or have the agent fix an issue and open the merge request.' },
+  { to: '/code', title: 'Code', description: 'A repository in an IDE in your browser: review a branch, or have the agent fix an issue and open the merge request.' },
   { to: '/projects', title: 'Projects', description: 'A team’s repositories, goals and tasks, with what its work costs and how far it has come.' },
   { to: '/setup', title: 'Connect your tools', description: 'Code Arena on your own machine, your API key, and setups for Claude Code, Qwen Code, your editor or scripts.' },
-  { to: '/studio', title: 'Agent Studio', description: 'An agent or a workflow that runs by itself: on a schedule, on a merge request, on a form.' },
+  { to: '/studio', title: 'Automations', description: 'An agent or a workflow that runs by itself: on a schedule, on a merge request, on a form.' },
   { to: '/skills', title: 'Skills', description: 'Slash commands for the chat and Code Arena: a code review, a test plan, a design doc, your own.' },
-  { to: '/media', title: 'Media studio', description: 'Pictures, video, voice and music: made, edited and cut out.' },
+  { to: '/media', title: 'Media', description: 'Pictures, video, voice and music: made, edited and cut out.' },
   { to: '/meetings', title: 'Meetings', description: 'Record a meeting or a call: its transcript, minutes and actions.' },
   { to: '/usage', title: 'Your usage', description: 'Tokens, cache hits and cost, over time and by model.' },
 ]

@@ -71,7 +71,7 @@ public sealed class GatewayRequest
 
 /// <summary>
 /// An API key, kept by the app (only its SHA-256, as LiteLLM kept it, so keys made before still work): a person's main key,
-/// one of their own (named, with its own limits), or a Code Studio workspace's.
+/// one of their own (named, with its own limits), or a Code workspace's.
 /// </summary>
 public sealed class ApiKey
 {

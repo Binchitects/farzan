@@ -151,7 +151,7 @@ internal sealed class LocalRun(JsonArray functions, string? instructions, Func<s
 
 /// <summary>
 /// code-intel: the organisation's code, searched with the person's own GitLab access, and the business behind it. With the
-/// business map (Code Studio → Business map), business_map lists the systems the person may read and what each does for
+/// business map (Code → Business map), business_map lists the systems the person may read and what each does for
 /// the business, and business_explain finds the capabilities, entities, rules, processes and terms that answer a
 /// question, with their sources, for the model to confirm in the code, the issues and the wiki before it answers as the
 /// company's senior technical expert.
@@ -229,7 +229,7 @@ public sealed class CodeIntelTool(CodeIntelMcp codeIntel, IServiceScopeFactory s
         var systems = await ReadyAsync(me, ct);
         if (systems.Count == 0)
         {
-            return new ToolResult("No system you may read is on the business map yet (Code Studio → Business map maps one).");
+            return new ToolResult("No system you may read is on the business map yet (Code → Business map maps one).");
         }
         return new ToolResult(new JsonArray([.. systems.Select(b => (JsonNode)new JsonObject
         {

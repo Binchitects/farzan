@@ -51,9 +51,9 @@ export const navigation: NavSection[] = [
     title: 'Build',
     space: 'work',
     items: [
-      { title: 'Code Studio', path: '/code', icon: GitPullRequest, keywords: ['ide', 'vs code', 'workspace', 'editor', 'terminal', 'debug', 'review', 'merge request', 'mr', 'gitlab', 'diff', 'code assistant', 'branch', 'code-intel', 'security', 'vulnerability', 'cwe', 'owasp'], feature: 'code-studio', may: ['code.studio', 'code.read', 'review.run'] },
+      { title: 'Code', path: '/code', icon: GitPullRequest, keywords: ['code studio', 'ide', 'vs code', 'workspace', 'editor', 'terminal', 'debug', 'review', 'merge request', 'mr', 'gitlab', 'diff', 'code assistant', 'branch', 'code-intel', 'security', 'vulnerability', 'cwe', 'owasp'], feature: 'code-studio', may: ['code.studio', 'code.read', 'review.run'] },
       { title: 'Security review', path: '/security', icon: ShieldCheck, keywords: ['security', 'vulnerabilities', 'sast', 'cwe', 'injection', 'secrets', 'dependencies', 'cve', 'scanners', 'several repositories', 'cross-repo', 'audit', 'pentest'], feature: 'code-studio', may: ['review.run', 'code.read'] },
-      { title: 'Agent Studio', path: '/studio', icon: Workflow, keywords: ['workflow', 'automation', 'agent', 'zapier', 'n8n', 'flow', 'trigger', 'approval', 'webhook', 'form'], feature: 'agents', may: ['feature.studio'] },
+      { title: 'Automations', path: '/studio', icon: Workflow, keywords: ['agent studio', 'studio', 'workflow', 'automation', 'agent', 'zapier', 'n8n', 'flow', 'trigger', 'approval', 'webhook', 'form'], feature: 'agents', may: ['feature.studio'] },
       { title: 'Scheduled tasks', path: '/tasks', icon: CalendarClock, keywords: ['schedule', 'cron', 'daily', 'weekly', 'report', 'digest', 'webhook', 'email', 'notification'], may: ['feature.tasks'] },
       { title: 'Apps', path: '/apps', icon: AppWindow, keywords: ['app', 'apps', 'tool', 'publish', 'page', 'component', 'gallery', 'remix'], feature: 'apps' },
     ],
@@ -62,7 +62,7 @@ export const navigation: NavSection[] = [
     title: 'Create',
     space: 'work',
     items: [
-      { title: 'Media studio', path: '/media', icon: Palette, keywords: ['pictures', 'images', 'photo', 'edit', 'inpaint', 'paint', 'variations', 'upscale', 'enlarge', 'animate', 'video', 'clip', 'midjourney', 'photoshop'], feature: 'media', may: ['feature.pictures'] },
+      { title: 'Media', path: '/media', icon: Palette, keywords: ['media studio', 'pictures', 'images', 'photo', 'edit', 'inpaint', 'paint', 'variations', 'upscale', 'enlarge', 'animate', 'video', 'clip', 'midjourney', 'photoshop'], feature: 'media', may: ['feature.pictures'] },
       { title: 'Decks', path: '/decks', icon: Presentation, keywords: ['slides', 'presentation', 'powerpoint', 'pptx', 'pdf', 'deck', 'keynote', 'template'], feature: 'decks', may: ['feature.decks'] },
       { title: 'Data', path: '/data', icon: BarChart, keywords: ['ask your data', 'sql', 'database', 'query', 'chart', 'dashboard', 'board', 'report', 'analytics', 'bi'], feature: 'data', may: ['feature.data'] },
       { title: 'Meetings', path: '/meetings', icon: AudioLines, keywords: ['meeting', 'record', 'recording', 'transcript', 'minutes', 'notes', 'action items', 'decisions', 'who said', 'speakers', 'otter', 'fireflies', 'call'], feature: 'meetings', may: ['feature.meetings'] },

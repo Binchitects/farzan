@@ -68,7 +68,7 @@ export const topics = {
     title: 'Home',
     about: 'Where you land after signing in: the quickest ways in, and your credit.',
     parts: [
-      { name: 'Get started', text: 'The main areas, in the order people usually start: **Start a chat**, **Code Studio**, **Projects**, **Connect your tools**, **Agent Studio**, **Skills**, **Media studio**, **Meetings** and **Your usage**. Those not installed here, or that you may not use, are left out.' },
+      { name: 'Get started', text: 'The main areas, in the order people usually start: **Start a chat**, **Code**, **Projects**, **Connect your tools**, **Automations**, **Skills**, **Media**, **Meetings** and **Your usage**. Those not installed here, or that you may not use, are left out.' },
       { name: 'Your credit this month', text: 'Kind by kind (the chat, API keys, pictures, video, speech): what you spent this month, of your credit, and what is left (your group\'s when it binds first).' },
       { name: 'System', text: 'For admins: the services, people, total spend and who is over credit, with a link to **Overview**.' },
     ],
@@ -301,7 +301,7 @@ export const topics = {
   },
 
   media: {
-    title: 'Media studio',
+    title: 'Media',
     about: 'Pictures from a few words; one changed by saying how (all of it, or only the part painted over), made a little different, enlarged, cut out or set moving; speech in a voice from a sample, and music.',
     parts: [
       { name: 'Describe a picture', text: 'What to draw, its **Shape** and **How many** (one, two or four). **Upload a picture** brings one of yours in to change it.' },
@@ -314,11 +314,11 @@ export const topics = {
       { title: 'Change only part of a picture', steps: ['Open the picture and choose **Change**.', 'Press **Paint the part** and paint over what should change.', 'Say what it becomes ("a blue knitted hat") and press **Change the painted part**: the rest stays as it was.'] },
       { title: 'Make a picture move', steps: ['Open the picture and choose **Move**.', 'Say what happens and how long; press **Make the clip**.', 'It takes a few minutes: the bell says when it is ready.'] },
     ],
-    manual: { doc: 'media', section: 'media-studio' },
+    manual: { doc: 'media', section: 'media' },
   },
 
   studio: {
-    title: 'Agent Studio',
+    title: 'Automations',
     about: 'Workflows that do the work as you: a trigger, steps that think, decide and wait for your yes, and what they give out. Every run kept, to replay.',
     parts: [
       { name: 'Your workflows', text: 'Each with its trigger, whether it is on, and when it last ran.' },
@@ -738,7 +738,7 @@ export const topics = {
   },
 
   code: {
-    title: 'Code Studio',
+    title: 'Code',
     about: `Three parts, each shown to those who may use it: Workspaces (an IDE in the browser on your projects), Review (a change, a whole repository or several, by the model) and Ask and explore (questions and ${codeIntelName}'s tools across repositories). Reviews read the code with your own access, through ${codeIntelName}, and write nothing to the code host.`,
     parts: [
       { name: 'Workspaces', text: 'A GitLab project and branch the server keeps for you, with Code Arena\'s IDE: **Open** starts it, unused for 30 minutes it sleeps (its files stay), **Delete** takes it away. It clones and pushes with your GitLab token.' },
@@ -780,7 +780,7 @@ export const topics = {
       { name: `Ask ${codeIntelName}`, text: `A chat with ${codeIntelName} about this system: it explains the business from the map, then shows it in the code.` },
       { name: 'Map again', text: 'Reads the project again, with your access and at your cost: after the code, the issues or the wiki changed.' },
     ],
-    tasks: [{ title: 'Map a system', steps: ['In **Code Studio → Business map**, type the project (group/project) and press **Map it**.', 'The map fills in as the model reads the code, the documents, the issues and the wiki.', `Ask ${codeIntelName} about the business in any chat with ${codeIntelName} on.`] }],
+    tasks: [{ title: 'Map a system', steps: ['In **Code → Business map**, type the project (group/project) and press **Map it**.', 'The map fills in as the model reads the code, the documents, the issues and the wiki.', `Ask ${codeIntelName} about the business in any chat with ${codeIntelName} on.`] }],
     manual: { doc: 'chat', section: 'the-business-map' },
   },
 
@@ -791,8 +791,8 @@ export const topics = {
       { name: 'Its engine', text: `Runs as a user of its own with limits, no Docker socket, and reaches the app, the gateway, ${codeIntelName} (with your key) and the internet only. Its agent has a key of its own at the gateway, against your credit.` },
       { name: 'Asleep', text: 'Unused for 30 minutes, it stops; its files stay. Opening it again wakes it.' },
     ],
-    tasks: [{ title: 'Work on a project in the browser', steps: ['Under **Code Studio → New workspace**, name the project (and a branch) and press **Open it**.', 'The IDE fills the window once the workspace is up; **Open** on its card brings it back later.', 'Edit, run and commit as in Code Arena; its agent works on the same files.'] }],
-    manual: { doc: 'chat', section: 'code-studio-workspaces' },
+    tasks: [{ title: 'Work on a project in the browser', steps: ['Under **Code → New workspace**, name the project (and a branch) and press **Open it**.', 'The IDE fills the window once the workspace is up; **Open** on its card brings it back later.', 'Edit, run and commit as in Code Arena; its agent works on the same files.'] }],
+    manual: { doc: 'chat', section: 'code-workspaces' },
   },
 
   review: {
@@ -1048,7 +1048,7 @@ export const topics = {
       'security-alerts': { name: 'Security alerts', text: 'How many failed sign-ins, from one address or on one account, and how many exports raise an alert for the admins, and whether alerts are raised at all.' },
       'rooms-and-calls': { name: 'Rooms and calls', text: 'The STUN or TURN servers browsers on different networks need, the most people in one call, and the captions a room keeps for who joins late.' },
       meetings: { name: 'Meetings', text: 'The largest recording one may upload, and how many meetings one person keeps.' },
-      'code-studio': { name: 'Code Studio', text: 'When an idle workspace sleeps, how many workspaces one person keeps, and how many of their own machines they may connect.' },
+      'code-workspaces': { name: 'Code workspaces', text: 'When an idle workspace sleeps, how many workspaces one person keeps, and how many of their own machines they may connect.' },
       'science-lab-and-3d': { name: 'Science lab and 3D', text: 'How long a proof, a 3D run and the decision model may take, and how much of 3D\'s output comes back.' },
       dashboards: { name: 'Dashboards', text: 'The rows and log lines a dashboard panel shows at most, the longest its query may run, and the scrape interval the dashboards assume (Prometheus\'s own is changed with it).' },
       replicas: { name: 'Replicas', text: 'Whether several app replicas on one database work together (off only for one replica behind a pooler that keeps no sessions), how often they check who leads, and how long one waits for another.' },

@@ -14,7 +14,7 @@ namespace Llm.Api.Code.Studio;
 public sealed record PortView(int Port, string? Label, string Url, string Visibility, string Origin, bool Listening, bool Stopped, string? Process, int? Pid, string? Address);
 
 /// <summary>
-/// Code Studio's forwarded ports: what a workspace's programs listen on (a dev server, found by the workspaces service),
+/// Code's forwarded ports: what a workspace's programs listen on (a dev server, found by the workspaces service),
 /// and those its owner forwarded by hand, each at an address of its own under Arena's domain
 /// (ws-&lt;workspace&gt;-&lt;port&gt;.&lt;domain&gt;): its own origin, so the program's pages never run on Arena's, reached with the
 /// person's Arena session, by its owner alone unless they share it with everyone signed in.

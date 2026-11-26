@@ -16,7 +16,7 @@ import { createWorkflow, fromTask, templatesQuery, triggerLabels, workflowsQuery
 
 const blank: Flow = { trigger: { kind: 'manual' }, steps: [{ id: 's1', kind: 'ask', name: 'Ask', prompt: 'Answer briefly: {{input.text}}' }] }
 
-/** Workspace → Agent Studio: one's workflows, those shared to fill in, and templates to start from. */
+/** Workspace → Automations: one's workflows, those shared to fill in, and templates to start from. */
 export function StudioPage() {
   const list = useQuery(workflowsQuery)
   const templates = useQuery(templatesQuery)
@@ -38,7 +38,7 @@ export function StudioPage() {
   return (
     <>
       <PageHeader
-        title="Agent Studio"
+        title="Automations"
         description="Workflows that do the work as you: started by hand, on a schedule, by a webhook, GitLab, a room's message or a form; steps that ask a model, use tools, decide, loop and wait for your yes; what they give out goes to a room, an email, GitLab or a file. Every run is kept, to read and replay."
         actions={
           <>

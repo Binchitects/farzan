@@ -441,7 +441,7 @@ function Thread({ id, config, onAdopt, onOpenList, startIn }: { id?: string; con
   const mayCustomize = !!me?.permissions?.includes('tools.read') || !!me?.isAdmin
   const toolsPicker =
     model?.tools === false ? null : (
-      <ToolsPicker tools={config.tools} value={toolsOnHere} onChange={(tools) => void change({ tools })} onCustomize={mayCustomize ? () => void navigate('/admin/tools') : undefined} />
+      <ToolsPicker tools={config.tools.filter((t) => t.id !== 'code')} value={toolsOnHere} onChange={(tools) => void change({ tools })} onCustomize={mayCustomize ? () => void navigate('/admin/tools') : undefined} />
     )
 
   /**

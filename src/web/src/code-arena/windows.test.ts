@@ -10,7 +10,7 @@ describe("the IDE's windows", () => {
     expect(detachedView('?window=editor')).toBeNull()
   })
 
-  it("keeps the IDE's own address (a Code Studio prefix, its query) and puts the window's part in", () => {
+  it("keeps the IDE's own address (a Code prefix, its query) and puts the window's part in", () => {
     const url = new URL(windowUrl({ kind: 'editor', path: 'src/a b.ts', id: 'w2' }, 'https://arena.example/api/studio/w/7/?theme=dark#x'))
     expect(url.pathname).toBe('/api/studio/w/7/')
     expect(url.searchParams.get('theme')).toBe('dark')

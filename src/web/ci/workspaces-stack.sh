@@ -1,5 +1,5 @@
 #!/bin/sh
-# A throwaway stack for e2e/workspaces.spec.ts (Code Studio's workspaces in a browser): Postgres, the app, the web and
+# A throwaway stack for e2e/workspaces.spec.ts (Code's workspaces in a browser): Postgres, the app, the web and
 # Traefik as the CI's browser job runs them, with the workspaces service as compose runs it (its security options) and a
 # code host that is GitLab's API, git over HTTP and the agent's model API (tests/Llm.Tests/Resources/real-workspace/codehost.py).
 # Every container and the network are its own (named wse2e-*), so it runs beside another stack.

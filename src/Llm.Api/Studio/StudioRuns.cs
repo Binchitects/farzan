@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Llm.Api.Studio;
 
 /// <summary>
-/// Agent Studio's runs: started (by hand, a form, a schedule, a webhook, GitLab or a room's message) and run in the
+/// Automations' runs: started (by hand, a form, a schedule, a webhook, GitLab or a room's message) and run in the
 /// background, one task each, stoppable; a run that waits for an approval goes on when it is given. Schedules are looked at
 /// every half minute (each due run claimed, so one replica runs it); a run left "running" by an app that stopped is ended.
 /// </summary>
@@ -211,6 +211,6 @@ public sealed partial class StudioRuns(IServiceScopeFactory scopes, TimeProvider
     [LoggerMessage(Level = LogLevel.Warning, Message = "A message in room {Room} could not start its workflows")]
     private static partial void RoomFailed(ILogger logger, Guid room, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Agent Studio's schedules could not be looked at")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Automations' schedules could not be looked at")]
     private static partial void SweepFailed(ILogger logger, Exception ex);
 }

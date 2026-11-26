@@ -44,7 +44,7 @@ tools/dn test tests/CodeIntel.Tests -c Release
 tools/dn test tests/CodeArena.Tests -c Release
 ```
 
-A Code Studio workspace end to end runs against a workspaces image built from
+A Code workspace end to end runs against a workspaces image built from
 the checkout, in throwaway containers of its own (the workspaces service with
 compose's security options, and a code host that is GitLab's API, git over
 HTTP and the agent's model): clone, a dev server in a terminal opened through
@@ -59,7 +59,7 @@ tools/dn test tests/Llm.Tests -c Release --filter RealWorkspace -e STUDIO_E2E_IM
 The same in a browser: `src/web/ci/workspaces-stack.sh up` starts a stack of
 its own (containers and a network named `wse2e-*`, beside any other) with the
 app, the web and Traefik built from the checkout, the workspaces service and
-the code host; `e2e/workspaces.spec.ts` then makes a workspace in Code Studio,
+the code host; `e2e/workspaces.spec.ts` then makes a workspace in Code,
 waits for its IDE on the clone, runs a dev server in its terminal, finds it in
 the Ports panel and opens its forwarded address in a tab of its own, then puts
 the workspace to sleep. CI's `workspaces` job runs both.
@@ -199,7 +199,7 @@ runtime image carries the receipt at `/usr/share/code-intel/build-verified`.
 
 A change runs once every image that holds it is built again and its service
 started again. That is often more than one: Code Arena is in the app's image
-(the app serves its builds) and in Code Studio's workspaces (each workspace's
+(the app serves its builds) and in Code's workspaces (each workspace's
 engine), and its page is in the app's and the web's. `tools/images-for.py`
 reads the Dockerfiles and names them:
 

@@ -1,5 +1,5 @@
 """
-The code host and Arena's model API for a real Code Studio workspace (RealWorkspaceTests): GitLab's API as the app asks
+The code host and Arena's model API for a real Code workspace (RealWorkspaceTests): GitLab's API as the app asks
 it (the person, a project, a branch), the project's git over smart HTTP (git http-backend) with the person's token as
 the password, the OpenAI API the workspace's agent asks (a model that runs one command, then answers), and for a
 stack without a gateway a stand-in of LiteLLM's management API. What it was

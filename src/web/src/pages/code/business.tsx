@@ -33,7 +33,7 @@ function MapState({ s }: { s: BusinessSystem }) {
 }
 
 /**
- * Code Studio's business map: each project mapped into what its software does for the business (its domain, what it
+ * Code's business map: each project mapped into what its software does for the business (its domain, what it
  * lets the business do, the rules it enforces, its processes, the words people use), read by a model with code-intel's
  * read-only tools from the code, the documents, the issues and the wiki. code-intel answers about the business from it.
  */
@@ -189,7 +189,7 @@ export function BusinessPage() {
     <>
       <Button variant="ghost" size="sm" className="mb-2 -ml-2" asChild>
         <Link to="/code">
-          <ArrowLeft /> Code Studio
+          <ArrowLeft /> Code
         </Link>
       </Button>
       <PageHeader

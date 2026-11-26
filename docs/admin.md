@@ -153,7 +153,7 @@ What each person may do is decided in one place, from three things:
   theirs to read and delete.
 - **What a person may not use is hidden**, not only refused. Their pages
   leave the sidebar, the command palette and Home (Chat, Memory, Meetings,
-  Plans, Data, Decks, Media studio, Agent Studio, Code Studio without any
+  Plans, Data, Decks, Media, Automations, Code without any
   of `code.studio`, `code.read` and `review.run`, Scheduled tasks, Connect
   your tools); a link to one says it is not among what they may use, and
   where to ask. The chat leaves out Compare, Attach and the voice message,
@@ -201,7 +201,7 @@ What each person may do is decided in one place, from three things:
   What a person may not use is left out of the pages, not shown to fail:
   a room's Call without `feature.calls`, an app's Remix without
   `feature.apps`, Fix it without `feature.fixit`, Code Arena on Connect your
-  tools without `feature.code_arena`, each part of Code Studio without its
+  tools without `feature.code_arena`, each part of Code without its
   permission, voice, memory and API keys on the account page without theirs,
   and the same in Code Arena's IDE (one's own skills in Arena without
   `feature.skills`). A page opened by its address says it is not among what
@@ -1376,8 +1376,8 @@ either list.
 ### Security
 
 Admin → Security (for those who may manage every review, `reviews.admin`,
-where Code Studio is on) shows every repository's latest security review at
-a glance. Reviews are run in Code Studio → Security
+where Code is on) shows every repository's latest security review at
+a glance. Reviews are run in Code → Security
 ([chat.md](chat.md#security-reviews)).
 
 - **The numbers**: open findings by severity, the known-exploited (on CISA's
@@ -1798,7 +1798,7 @@ once, a budget in 30 days) that hold under the person's, as the gateway holds
 the key to the tighter of the two whenever the person's limits change. Each is revoked on its own (`person.key_revoked`);
 making one is audited (`person.key_made`) and counts with **New key** in the
 five an hour. **New key** replaces the main key only: keys of their own and a
-Code Studio workspace's keep working.
+Code workspace's keep working.
 The gateway counts each key on its own, so a new key starts a fresh minute:
 people may make at most five new keys an hour themselves (the sixth is refused
 with HTTP 429 and audited as a failed `person.rotate_key`), so a new key is no
@@ -1999,7 +1999,7 @@ what running the models really cost over the time chosen, and shares it out.
   spend, requests, tokens, model hours and people, then and now.
 - **Shared out**: each group (its credit a month and cost centre, open it for
   its people), cost centre, person (sortable, searchable), project, model,
-  source (the chat, API keys and Code Arena, Code Studio, the media studio,
+  source (the chat, API keys and Code Arena, Code, the media studio,
   the app's own work) and kind of work (chat answers, API keys, pictures,
   video, speech), each with its requests, tokens, model hours, spend, its
   share of the use and its part of the running cost. The share is **by

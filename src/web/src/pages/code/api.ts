@@ -286,7 +286,7 @@ export function sourceLabel(s: BusinessSource): string {
   return s.ref
 }
 
-/** Security reviews of a repository (Code Studio → Security). */
+/** Security reviews of a repository (Code → Security). */
 export interface ScanBrief {
   id: string
   project: string

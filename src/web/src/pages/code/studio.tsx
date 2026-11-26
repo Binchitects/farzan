@@ -19,7 +19,7 @@ import { TokenCard } from './fixes'
 
 const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 
-/** Code Studio's workspaces: one's own, each opened in the IDE; a new one from a GitLab project and branch. */
+/** Code's workspaces: one's own, each opened in the IDE; a new one from a GitLab project and branch. */
 export function Workspaces() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -169,7 +169,7 @@ function StudioIde({ id }: { id: string }) {
   )
 }
 
-/** Code Studio → a workspace: started when it sleeps, then its IDE, under a bar to go back, put it to sleep or see where it is. */
+/** Code → a workspace: started when it sleeps, then its IDE, under a bar to go back, put it to sleep or see where it is. */
 export function WorkspacePage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
@@ -199,7 +199,7 @@ export function WorkspacePage() {
       <header className="flex h-9 shrink-0 items-center gap-2 border-b bg-sidebar px-2 text-sm">
         <Button size="sm" variant="ghost" asChild>
           <Link to="/code">
-            <ArrowLeft /> Code Studio
+            <ArrowLeft /> Code
           </Link>
         </Button>
         <span className="min-w-0 truncate font-medium">{w?.name ?? 'Workspace'}</span>

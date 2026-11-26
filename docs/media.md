@@ -1,11 +1,11 @@
-# Media studio
+# Media
 
 Pictures from a few words; a picture changed by saying how, all of it or only the
 part painted over; variations of it; the picture four times as large, or cut out of
 its background; a short clip that starts from it; vector drawings (SVG) that move;
-speech in a voice from a sample, and music. **Workspace → Media studio** (`/media`).
+speech in a voice from a sample, and music. **Workspace → Media** (`/media`).
 
-## Media studio
+## Media
 
 **Describe a picture**, choose its **Shape** (square, wide, photo, tall) and **How
 many** (one, two or four), and press **Make it**. **Upload a picture** brings one of

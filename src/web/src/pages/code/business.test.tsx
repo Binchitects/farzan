@@ -40,7 +40,7 @@ describe('business map', () => {
     expect(sourceUrl(null, { kind: 'issue', ref: '1' })).toBeNull()
   })
 
-  it('lists the mapped systems in Code Studio, with one being mapped, and maps a project', async () => {
+  it('lists the mapped systems in Code, with one being mapped, and maps a project', async () => {
     const calls = fakeApi(member, {
       ...code,
       'GET /api/code/business': () => ({ json: { codeIntel: true, systems: [checkout, billing] } }),

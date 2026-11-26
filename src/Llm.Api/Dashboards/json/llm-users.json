@@ -1263,7 +1263,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "select coalesce(s.person, '(unattributed)') as \"Person\", count(*) as \"Requests\", coalesce(sum(greatest(s.prompt_tokens - s.cached_tokens, 0)),0) as \"In\", coalesce(sum(s.cached_tokens),0) as \"Cached\", coalesce(sum(s.completion_tokens),0) as \"Out\", coalesce(sum(s.total_tokens),0) as \"Tokens\", round(coalesce(sum(s.cost),0)::numeric,4) as \"Spend\", count(distinct coalesce(s.key_alias, s.surface)) as \"Keys used\", string_agg(distinct case s.surface when 'chat' then 'Chat' when 'app' then 'Arena itself' when 'studio' then 'Code Studio' when 'media' then 'Pictures, video, sound' else 'API / agent' end, ', ') as \"Surfaces\" from requests s where $__timeFilter(s.started_at) and s.status <> 'refused' group by 1 order by 6 desc nulls last"
+          "rawSql": "select coalesce(s.person, '(unattributed)') as \"Person\", count(*) as \"Requests\", coalesce(sum(greatest(s.prompt_tokens - s.cached_tokens, 0)),0) as \"In\", coalesce(sum(s.cached_tokens),0) as \"Cached\", coalesce(sum(s.completion_tokens),0) as \"Out\", coalesce(sum(s.total_tokens),0) as \"Tokens\", round(coalesce(sum(s.cost),0)::numeric,4) as \"Spend\", count(distinct coalesce(s.key_alias, s.surface)) as \"Keys used\", string_agg(distinct case s.surface when 'chat' then 'Chat' when 'app' then 'Arena itself' when 'studio' then 'Code' when 'media' then 'Pictures, video, sound' else 'API / agent' end, ', ') as \"Surfaces\" from requests s where $__timeFilter(s.started_at) and s.status <> 'refused' group by 1 order by 6 desc nulls last"
         }
       ],
       "fieldConfig": {

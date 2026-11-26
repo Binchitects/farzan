@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Llm.Tests;
 
 /// <summary>
-/// Agent Studio: workflows checked as kept; a run's steps (a question, JSON, a condition, a loop, a tool, a file) kept as they
+/// Automations: workflows checked as kept; a run's steps (a question, JSON, a condition, a loop, a tool, a file) kept as they
 /// went; an approval that waits and goes on without running again what ran; webhooks, schedules and a room's word; sharing.
 /// </summary>
 [Collection(nameof(AppCollection))]

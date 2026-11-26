@@ -145,7 +145,7 @@ export function SecurityPage() {
     <>
       <PageHeader
         title="Security"
-        description="Every repository's latest security review: what is open, what cannot wait, what changed this week, and the risks accepted. Reviews are run in Code Studio → Security."
+        description="Every repository's latest security review: what is open, what cannot wait, what changed this week, and the risks accepted. Reviews are run in Code → Security."
       />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
         {d.advisories === null ? (
@@ -166,7 +166,7 @@ export function SecurityPage() {
         </StatGrid>
         {d.repositories.length === 0 ? (
           <EmptyState icon={ShieldAlert} title="No repository has been reviewed yet">
-            Review one in Code Studio → Security: its packages, its code and, with the scanners, its secrets and configuration.
+            Review one in Code → Security: its packages, its code and, with the scanners, its secrets and configuration.
           </EmptyState>
         ) : (
           <Card>

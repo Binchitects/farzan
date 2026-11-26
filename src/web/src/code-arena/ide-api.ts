@@ -670,7 +670,7 @@ export const within = (path: string, folder: string) => path === folder || path.
 export interface CodeAccount {
   arena: string | null
   signedIn: boolean
-  /** A Code Studio workspace: it works with Arena's key for it, and does not sign in. */
+  /** A Code workspace: it works with Arena's key for it, and does not sign in. */
   codeStudio: boolean
   /** denied: Arena's feature permissions the person does not hold (feature.skills…): what needs them is left out. */
   account: { userName: string; displayName: string | null; email: string | null; managesPeople: boolean; denied?: string[] } | null

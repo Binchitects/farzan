@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 namespace Llm.Api.Code.Studio;
 
 /// <summary>
-/// Code Studio's workspaces service (compose profile "workspaces"): where the app drives it (<see cref="Url"/>, with
+/// Code's workspaces service (compose profile "workspaces"): where the app drives it (<see cref="Url"/>, with
 /// <see cref="Key"/>, WORKSPACES_KEY), the name its engines answer at (<see cref="EngineHost"/>), and the addresses the
 /// engines reach the app, the gateway and code-intel at over the stack's own network (code-intel checks the person's own key).
 /// </summary>
@@ -48,7 +48,7 @@ public sealed class StudioException(int status, string message) : Exception(mess
 }
 
 /// <summary>
-/// Code Studio's workspaces on the server: made from a GitLab project and branch the person reads with their own token
+/// Code's workspaces on the server: made from a GitLab project and branch the person reads with their own token
 /// (the one Fix it links), started on the workspaces service (cloned once, Code Arena's engine run for it as its own
 /// user, its agent with a key of its own at the gateway), put to sleep, and deleted with their files and their key.
 /// </summary>
@@ -82,7 +82,7 @@ public sealed class StudioWorkspaces(AppDbContext db, IHttpClientFactory http, I
         {
             throw new StudioException(409, $"You have {options.CurrentValue.MostPerPerson} workspaces: delete one first.");
         }
-        var token = await gitlab.TokenAsync(me.Id, ct) ?? throw new StudioException(409, "Link your GitLab token first (Code Studio → GitLab token): the workspace clones and pushes as you.");
+        var token = await gitlab.TokenAsync(me.Id, ct) ?? throw new StudioException(409, "Link your GitLab token first (Code → GitLab token): the workspace clones and pushes as you.");
         project = project.Trim().Trim('/');
         JsonNode repo;
         try
@@ -216,7 +216,7 @@ public sealed class StudioWorkspaces(AppDbContext db, IHttpClientFactory http, I
         {
             if (await db.StudioWorkspaces.CountAsync(w => w.UserId == me.Id && w.Kind == StudioWorkspace.Machine, ct) >= options.CurrentValue.MostMachines)
             {
-                return (null, null, $"You have {options.CurrentValue.MostMachines} machines connected to Code Studio: delete one there first.");
+                return (null, null, $"You have {options.CurrentValue.MostMachines} machines connected to Code: delete one there first.");
             }
             workspace = new StudioWorkspace { Id = id, UserId = me.Id, Kind = StudioWorkspace.Machine };
             db.StudioWorkspaces.Add(workspace);

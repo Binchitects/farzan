@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { watchConsole } from './helpers.ts'
 
 /**
- * Code Studio's workspaces in a browser, against a stack with a real workspaces service and a code host
+ * Code's workspaces in a browser, against a stack with a real workspaces service and a code host
  * (ci/workspaces-stack.sh; E2E_WORKSPACES=1): a workspace made from a project and started (cloned with the person's
  * token), its IDE open on the clone, a dev server run in its terminal, listed in the Ports panel with its process, and
  * opened at its forwarded address in a tab of its own; then put to sleep. Any other stack has no workspaces: skipped.
@@ -12,7 +12,7 @@ test('a workspace starts, its IDE opens the clone, a dev server in its terminal 
   test.setTimeout(240_000)
   const errors = watchConsole(page)
   const headers = { 'X-Requested-With': 'e2e' }
-  // The person's GitLab token, as Code Studio's token card saves it: the code host knows this one.
+  // The person's GitLab token, as Code's token card saves it: the code host knows this one.
   expect((await page.request.put('/api/fixes/token', { data: { token: 'glpat-e2e-token' }, headers })).ok()).toBe(true)
   let id = ''
   try {
@@ -57,7 +57,7 @@ test('a workspace starts, its IDE opens the clone, a dev server in its terminal 
     // Nothing failed on the way but the IDE's look for the folder's own VS Code settings, which this clone has none of.
     expect(errors.filter((e) => !(e.includes('status of 404') && e.includes('.vscode%2Fsettings.json')))).toEqual([])
 
-    // Put to sleep: back on Code Studio, where it says so (the IDE's watches still open as it sleeps end with 409).
+    // Put to sleep: back on Code, where it says so (the IDE's watches still open as it sleeps end with 409).
     await page.getByRole('button', { name: 'Put to sleep' }).click()
     await page.waitForURL(/\/code$/)
     const listed = page.getByRole('list', { name: 'Your workspaces' }).getByRole('listitem').filter({ hasText: 'group/app' })

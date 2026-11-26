@@ -1,4 +1,4 @@
-# Agent Studio
+# Automations
 
 Workflows that do the work as you. A trigger starts one. Its steps ask a
 model, use tools, decide, loop and wait for your yes. What they give out
@@ -7,11 +7,11 @@ step as it went, to read and to replay.
 
 ## Making a workflow
 
-**Workspace → Agent Studio.** Press **New workflow**, start from a template,
+**Workspace → Automations.** Press **New workflow**, start from a template,
 or turn one of your scheduled tasks into a workflow with **From a scheduled
 task**. A new workflow starts **Off**: it runs only by hand until you switch
 it **On**. For code review the templates are **Review each merge request**
-(GitLab's merge request event, Code Studio's review of it as a comment),
+(GitLab's merge request event, Code's review of it as a comment),
 **Weekly repository health** (a whole repository reviewed each Monday, its
 summary by email when it needs changes) and **Weekly security of a
 product** (several repositories' security looked at across, under your

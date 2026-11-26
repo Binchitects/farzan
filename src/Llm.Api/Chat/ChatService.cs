@@ -323,15 +323,11 @@ public sealed partial class ChatService(
                     await emit(NoWebForResearch);
                 }
             }
-            // How this model is given its tools (Admin → Models → Tools): without run_code, or with it, or (as code) its tools only
-            // as functions in a program, which run_code then needs.
+            // How this model is given its tools (Admin → Models → Tools) decides run_code, not the chat: without it (direct), beside
+            // them (both), or its tools only as functions in a program (code). Who may call tools from code is the tool's own setting.
             toolMode = research ? ToolModes.Both : await toolModes.OfAsync(modelName, ct);
-            if (toolMode == ToolModes.Direct)
-            {
-                chosen.RemoveAll(c => c.Tool.Id == CodeTool.ToolId);
-            }
-            else if (toolMode == ToolModes.Code && chosen.All(c => c.Tool.Id != CodeTool.ToolId) && chosen.Any(c => CodeTool.Callable(c.Tool))
-                && allowed.FirstOrDefault(t => t.Tool.Id == CodeTool.ToolId) is { } code)
+            chosen.RemoveAll(c => c.Tool.Id == CodeTool.ToolId);
+            if (toolMode != ToolModes.Direct && chosen.Any(c => CodeTool.Callable(c.Tool)) && allowed.FirstOrDefault(t => t.Tool.Id == CodeTool.ToolId) is { } code)
             {
                 chosen.Add(code);
             }

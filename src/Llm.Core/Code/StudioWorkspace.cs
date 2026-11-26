@@ -1,7 +1,7 @@
 namespace Llm.Core.Code;
 
 /// <summary>
-/// A Code Studio workspace: a project and branch a person works on in the browser's IDE — on the server (a clone the
+/// A Code workspace: a project and branch a person works on in the browser's IDE — on the server (a clone the
 /// workspaces service keeps, worked on by Code Arena's own engine) or on their own machine (their Code Arena, connected).
 /// Its engine's address and key are kept while it runs, so any of the app's replicas reaches it.
 /// </summary>

@@ -219,7 +219,7 @@ public sealed partial class PeopleService(
         {
             throw new PeopleException($"{user.UserName} is disabled: enable them first.");
         }
-        // The main key goes (the person's own keys and a Code Studio workspace's keep working).
+        // The main key goes (the person's own keys and a Code workspace's keep working).
         var mains = (await keys.OfAsync(user.Id)).Where(k => k.Kind == ApiKey.Main).Select(k => k.Hash).ToHashSet(StringComparer.Ordinal);
         await keys.RevokeAsync(mains);
         var (key, _) = await keys.MakeAsync(user, ApiKey.Main, KeyAlias(user));

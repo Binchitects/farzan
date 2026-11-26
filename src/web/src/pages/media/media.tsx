@@ -430,7 +430,7 @@ function Editor({ item, items, config, onOpen, onClose }: { item: MediaItem; ite
   )
 }
 
-/** Workspace → Media studio: pictures from words, changed (all or where painted), varied, enlarged, set moving. */
+/** Workspace → Media: pictures from words, changed (all or where painted), varied, enlarged, set moving. */
 export function MediaPage() {
   const queryClient = useQueryClient()
   const config = useQuery(mediaConfigQuery)
@@ -465,7 +465,7 @@ export function MediaPage() {
   return (
     <>
       <PageHeader
-        title="Media studio"
+        title="Media"
         description="Pictures and vector drawings from a few words; change one by saying how (all of it, or only the part you paint over), trace it into an SVG, animate it, or make it move."
       />
       <div className="grid gap-4">

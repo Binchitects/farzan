@@ -15,7 +15,7 @@ namespace Llm.Api.Code.Studio;
 /// <summary>
 /// A forwarded port's own host (ws-&lt;workspace&gt;-&lt;port&gt;.&lt;domain&gt;, Traefik's ports route to the app): every request
 /// there goes on to what the workspace listens on at that port, WebSockets too, for the person signed in to Arena (the
-/// session cookie covers the domain's subdomains) who owns the workspace, or anyone signed in who may use Code Studio
+/// session cookie covers the domain's subdomains) who owns the workspace, or anyone signed in who may use Code
 /// when its owner shared the port. Arena's session never reaches the program: its cookies are taken out of the request,
 /// and the program cannot set one for Arena's domain. Nothing of Arena's API answers on these hosts.
 /// </summary>
@@ -92,7 +92,7 @@ public static class PortForwards
         var studio = services.GetRequiredService<StudioWorkspaces>();
         if (!features.IsOn("code-studio") || !await studio.EnabledAsync(ct))
         {
-            await RefuseAsync(http, 404, "Not found", "Code Studio's workspaces are not set up here.");
+            await RefuseAsync(http, 404, "Not found", "Code's workspaces are not set up here.");
             return;
         }
         // A session of Arena's (a key is not a browser), its person not held back by the second factor or the notice.
@@ -120,7 +120,7 @@ public static class PortForwards
         var setting = workspace is null ? null : await db.StudioPorts.AsNoTracking().SingleOrDefaultAsync(p => p.WorkspaceId == id && p.Port == port, ct);
         var mine = workspace is not null && me is not null && workspace.UserId == me.Id;
         var shared = setting is { Visibility: StudioPort.SignedIn, Stopped: false };
-        // Its owner, or anyone signed in when it is shared; both with Code Studio among what they may use.
+        // Its owner, or anyone signed in when it is shared; both with Code among what they may use.
         if (me is null || workspace is null || (!mine && !shared) || !await services.GetRequiredService<Access.AccessService>().MayAsync(me, Core.Access.Permissions.CodeStudio, ct))
         {
             await RefuseAsync(http, 404, "Not found", "There is no forwarded port here that you may open.");
@@ -133,7 +133,7 @@ public static class PortForwards
         }
         if (workspace.EnginePort is null)
         {
-            await RefuseAsync(http, 503, "Asleep", $"{workspace.Name} is asleep: open it in Code Studio, then start what listens on port {port}.");
+            await RefuseAsync(http, 503, "Asleep", $"{workspace.Name} is asleep: open it in Code, then start what listens on port {port}.");
             return;
         }
         try

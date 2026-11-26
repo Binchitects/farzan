@@ -195,9 +195,9 @@ controls:
       being Owner; a rule can keep one shared assistant, skill or app from
       people its sharing reaches; the people list with emails and spend needs
       people.read. Each person's effective permissions are listed with why.
-      A Code Studio workspace's forwarded port is reached only by its owner,
+      A Code workspace's forwarded port is reached only by its owner,
       signed in, at an origin of its own, or by everyone signed in who may use
-      Code Studio once its owner shares it (audited); Arena's session cookies
+      Code once its owner shares it (audited); Arena's session cookies
       never reach the program, which cannot set one for Arena's domain.
       Nobody gives more than they hold: changing a person's role needs
       access.assign, disabling people.disable alone, and no assignment, role
@@ -905,7 +905,7 @@ controls:
     meets: >-
       Python, documents and a plugin's own server run in the sandbox: no
       network, a read-only root, its own limits, nothing that outlives a run.
-      In a Code Studio workspace the agent's commands run in bubblewrap: they
+      In a Code workspace the agent's commands run in bubblewrap: they
       write only in the clone, the build caches and a /tmp of their own, and
       the engine's settings, sessions and the person's GitLab token are hidden
       from them; the workspaces service says when it cannot make one.
@@ -919,7 +919,7 @@ controls:
       nist80053: [SC-39, SC-44]
       airmf: [MEASURE 2.7]
       euaiact: [Art.15]
-    docs: [plugins.md#a-server-of-its-own-in-the-sandbox, chat.md#code-studio-workspaces]
+    docs: [plugins.md#a-server-of-its-own-in-the-sandbox, chat.md#code-workspaces]
     tests:
       - Llm.Tests/ChatToolsTests.Python_runs_in_the_sandbox_with_the_chats_files_and_what_it_writes_comes_back
       - deploy/test_workspaces_supervisor.py::test_health_says_whether_the_agents_commands_have_a_sandbox
@@ -1324,7 +1324,7 @@ controls:
   - id: VUL-01
     title: Repositories are reviewed for vulnerabilities, fixed or accepted in time
     meets: >-
-      Code Studio → Security reviews a repository at a commit, read with the
+      Code → Security reviews a repository at a commit, read with the
       person's own access: its packages matched against GitHub's reviewed
       advisories and CISA's known-exploited list (the advisories pack, renewed
       each day), and the places where outside data reaches a query, a

@@ -67,9 +67,9 @@ and the engines directly only to manage them (load, unload, slots, health).
 | the stores | `postgres`, `valkey` | the app's database (`llmapp`: people, chats, settings, the ledger of model requests, the API keys and their rate counts); Valkey, LMCache's shared store, only with the `valkey` feature |
 | the engines | `llamacpp`, `vllm`, `sglang`, `lmdeploy`, `strata`; `imagegen`, `videogen`, `audio`, `embed` | the models: chat models on llama.cpp, vLLM or SGLang, pictures and video on stable-diffusion.cpp, speech on speaches, embeddings on the CPU; other GPU servers the app does not run are reached the same way, through the app's gateway |
 | Farzan Graph | `code-intel`, `scanners` | the code index of your GitLab (read only), knowledge packs and security advisories, over MCP; the scanners for its security reviews |
-| the tools | `sandbox`, `blender`, `lean`, `browser`, `searxng`, `laya`, `studio`, `workspaces` | Python and commands, 3D, proofs, the browser agent, web search, typed decisions, the media studio's own models, Code Studio's workspaces |
+| the tools | `sandbox`, `blender`, `lean`, `browser`, `searxng`, `laya`, `studio`, `workspaces` | Python and commands, 3D, proofs, the browser agent, web search, typed decisions, the media studio's own models, Code's workspaces |
 | monitoring | `prometheus`, `alertmanager`, `loki`, `alloy`, the exporters, `power-limits` | what the app's dashboards, logs and alerts read; power caps kept applied |
-| off the host | Code Arena, your GitLab, GitHub and Gitea, other GPU servers, Hugging Face, the company's knowledge sources | reached by the app or Farzan Graph (the app's gateway reaches other GPU servers), by the speech server (Hugging Face) and by Code Studio's workspaces (the code hosts, package registries), or reaching in through Traefik |
+| off the host | Code Arena, your GitLab, GitHub and Gitea, other GPU servers, Hugging Face, the company's knowledge sources | reached by the app or Farzan Graph (the app's gateway reaches other GPU servers), by the speech server (Hugging Face) and by Code's workspaces (the code hosts, package registries), or reaching in through Traefik |
 
 A broken Traefik is a total outage. A broken Prometheus is not. Farzan Graph alone,
 without the platform, is a compose of its own in `deploy/code-intel-standalone`
@@ -185,14 +185,14 @@ features it requires.
 | `3d` | no | `blender` | 3D models |
 | `lean` | no | `lean` | proofs checked by Lean 4 and Mathlib (requires `lab`) |
 | `studio` | no | `studio` | the media studio's own models: cutouts, voices, music (requires `media`) |
-| `workspaces` | no | `workspaces` | Code Studio's workspaces on this server (requires `code-studio`) |
+| `workspaces` | no | `workspaces` | Code's workspaces on this server (requires `code-studio`) |
 | `laya` | no | `laya` | typed decisions on the CPU |
 | `scanners` | no | `scanners` | security scanners for code reviews (requires `code-intel`) |
 | `monitoring` | yes | `prometheus`, `alertmanager`, `loki`, `alloy`, `node-exporter`, `cpu-temp-exporter` | dashboards, logs and alerts |
 | `gpu-monitoring`, `dcgm` | yes, no | `gpu-exporter`, `dcgm-exporter` | the GPUs' metrics; data-centre GPU detail on bare metal |
 | `power-limits` | yes | `power-limits` | GPU and CPU power caps kept applied |
 | `valkey` | no | `valkey` | LMCache's shared store for the vLLM models' token cache, when `LMCACHE_REMOTE` names it |
-| `meetings`, `lab`, `apps`, `data`, `decks`, `media`, `agents`, `code-studio` | yes | nothing: parts of the app | meetings, the science lab, apps, ask your data, decks, the media studio, Agent Studio, Code Studio |
+| `meetings`, `lab`, `apps`, `data`, `decks`, `media`, `agents`, `code-studio` | yes | nothing: parts of the app | meetings, the science lab, apps, ask your data, decks, the media studio, Automations, Code |
 
 `--cpu-only` turns the GPU features off. Without a GitLab, Farzan Graph serves its
 knowledge packs only (it indexes nothing, and says so where a GitLab would be asked);
@@ -361,7 +361,7 @@ One issuer, the app. More in [authentication.md](authentication.md).
   turned back on with no key left. The first admin, made from
   `ADMIN_PASSWORD`, has none until they rotate it. Own keys come
   from Account → API keys, each with its own limits (requests and tokens a
-  minute, at once) and, if wanted, a 30-day budget. Each Code Studio
+  minute, at once) and, if wanted, a 30-day budget. Each Code
   workspace gets a key of its own.
 - **Whose key is it?** `KeyBook` is the one answer, for every part that takes
   a key: the key's line, the answer cache, Arena MCP, Code Arena's sync,
@@ -539,7 +539,7 @@ person's requests a minute itself ([mcp.md](mcp.md)).
   API and accounts are off in the platform. The app's admin calls carry
   `CODE_INTEL_KEY`.
 
-### Code Arena and Code Studio
+### Code Arena and Code
 
 - **Code Arena on a person's machine** signs in with an API key, or a user
   name and password (it then makes an own key, "Code Arena on MACHINE", and
@@ -550,9 +550,9 @@ person's requests a minute itself ([mcp.md](mcp.md)).
 - **Its sessions follow the web chat** both ways through `/api/code-arena`
   (chats, messages, a turn's lease of 90 seconds), signed in by the key.
 - **`code-arena web --connect`** dials a WebSocket to
-  `wss://DOMAIN/api/code-arena/connect`. Code Studio's IDE in the browser then
+  `wss://DOMAIN/api/code-arena/connect`. Code's IDE in the browser then
   reaches that machine through the tunnel, held by the replica it dialled.
-- **Code Studio's workspaces on the server** (the `workspaces` feature): the
+- **Code's workspaces on the server** (the `workspaces` feature): the
   app makes the workspace a key of its own and asks `workspaces` (with
   `WORKSPACES_KEY`) to start it. Each workspace runs Code Arena's engine as a
   user of its own. Its model calls go to `http://app:8080`, so they take the
@@ -561,7 +561,7 @@ person's requests a minute itself ([mcp.md](mcp.md)).
   engine through the app. The company CA the app trusts goes with each start
   (`ca`), as one bundle with the system's CAs in the workspace's home. No
   Docker socket is involved
-  ([chat.md](chat.md#code-studio-workspaces), [code-arena.md](code-arena.md)).
+  ([chat.md](chat.md#code-workspaces), [code-arena.md](code-arena.md)).
 
 ### Company knowledge and the wiki
 
@@ -657,7 +657,7 @@ or the Helm chart's `app.replicas`). What must happen once runs on one of them:
   targets), the media servers' on and off, the downloads, the first model,
   the ledger's import once after an upgrade from before 8.0, the LDAP sync,
   Farzan Graph's schedule, the storage watch, the alerts for the bell, the chat
-  digests, meeting reminders, the memory's upkeep, idle Code Studio
+  digests, meeting reminders, the memory's upkeep, idle Code
   workspaces, and the answers queued before a restart. A replica that stops
   lets go of the lock. One that dies loses it with its connection, and another
   leads within seconds. The replicas are counted by their connections' names.

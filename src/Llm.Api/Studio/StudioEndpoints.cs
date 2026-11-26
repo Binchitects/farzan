@@ -24,7 +24,7 @@ public sealed record RunRequest(string? Text = null, Dictionary<string, string>?
 public sealed record Approval(bool Approve);
 
 /// <summary>
-/// Agent Studio: workflows (a trigger, its steps) run as their owner; by hand, a form, a schedule, a webhook, GitLab or a
+/// Automations: workflows (a trigger, its steps) run as their owner; by hand, a form, a schedule, a webhook, GitLab or a
 /// room's message; each run with its steps as they went, to read and replay; an approval answered; templates.
 /// </summary>
 public static class StudioEndpoints

@@ -15,9 +15,9 @@ using Microsoft.Extensions.Options;
 namespace Llm.Api.Code;
 
 /// <summary>
-/// The person's agents (Agent Studio's workflows) and scheduled tasks, for Code Arena with their key, as the pages have
+/// The person's agents (Automations' workflows) and scheduled tasks, for Code Arena with their key, as the pages have
 /// them: listed, run, and each run followed. The same rules as the pages: an agent is the person's or shared with them, a
-/// task the person's own, Agent Studio and scheduled tasks as their role allows.
+/// task the person's own, Automations and scheduled tasks as their role allows.
 /// </summary>
 public static class CodeArenaAutomation
 {
@@ -41,11 +41,11 @@ public static class CodeArenaAutomation
         }
         if (!features.IsOn("agents"))
         {
-            return (null, AuthEndpoints.Problem(404, "feature-off", "Agent Studio is not installed in this Arena."));
+            return (null, AuthEndpoints.Problem(404, "feature-off", "Automations is not installed in this Arena."));
         }
         return (await access.MembershipAsync(me, http.RequestAborted)).Has(Core.Access.Permissions.Studio)
             ? (me, null)
-            : (null, AuthEndpoints.Problem(403, "studio", "Your role does not include Agent Studio."));
+            : (null, AuthEndpoints.Problem(403, "studio", "Your role does not include Automations."));
     }
 
     private static async Task<(AppUser? Me, IResult? Refusal)> TasksCallerAsync(HttpContext http, McpPeople people, AccessService access, bool run)

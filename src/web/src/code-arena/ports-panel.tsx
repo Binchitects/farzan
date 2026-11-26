@@ -253,7 +253,7 @@ export function PortsPanel({ shown }: { shown: boolean }) {
 
 /**
  * VS Code's notice when a program starts listening: "Your application running on port 3000 is available", with Open in
- * Browser. Read every 5 seconds while the IDE is open in a Code Studio workspace; the ports found at first say nothing.
+ * Browser. Read every 5 seconds while the IDE is open in a Code workspace; the ports found at first say nothing.
  */
 export function PortNotices({ onShow }: { onShow: () => void }) {
   const workspace = studioWorkspace()
