@@ -90,7 +90,6 @@ public sealed class ApiKey
     public string? Name { get; set; }
     /// <summary>What may be shown of it: sk-…abcd.</summary>
     public required string Preview { get; set; }
-    public Guid? WorkspaceId { get; set; }
     /// <summary>An own key's limits: requests and tokens a minute, at once.</summary>
     public int? RequestsPerMinute { get; set; }
     public int? TokensPerMinute { get; set; }

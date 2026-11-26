@@ -240,8 +240,8 @@ public sealed class LedgerImportTests(AppFixture app)
             Assert.Equal((ApiKey.Main, "app-" + name + "-before", (string?)null, "sk-...main", 0.25m, new DateTimeOffset(2027, 1, 1, 0, 0, 0, TimeSpan.Zero)),
                 (keys[main].Kind, keys[main].Alias, keys[main].Name, keys[main].Preview, keys[main].Spend, keys[main].ExpiresAt));
             Assert.Equal((ApiKey.Own, "app-" + name + "-own-abcd1234"), (keys[own].Kind, keys[own].Name));
-            // A workspace the app no longer has: the key is still its kind, tied to none.
-            Assert.Equal((ApiKey.Studio, (Guid?)null), (keys[studio].Kind, keys[studio].WorkspaceId));
+            // A Code workspace's key (they are gone): still its kind.
+            Assert.Equal(ApiKey.Studio, keys[studio].Kind);
 
             // Imported again: the app's own (a name and limits set here) stays and LiteLLM's spend comes over; a key LiteLLM
             // no longer holds stays the app's, as does one the app made that LiteLLM never held.

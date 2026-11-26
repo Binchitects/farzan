@@ -17,13 +17,13 @@ public sealed record OwnLimits(int? RequestsPerMinute, int? TokensPerMinute, int
 public sealed class ApiKeys(AppDbContext db, KeyBook book, TimeProvider clock, Access.AccessService access)
 {
     /// <summary>A new key: the secret (shown once), and its row.</summary>
-    public async Task<(string Secret, ApiKey Key)> MakeAsync(AppUser user, string kind, string alias, string? name = null, Guid? workspace = null, OwnLimits? own = null,
+    public async Task<(string Secret, ApiKey Key)> MakeAsync(AppUser user, string kind, string alias, string? name = null, OwnLimits? own = null,
         CancellationToken ct = default)
     {
         var secret = NewSecret();
         var key = new ApiKey
         {
-            Hash = AnswerCache.HashOf(secret), UserId = user.Id, Kind = kind, Alias = alias, Name = name, Preview = PreviewOf(secret), WorkspaceId = workspace,
+            Hash = AnswerCache.HashOf(secret), UserId = user.Id, Kind = kind, Alias = alias, Name = name, Preview = PreviewOf(secret),
             RequestsPerMinute = own?.RequestsPerMinute, TokensPerMinute = own?.TokensPerMinute, Parallel = own?.Parallel, MonthlyBudget = own?.MonthlyBudget,
             CreatedAt = clock.GetUtcNow(),
         };

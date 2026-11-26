@@ -230,4 +230,42 @@ public sealed class V82MigrationTests(AppFixture app)
         Assert.True(await db.Plans.AnyAsync(x => x.Id == codePlan));
         Assert.True(await db.Plans.AnyAsync(x => x.Id == lonePlan));
     }
+    [Fact]
+    public async Task Code_workspaces_tables_go_and_a_workspace_key_stays_tied_to_none()
+    {
+        var cs = app.ConnectionStringFor("v82w_" + Guid.NewGuid().ToString("N")[..8]);
+        var options = new DbContextOptionsBuilder<AppDbContext>();
+        options.UseNpgsql(cs);
+        options.UseOpenIddict<Guid>();
+        await using var db = new AppDbContext(options.Options);
+        var all = db.Database.GetMigrations().ToList();
+        var before = all[all.FindIndex(m => m.EndsWith("_DropCodeWorkspaces", StringComparison.Ordinal)) - 1];
+        await db.GetService<IMigrator>().MigrateAsync(before);
+        var (person, workspace) = (Guid.NewGuid(), Guid.NewGuid());
+        await using (var conn = new NpgsqlConnection(cs))
+        {
+            await conn.OpenAsync();
+            await V61MigrationTests.InsertAsync(conn, "AspNetUsers", new() { ["Id"] = person, ["UserName"] = "kim", ["NormalizedUserName"] = "KIM" });
+            await V61MigrationTests.InsertAsync(conn, "studio_workspaces", new() { ["Id"] = workspace, ["UserId"] = person, ["Kind"] = "vscode", ["Name"] = "api" });
+            await V61MigrationTests.InsertAsync(conn, "studio_ports", new() { ["Id"] = Guid.NewGuid(), ["WorkspaceId"] = workspace, ["Port"] = 5173, ["Visibility"] = "private" });
+            await using var key = new NpgsqlCommand("""
+                insert into gateway.api_keys (hash, user_id, kind, alias, preview, created_at, spend, workspace_id)
+                values (repeat('a', 64), @p, 'studio', 'studio:' || replace(@w::text, '-', ''), 'sk-...aaaa', now(), 0, @w)
+                """, conn);
+            key.Parameters.AddWithValue("p", person);
+            key.Parameters.AddWithValue("w", workspace);
+            await key.ExecuteNonQueryAsync();
+        }
+        await db.Database.MigrateAsync();
+        await using (var conn = new NpgsqlConnection(cs))
+        {
+            await conn.OpenAsync();
+            await using var tables = new NpgsqlCommand("select count(*) from information_schema.tables where table_name in ('studio_workspaces', 'studio_ports')", conn);
+            Assert.Equal(0L, (long)(await tables.ExecuteScalarAsync())!);
+            await using var column = new NpgsqlCommand("select count(*) from information_schema.columns where table_schema = 'gateway' and table_name = 'api_keys' and column_name = 'workspace_id'", conn);
+            Assert.Equal(0L, (long)(await column.ExecuteScalarAsync())!);
+        }
+        // The workspace's key is still the person's, of its kind.
+        Assert.Equal("studio", await db.ApiKeys.AsNoTracking().Where(k => k.UserId == person).Select(k => k.Kind).SingleAsync());
+    }
 }

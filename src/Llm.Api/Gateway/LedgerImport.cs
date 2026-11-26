@@ -238,7 +238,6 @@ public sealed partial class LedgerImport(IServiceScopeFactory scopes, IConfigura
         var emails = rows.Select(k => k.Email.ToUpperInvariant()).Distinct().ToList();
         var people = await db.Users.AsNoTracking().Where(u => u.NormalizedEmail != null && emails.Contains(u.NormalizedEmail))
             .Select(u => new { u.NormalizedEmail, u.Id, u.UserName }).ToDictionaryAsync(u => u.NormalizedEmail!, StringComparer.Ordinal, ct);
-        var workspaces = (await db.StudioWorkspaces.AsNoTracking().Select(w => w.Id).ToListAsync(ct)).ToHashSet();
         var wanted = new Dictionary<string, ApiKey>(StringComparer.Ordinal);
         var aliases = new HashSet<string>(StringComparer.Ordinal);
         foreach (var k in rows)
@@ -254,13 +253,12 @@ public sealed partial class LedgerImport(IServiceScopeFactory scopes, IConfigura
                 alias = Cut(alias, 111) + "-" + k.Token[..Math.Min(8, k.Token.Length)];
                 aliases.Add(alias);
             }
-            Guid? workspace = alias.StartsWith("studio:", StringComparison.Ordinal) && Guid.TryParseExact(alias[7..], "N", out var w) && workspaces.Contains(w) ? w : null;
             // As Account → API keys tells them: a workspace's, one of the person's own (made there), else their main key.
             var kind = alias.StartsWith("studio:", StringComparison.Ordinal) ? ApiKey.Studio : alias.Contains("-own-", StringComparison.Ordinal) ? ApiKey.Own : ApiKey.Main;
             wanted[k.Token] = new ApiKey
             {
                 Hash = k.Token, UserId = person.Id, Kind = kind, Alias = alias, Name = kind == ApiKey.Own ? Cut(k.Alias, 80) : null,
-                Preview = Cut(k.Preview, 20) ?? "sk-...", WorkspaceId = workspace,
+                Preview = Cut(k.Preview, 20) ?? "sk-...",
                 ExpiresAt = k.Expires is { } e ? new DateTimeOffset(DateTime.SpecifyKind(e, DateTimeKind.Utc)) : null,
                 CreatedAt = k.CreatedAt is { } c ? new DateTimeOffset(DateTime.SpecifyKind(c, DateTimeKind.Utc)) : clock.GetUtcNow(),
                 Spend = (decimal)k.Spend,
@@ -281,7 +279,6 @@ public sealed partial class LedgerImport(IServiceScopeFactory scopes, IConfigura
                     row.Alias = k.Alias;
                 }
                 (row.Preview, row.ExpiresAt, row.Spend) = (k.Preview, k.ExpiresAt, k.Spend);
-                row.WorkspaceId ??= k.WorkspaceId;
             }
             else if (!taken.Contains(k.Alias))
             {
