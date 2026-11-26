@@ -7,9 +7,11 @@ ARG SPEACHES_IMAGE=ghcr.io/speaches-ai/speaches:0.9.0-rc.3-cpu
 FROM ${SPEACHES_IMAGE}
 
 USER root
+# uv's download cache, left in the image by its build, holds the old packages again (Pillow 10.4, Gradio 5.49): nothing
+# reads it (the app's packages are copies, not links into it), so it goes.
 RUN apt-get update \
  && apt-get upgrade -y \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* /home/ubuntu/.cache/uv
 
 USER ubuntu
 # PyPI over a slow or lossy link: a minute per read and ten tries before a package counts as missing.

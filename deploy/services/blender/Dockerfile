@@ -25,6 +25,15 @@ RUN apt-get update \
  && /opt/blender/blender --background --factory-startup --python-expr "import bpy; print('blender', bpy.app.version_string)" \
  && find / -xdev -perm /6000 -type f -exec chmod a-s {} +
 
+# Blender's own Python carries older certifi, urllib3 and setuptools (with known vulnerabilities): raised to their fixed
+# versions in its site-packages, with its own pip (which goes again after). Checked: Blender starts and imports them.
+RUN BPY=/opt/blender/${BLENDER_VERSION%.*}/python/bin/python3.11 \
+ && "$BPY" -m ensurepip --upgrade >/dev/null \
+ && "$BPY" -m pip install --no-cache-dir --upgrade "certifi>=2026.10.18" "urllib3>=2.8.0" "setuptools>=78.1.1" \
+ && "$BPY" -m pip uninstall -y pip \
+ && rm -rf "/opt/blender/${BLENDER_VERSION%.*}/python/lib/python3.11/ensurepip/_bundled" \
+ && /opt/blender/blender --background --factory-startup --python-expr "import bpy, certifi, urllib3; print('blender', bpy.app.version_string, 'certifi', certifi.__version__, 'urllib3', urllib3.__version__)"
+
 COPY sandbox/runner.py /runner.py
 
 ENV SANDBOX_RUN=blender \

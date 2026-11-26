@@ -62,6 +62,10 @@ def stack_images(engine: str) -> list[str]:
 
 
 def scan(image: str, engine: str, work: Path) -> dict:
+    # A name with no tag is its :latest (save would put every tag of the name in the archive, which Trivy refuses).
+    last = image.rsplit("/", 1)[-1]
+    if ":" not in last and "@" not in image:
+        image += ":latest"
     tar = work / "image.tar"
     saved = subprocess.run([engine, "save", "-o", str(tar), image], capture_output=True, text=True)
     if saved.returncode != 0:
@@ -82,10 +86,17 @@ def scan(image: str, engine: str, work: Path) -> dict:
         tar.unlink(missing_ok=True)
 
 
+# Packages whose findings are not the image's: linux-libc-dev is the kernel's headers for building C code, and Trivy gives
+# it the kernel's own vulnerabilities, while a container runs the host's kernel, never the one these headers describe.
+NOT_THE_IMAGES = {"linux-libc-dev"}
+
+
 def findings(report: dict) -> list[dict]:
     out = []
     for res in report.get("Results") or []:
         for v in res.get("Vulnerabilities") or []:
+            if v["PkgName"] in NOT_THE_IMAGES:
+                continue
             out.append({"id": v["VulnerabilityID"], "severity": v.get("Severity", "UNKNOWN"), "package": v["PkgName"],
                         "version": v.get("InstalledVersion", ""), "fixed": v.get("FixedVersion") or "", "where": res.get("Target", "")})
     return out
