@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Building2, Download, LogOut, UserCheck, UserPlus, UserX, Wallet } from 'lucide-react'

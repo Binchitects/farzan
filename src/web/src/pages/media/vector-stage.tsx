@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Pause, Play, Repeat } from 'lucide-react'
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react'
 import { Button } from '@/components/ui/button'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
 import { afterEach, beforeAll, expect, vi } from 'vitest'

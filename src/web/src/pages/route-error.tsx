@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { AlertTriangle } from 'lucide-react'
 import { isRouteErrorResponse, useRouteError } from 'react-router'
 import { Button } from '@/components/ui/button'

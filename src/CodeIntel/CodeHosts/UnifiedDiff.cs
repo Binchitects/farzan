@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace CodeIntel.CodeHosts;
 
 /// <summary>A unified diff as git writes it ("diff --git a/x b/y" for each file), cut into one <see cref="FileDiff"/> per file.</summary>

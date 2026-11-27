@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The app's own model gateway against LiteLLM, on this stack, back to back (docs/design/own-gateway.md §7):
 the same model, the same person and key, each workload in Gateway:Mode=litellm and then in Gateway:Mode=own

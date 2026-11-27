@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** Questions the model asks the person (its ask_user tool), and the person's reply. */
 
 export interface Question {

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 Many people using the app at once, as they do: each signs in, opens the chat
 list, starts a chat, asks something and reads the answer as it streams, then

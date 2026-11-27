@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The launchers the supervisor starts a model with, for a GGUF file from the library: deploy/services/vllm/serve.py (vLLM)
 adds the folder of the file's config and tokenizer with --tokenizer, which vLLM's GGUF plugin needs; sglang/serve.py adds

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The security review, measured on the Juliet test suite (NIST SARD, public domain) and the OWASP Benchmark (GPL-2.0, read
 here, never shipped): precision and recall per weakness for four arms.

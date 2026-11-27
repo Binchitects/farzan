@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 A stand-in for docker and podman on PATH, for the deploy script tests: it logs
 every call (one JSON list a line, to FAKE_LOG) and answers the few the scripts

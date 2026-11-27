@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // Every report of code-intel's own takes the shared time window (components/TimeWindowPicker), kept in the address, and asks
 // the API for it: the overview's and people's spend, and one's own on Settings.
 import assert from "node:assert/strict";

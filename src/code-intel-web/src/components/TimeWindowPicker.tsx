@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useId, useState } from "react";
 import { useSearchParams } from "react-router";
 import { days, label, presets, problem, type TimeWindow } from "./time-window";

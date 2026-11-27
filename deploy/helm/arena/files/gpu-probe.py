@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 What GPUs this machine has, for the app (Engine:HardwareFile), whatever their vendor: nvidia-smi for NVIDIA,
 rocm-smi for AMD, and none at all (a machine that runs on the CPU). Python's standard library only, so it runs in

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import AnswerTable from "./AnswerTable";

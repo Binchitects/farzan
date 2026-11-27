@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Forced verify-after: check a finished answer against code-intel before it ships.
 
 Every mechanism that *offers* verification has been measured failing on at

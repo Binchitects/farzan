@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace Llm.Api.Reports;
 
 /// <summary>How a column's values read: text, a whole number, money (dollars), hours (from seconds), a percent (0 to 100), a time, or a number with its fraction (Fraction: a dashboard's 0.83).</summary>

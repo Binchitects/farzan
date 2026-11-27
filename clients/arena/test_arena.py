@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """The arena CLI and the GitLab CI template, against a fake gateway and a fake GitLab on a local socket.
 
 python3 -m unittest discover clients/arena    (no network, no packages; the template's tests need PyYAML and skip without it)

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Arena on Kubernetes, with Helm (deploy/helm/arena): what the cluster needs, each checked before
 # anything is changed and each said with how to put it right; then the chart installed or upgraded, its secrets
 # made in the cluster (never printed, never in a values file), and the stack checked as it answers. The offline

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """The Python sandbox's runner: takes jobs the app leaves in /jobs, runs each in
 isolation, and leaves the results beside them.
 

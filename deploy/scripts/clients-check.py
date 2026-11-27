@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 Clients against the stack, as a developer points them: the API (OpenAI- and
 Anthropic-compatible, through the gateway's TLS with the stack's CA) and code-intel

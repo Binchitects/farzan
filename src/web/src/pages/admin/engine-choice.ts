@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { engineLabel, serverPerModel, type ChatEngineKind, type EngineInstance, type Snapshot } from './engine-api'
 import type { LibraryFile, ModelProfile } from './model-profile'
 

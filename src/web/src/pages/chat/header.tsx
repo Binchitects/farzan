@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Archive, ArchiveRestore, Bot, Brain, Check, ChevronDown, Eye, FileDown, FilePen, FoldVertical, FolderOpen, GitFork, MessagesSquare, MoreHorizontal, Share2, SlidersHorizontal, Sparkles, Tag, Timer, Trash2, Users, Wrench } from 'lucide-react'
 import { ReadInMenu } from './read-in'
 import { ChatProjectMenu } from '../projects/chat-project'

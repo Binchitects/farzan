@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { describe, expect, it } from 'vitest'
 import { allSteps, insertStep, newStep, removeStep, stepAt, updateStep, valuesBefore } from './flow-edit'
 import type { FlowStep } from './studio-api'

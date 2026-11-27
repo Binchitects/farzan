@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Calculator, ChevronDown, ChevronRight, Coins, Cpu, Filter, Gauge, Hash, Settings2, Timer, TrendingUp, Users, Wrench, X, Zap } from 'lucide-react'
 import { Fragment, useState } from 'react'

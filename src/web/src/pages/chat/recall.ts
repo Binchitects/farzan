@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { infiniteQueryOptions, useInfiniteQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { api } from '@/lib/api'

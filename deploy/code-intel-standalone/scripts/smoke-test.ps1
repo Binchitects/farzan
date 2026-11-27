@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # End to end through the running stack: sign in as the administrator, ask the
 # model a question in a new conversation, and read the streamed answer back.
 . "$PSScriptRoot\lib.ps1"

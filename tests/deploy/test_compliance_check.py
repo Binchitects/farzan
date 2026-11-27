@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/scripts/compliance-check.py: how it judges what a stack answers (its
 headers, the session cookie, the guard against cross-site requests and the

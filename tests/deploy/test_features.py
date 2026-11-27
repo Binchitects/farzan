@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/features and the compose file in step: each optional service runs under its feature's profile, each feature's
 services are there, and .env.example turns on the features that are on by default.

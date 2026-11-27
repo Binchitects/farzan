@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # The Python sandbox (compose profile "sandbox"): Python 3.13 with data and
 # science packages, the tools that convert what a model cannot (documents,
 # images, audio and video, scans), and the runner that isolates each job
@@ -7,6 +9,10 @@
 # odfpy (OpenDocument, for pandas and .ods files), published only as source: it
 # is pure Python, so building it copies files and compiles nothing.
 FROM python:3.13-slim-bookworm
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only OR LicenseRef-Farzan-Commercial" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 # PyPI over a slow or lossy link: a minute per read and ten tries before a package counts as missing (a read
 # that timed out read as "no matching distribution"). Only pip reads it.
 ENV PIP_DEFAULT_TIMEOUT=60 PIP_RETRIES=10

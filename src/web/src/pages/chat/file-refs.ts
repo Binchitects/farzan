@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { createContext, use } from 'react'
 
 /** A place in a file an answer cites: the file's path in the folder, and its lines (and column) when given. */

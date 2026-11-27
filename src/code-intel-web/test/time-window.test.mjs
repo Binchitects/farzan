@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // The reports' time window (components/time-window.ts), made JavaScript by the TypeScript the build uses.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

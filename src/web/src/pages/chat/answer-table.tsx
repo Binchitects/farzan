@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { ArrowDown, ArrowUp, ChevronsUpDown, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { textDirection } from '@/lib/direction'

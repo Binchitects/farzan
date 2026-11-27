@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Lock, ShieldCheck, UserX } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { Person } from './people-api'

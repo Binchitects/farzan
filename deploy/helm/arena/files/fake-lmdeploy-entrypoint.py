@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """`lmdeploy serve api_server ARGS` for a stack without LMDeploy: the fake server, as LMDeploy, with the arguments
 services/lmdeploy/serve.py runs it with (its key among them, inside the process)."""
 import os

@@ -1,0 +1,136 @@
+# What tools/licence-check.py allows, and what it accepts by name. LICENSING.md says why.
+#
+# allowed:  permissive licences; a package under one may ship in the app, the web apps and the images.
+# review:   weak copyleft; allowed only as a separate library or program, used unmodified (its own licence, its
+#           notice in THIRD-PARTY-NOTICES.md, its source where it asks for it). Modifying one, or copying its code
+#           into ours, needs a decision first.
+# Anything else (GPL, AGPL, SSPL, EUPL, BUSL, CC-BY-SA for code, "NOASSERTION": nobody stated one) fails, unless
+# accepted below by ecosystem, name and licence, with why (and until when, where it is temporary).
+
+owners:            # commit authors who hold the copyright of what they wrote for Binchitects
+  - Ali Ghadyani
+  - Binchitects
+
+agpl_sha256: db1a87ba81e885b6bb82971964ab4e202463cde2ac4003571bc5a857d577e4a3   # LICENSE.md, unchanged
+
+allowed:
+  - MIT
+  - MIT-0
+  - Apache-2.0
+  - BSD-2-Clause
+  - BSD-3-Clause
+  - 0BSD
+  - ISC
+  - Zlib
+  - Unlicense
+  - CC0-1.0
+  - CC-BY-4.0
+  - BlueOak-1.0.0
+  - PSF-2.0
+  - Python-2.0
+  - OFL-1.1
+  - BSL-1.0
+  - MS-PL
+  - PostgreSQL
+  - HPND
+  - MIT-CMU
+  - X11
+  - LicenseRef-Public-Domain
+
+review:
+  - LGPL-2.1-only
+  - LGPL-2.1-or-later
+  - LGPL-3.0-only
+  - LGPL-3.0-or-later
+  - MPL-2.0
+  - EPL-2.0
+
+aliases:           # what packages write, as SPDX
+  "https://go.microsoft.com/fwlink/?LinkId=329770": LicenseRef-Microsoft-DotNet-Library
+  "http://go.microsoft.com/fwlink/?LinkId=329770": LicenseRef-Microsoft-DotNet-Library
+
+# The programs the images download by version (ARG NAME_VERSION=... in their Dockerfiles).
+programs:
+  - {arg: BLENDER, name: blender, licence: GPL-2.0-or-later, source: "https://projects.blender.org/blender/blender"}
+  - {arg: ELAN, name: elan, licence: Apache-2.0 OR MIT, source: "https://github.com/leanprover/elan"}
+  - {arg: LEAN, name: lean4, licence: Apache-2.0, source: "https://github.com/leanprover/lean4"}
+  - {arg: GITLEAKS, name: gitleaks, licence: MIT, source: "https://github.com/gitleaks/gitleaks"}
+  - {arg: OPENGREP, name: opengrep, licence: LGPL-2.1-only, source: "https://github.com/opengrep/opengrep"}
+  - {arg: TRIVY, name: trivy, licence: Apache-2.0, source: "https://github.com/aquasecurity/trivy"}
+  - {arg: VLLM, name: vllm, licence: Apache-2.0, source: "https://github.com/vllm-project/vllm"}
+  - {arg: SGLANG, name: sglang, licence: Apache-2.0, source: "https://github.com/sgl-project/sglang"}
+  - {arg: LMDEPLOY, name: lmdeploy, licence: Apache-2.0, source: "https://github.com/InternLM/lmdeploy"}
+  - {arg: FREETOKEN, name: freetoken, licence: Apache-2.0, source: "https://github.com/FlashML-org/FreeToken"}
+
+# A base image is its distribution's packages, each under its own licence (GPL ones included); LICENSING.md says
+# where their source is, and makes the written offer.
+base_image_licence: LicenseRef-Distribution-Packages
+# Base images that are mostly one program of someone else's: that program's licence, and the distribution's packages.
+images:
+  vllm/vllm-openai: Apache-2.0 AND LicenseRef-Distribution-Packages
+  lmsysorg/sglang: Apache-2.0 AND LicenseRef-Distribution-Packages
+  ollama/ollama: MIT AND LicenseRef-Distribution-Packages
+  pgvector/pgvector: PostgreSQL AND LicenseRef-Distribution-Packages
+  ghcr.io/speaches-ai/speaches: MIT AND LicenseRef-Distribution-Packages
+
+# What each image's org.opencontainers.image.licenses label says besides ours: the main program in it that is
+# someone else's (the image carries both; its other packages are its distribution's).
+image_labels:
+  deploy/services/blender/Dockerfile: GPL-2.0-or-later
+  deploy/services/lean/Dockerfile: Apache-2.0
+  deploy/services/scanners/Dockerfile: LGPL-2.1-only AND MIT AND Apache-2.0
+  deploy/services/vllm.Dockerfile: Apache-2.0
+  deploy/services/vllm-pypi.Dockerfile: Apache-2.0
+  deploy/services/sglang.Dockerfile: Apache-2.0
+  deploy/services/lmdeploy.Dockerfile: Apache-2.0
+  deploy/services/freetoken.Dockerfile: Apache-2.0
+  deploy/services/ollama.Dockerfile: MIT
+  deploy/services/postgres.Dockerfile: PostgreSQL
+  deploy/services/speaches/Dockerfile: MIT
+
+accepted:
+  - ecosystem: image
+    name: "*"
+    licence: "*LicenseRef-Distribution-Packages"
+    why: >-
+      Debian, Ubuntu, Alpine, Python's, Node's and Microsoft's base images: each package runs as its own program under
+      its own licence, aggregated with ours, not combined with it (GPL-3.0 section 5, GPL-2.0 section 2). Their source
+      is in the distribution's archive, and LICENSING.md makes the written offer for the images Binchitects publishes.
+  - ecosystem: program
+    name: blender
+    licence: GPL-2.0-or-later
+    why: >-
+      Blender runs as its own program in its own image (deploy/services/blender), driven over a command line and files:
+      an aggregate, not a work based on Farzan Arena, and none of its code is in ours. Its source is at its release's
+      tag; LICENSING.md makes the written offer for the image.
+  - ecosystem: nuget
+    name: "*"
+    licence: LicenseRef-Microsoft-DotNet-Library
+    why: >-
+      Older Microsoft packages name the .NET Library License by its URL; Microsoft's packages of those versions are
+      redistributable with an application that uses them.
+
+  - ecosystem: nuget
+    name: Microsoft.Data.SqlClient.SNI.runtime
+    licence: LicenseRef-Microsoft-Software-License
+    why: >-
+      Its native Windows library only (runtimes/win-*): the Linux images and builds do not carry it. Microsoft's terms
+      let it be distributed as part of an application, not on its own; a Windows build that ships it must pass on
+      those terms (COMMERCIAL-LICENSE.md section 6 puts that on the licensee).
+
+# Files of ours that carry no header, and why.
+exempt_files:
+  - {glob: "*/Migrations/*", why: "Entity Framework writes and rewrites them (the model snapshot each migration); generated, not authored"}
+  - {glob: "deploy/services/scanners/rules/*", why: "the scanners' test cases: their findings are asserted by line"}
+  - {glob: "*/node_modules/*", why: "npm's, not ours"}
+  - {glob: "src/Llm.Api/Vector/Icons/*", why: "the Lucide icons, under ISC (LICENSE-lucide.txt beside them)"}
+
+# Packages whose metadata leaves their licence out or misstates it, with where the licence was read.
+overrides:
+  - {ecosystem: pypi, name: torch, licence: "Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT", evidence: "PyPI's license_expression for 2.14.1 (the +cpu build is the same source)"}
+  - {ecosystem: pypi, name: lightgbm, licence: MIT, evidence: "github.com/lightgbm-org/LightGBM LICENSE"}
+  - {ecosystem: pypi, name: resvg-py, licence: MIT, evidence: "github.com/baseplate-admin/resvg-py LICENSE"}
+  - {ecosystem: pypi, name: hangul-romanize, licence: BSD-2-Clause, evidence: "github.com/youknowone/hangul-romanize LICENSE (two clauses)"}
+  - {ecosystem: pypi, name: num2words, licence: LGPL-2.1-or-later, evidence: "github.com/savoirfairelinux/num2words COPYING (LGPL 2.1); PyPI says only LGPL"}
+  - {ecosystem: pypi, name: biopython, licence: "LicenseRef-Biopython-License-Agreement OR BSD-3-Clause", evidence: "biopython LICENSE.rst: dual, the Biopython License Agreement or the 3-clause BSD"}
+  - {ecosystem: npm, name: khroma, licence: MIT, evidence: "the package's own license file (The MIT License)"}

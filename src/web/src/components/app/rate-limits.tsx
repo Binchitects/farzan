@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { KeyValues } from '@/components/app/key-values'
 import { Alert } from '@/components/ui/alert'
 import { ago, count } from '@/lib/format'

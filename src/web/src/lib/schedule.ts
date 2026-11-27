@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** A task's schedule as people choose it (every day at 9, weekdays, …) and as cron, both ways. */
 
 export type Repeat = 'minutes' | 'daily' | 'weekdays' | 'weekly' | 'monthly' | 'hours' | 'custom'

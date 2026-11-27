@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { expect, test, type Page } from "@playwright/test";
 
 // The sign-in page's scene: code-intel's logo, then its eyes opening across the screen

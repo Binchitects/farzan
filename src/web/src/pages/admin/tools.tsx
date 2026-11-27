@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Layers, Pencil, Plug, PlugZap, Plus, SlidersHorizontal, Trash2, Wrench } from 'lucide-react'
 import { useRef, useState } from 'react'

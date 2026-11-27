@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 
 
 # --- added by the 3D tool after the script: pictures of the model, and the model as model.glb, unless the script made them ---

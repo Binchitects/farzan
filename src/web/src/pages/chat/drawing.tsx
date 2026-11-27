@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * A drawing a tool made (the science lab's molecule as RDKit draws it, a chart of counts or energies): an SVG shown as a
  * picture, so nothing in it runs, on white, as its dark lines need in either theme.

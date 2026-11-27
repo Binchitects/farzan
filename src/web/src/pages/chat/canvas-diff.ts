@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** One line of a diff: the same in both, added, or removed, with its numbers in the old and new text. */
 export interface DiffLine {
   kind: 'same' | 'added' | 'removed'

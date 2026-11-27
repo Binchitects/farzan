@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Build knowledge packs ONE AT A TIME.
 #
 #   ./tools/build-packs.sh                # every pack not already built

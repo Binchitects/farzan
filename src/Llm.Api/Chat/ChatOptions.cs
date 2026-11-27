@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace Llm.Api.Chat;
 
 /// <summary>Configuration section "Chat" (most of it defaults from the Stack and code-intel sections).</summary>

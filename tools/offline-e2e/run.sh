@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # The offline installer, end to end, as a person runs it on a fresh host with no network: a
 # privileged container running systemd (tools/offline-e2e/Dockerfile) with its own Docker storage
 # and no network at all, the .run copied onto its disk, installed unattended, then checked: every

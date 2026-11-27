@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Rolling a release back, proven in a throwaway project. EF migrations only go
 # forward: a rollback is the backup taken before the upgrade, restored, under the
 # older release's images.

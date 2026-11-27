@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // Stand-ins for the services around the backend, on real sockets, so the
 // browser test exercises the real HTTP paths: GitLab (REST and git's dumb
 // HTTP protocol, so the indexer's clone path runs for real), the LiteLLM

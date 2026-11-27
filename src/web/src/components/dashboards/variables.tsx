@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useId, useState } from 'react'
 import { Pick } from '@/components/app/pick'

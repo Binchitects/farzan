@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """arenactl, the repository's one command: the features it builds for, doctor, the list of scripts, builds and bundles
 (nothing here needs .NET, Node, a container engine or the network)."""
 from __future__ import annotations

@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial */
+/* Copyright (C) 2026 Binchitects */
 /* The runner's own look: a blank page for components, centred pictures and diagrams, and a readable error. */
 :root { color-scheme: light; background: #fff; color: #111; font-family: system-ui, sans-serif; }
 :root[data-theme='dark'] { color-scheme: dark; background: #0b0b0c; color: #eee; }

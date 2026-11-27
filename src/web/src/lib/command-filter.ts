@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * The command palette's matching: every word typed must start a word of the
  * item's title or keywords. Prefix-of-word, not cmdk's default subsequence

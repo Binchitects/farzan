@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Checks of the 3D sandbox (profile 3d), against the running container: Blender scripts go through the blender-jobs
 volume exactly as the app sends them, as the app's user (sandbox-check.py's client).
     python3 scripts/blender-check.py

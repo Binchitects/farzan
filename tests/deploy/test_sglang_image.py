@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/services/sglang.Dockerfile (arena-sglang), deploy/sglang-build.yml and services/sglang/serve.py, read without
 building or pulling anything: SGLang and the base pinned, the supervisor run as SGLang's (ENGINE_SERVER=sglang) with models

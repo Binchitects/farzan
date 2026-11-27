@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # FP4 against FP8 (and BF16) on the H200 NVL host, each copy of a model in a throwaway vLLM container on the same GPUs,
 # with fp4-bench.py beside this: memory, tokens a second with 1, 8, 32 and 64 people at once, the first token, and the
 # small quality check. Nothing is fetched: it runs the snapshots the library has, by their repositories, and skips the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * The preview runner (/preview.html). nginx serves this page with a sandbox
  * policy: it runs in an origin of its own (no cookies, no storage of the app's,

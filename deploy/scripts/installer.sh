@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Arena's offline installer: install, upgrade (from 5.2.0 or newer), repair,
 # remove, status and verify, from one bundle that ./arenactl bundle makes,
 # with Docker or rootless Podman, and nothing from the network.
@@ -1733,7 +1735,7 @@ expected_sums() {
 # where nothing of someone else's is: a path there already is replaced only when this installer
 # wrote it ($STATE/extras lists them), and a git checkout keeps its own. packs/ is made when
 # missing (compose mounts it); a pack is added to it, never taken out.
-EXTRAS="docs packs LICENSE.md LICENSING.md VERSION"
+EXTRAS="docs packs LICENSE.md LICENSING.md COMMERCIAL-LICENSE.md THIRD-PARTY-NOTICES.md VERSION"
 extra_ours() { [[ ! -e "$1" ]] || grep -qxF "$1" "$STATE/extras" 2>/dev/null; }
 replaceable() {   # replaceable NAME: this installer may write DIR/NAME
   extra_ours "$DIR/$1" && return 0

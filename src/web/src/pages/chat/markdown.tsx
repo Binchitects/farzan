@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import 'katex/dist/katex.min.css'
 import { memo, use, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AnswerTable } from './answer-table'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Check, ChevronRight, Circle } from 'lucide-react'
 import { DropdownMenu as Menu } from 'radix-ui'
 import type { ComponentProps } from 'react'

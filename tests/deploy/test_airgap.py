@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """deploy/scripts/airgap.sh: packing and loading a bundle, with fake docker and podman."""
 from __future__ import annotations
 

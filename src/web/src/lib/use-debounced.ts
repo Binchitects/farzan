@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useEffect, useState } from 'react'
 
 /** A value that follows another once it has stopped changing for `ms` (typing, say), for what asks the server. */

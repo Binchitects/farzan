@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * Desktop notifications: the browser's own, for news that arrives while the app's tab
  * is hidden. Off until the person turns them on (the browser asks them once); they can

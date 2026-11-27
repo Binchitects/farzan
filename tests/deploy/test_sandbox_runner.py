@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/services/sandbox/runner.py (the Python sandbox's runner, Blender's and Lean's too), run in this process on
 folders of the test's own: an admin's reset stops the job running and answers the one waiting, each result saying

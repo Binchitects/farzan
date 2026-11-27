@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { AlertTriangle, AudioLines, Brain, Calculator, Check, ChevronRight, CircleX, Clapperboard, Clock, Download, FilePen, FileText, FolderTree, Globe, Image as ImageIcon, ListChecks, ListTree, Loader2, Network, Orbit, PenTool, Scale, Search, ShieldQuestion, ShieldX, SquareTerminal, Telescope, TextSearch, Wrench, Zap, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router'
 import { Collapsible } from 'radix-ui'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** How a tool server's https certificate is checked: by the system's CAs, by a CA of the admin's, or not at all. */
 export type TlsCheck = 'System' | 'OwnCa' | 'Off'
 

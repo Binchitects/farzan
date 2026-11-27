@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import type { TableCell } from './markdown-blocks'
 
 /** A number when the whole cell reads as one ("1,204", "35%", "$4.20", "-3"); else null, and the cell sorts as text. */

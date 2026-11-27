@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """deploy/services/laya/server.py: what a request may hold, which checkpoint reads it, and the HTTP around it, with laya's predict stubbed (no model, no torch)."""
 from __future__ import annotations
 

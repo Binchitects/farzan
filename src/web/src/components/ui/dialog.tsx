@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import type { ComponentProps } from 'react'

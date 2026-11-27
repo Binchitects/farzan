@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * What went with a question asked in Code Arena (@files, the lines chosen in its editor): after what was typed, between
  * these markers, the files and selections as the model read them. The web shows what was typed, and what went with it

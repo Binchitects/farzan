@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { describe, expect, it } from 'vitest'
 import { blank, keepSame, reduce, sameJson, stopped, waitsForModel, withQuestion, type LiveState } from './live'
 import type { ChatEvent } from './types'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Check, ChevronDown } from 'lucide-react'
 import { useId, useState } from 'react'
 import { Button } from '@/components/ui/button'

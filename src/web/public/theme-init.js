@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // The saved theme ("light", "dark" or "system"), colour theme and content width, applied before React loads so a
 // dark-mode reader never sees a white flash. Storage can be unavailable: then "system", Arena's colours and wide.
 // Also before the page's stylesheet: one the browser failed to fetch is fetched again.

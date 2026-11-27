@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace Llm.Api.Knowledge;
 
 /// <summary>Company knowledge and retrieval: the embedder, the store, the connectors, the sync loop and the file index.</summary>

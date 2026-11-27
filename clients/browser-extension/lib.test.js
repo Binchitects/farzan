@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // The extension's pure functions, with node's own test runner (no packages): node --test clients/browser-extension/lib.test.js
 const test = require('node:test')
 const assert = require('node:assert/strict')

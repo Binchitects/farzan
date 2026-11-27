@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Back up everything a restore needs, by itself, into BACKUP_DIR.
 #
 #   ./scripts/backup.sh                          one complete backup now (what the timer runs)

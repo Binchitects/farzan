@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PluginRuntimePanel, PublishersCard } from './plugin-runtime-panel'
 import { Activity, Blocks, ClipboardCheck, Download, FileCode2, Link2, Pin, PinOff, RefreshCw, RotateCcw, Settings2, Trash2, Upload, Users } from 'lucide-react'

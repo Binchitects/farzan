@@ -7,6 +7,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Who holds the copyright, in every assembly's metadata (LICENSING.md; tools/licence-check.py keeps these). -->
+    <Company>Binchitects</Company>
+    <Authors>Binchitects</Authors>
+    <Copyright>Copyright (C) 2026 Binchitects. Licensed under the AGPL-3.0-only or a commercial license (LICENSING.md).</Copyright>
     <!-- A vulnerability NuGet's audit learns of later (NU1901-NU1904) is reported but does not stop
          the build: a published advisory would otherwise break every build of an unchanged tree.
          The package is bumped deliberately, in its own commit. -->
@@ -27,5 +31,6 @@
   <ItemGroup>
     <AssemblyMetadata Include="BrandProduct" Value="$(BrandProduct)" />
     <AssemblyMetadata Include="BrandCodeIntel" Value="$(BrandCodeIntel)" />
+    <AssemblyMetadata Include="License" Value="AGPL-3.0-only OR LicenseRef-Farzan-Commercial" />
   </ItemGroup>
 </Project>

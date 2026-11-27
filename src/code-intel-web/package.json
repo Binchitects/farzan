@@ -1,7 +1,7 @@
 {
   "name": "code-intel-frontend",
   "private": true,
-  "license": "AGPL-3.0-only",
+  "license": "AGPL-3.0-only OR LicenseRef-Farzan-Commercial",
   "version": "3.0.0",
   "type": "module",
   "scripts": {

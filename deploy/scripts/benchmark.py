@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 Load-test an OpenAI-compatible endpoint and report the metrics that matter for
 serving: TTFT, inter-token latency, and aggregate throughput.

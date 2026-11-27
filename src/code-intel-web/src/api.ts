@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // The one place the app talks to the backend. Every change carries
 // X-Code-Intel-Request, which the backend requires of a browser session so that a
 // cross-site form cannot act on someone's behalf.

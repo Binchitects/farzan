@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # arena-freetoken: FreeToken (github.com/FlashML-org/FreeToken, Apache-2.0) pinned from PyPI, with the stack's supervisor
 # (services/vllm/supervisor.sh with ENGINE_SERVER=freetoken), built on SGLang's image, which already has what FreeToken
 # runs on: PyTorch 2.14.1 for CUDA 13.0 (the one sglang-kernel, which FreeToken pins, takes), Triton and CUDA 13's nvcc,
@@ -20,6 +22,10 @@
 # never fetches one itself).
 ARG BASE_IMAGE=lmsysorg/sglang:v0.5.23-cu130-runtime
 FROM ${BASE_IMAGE}
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="(AGPL-3.0-only OR LicenseRef-Farzan-Commercial) AND Apache-2.0" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 
 ARG FREETOKEN_VERSION=0.2.3
 ARG PIP_INDEX_URL=

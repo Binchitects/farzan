@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { FoldVertical, ListTree, SquareSlash, X } from 'lucide-react'
 import { useEffect, useId, useRef, type KeyboardEvent, type RefObject } from 'react'
 import { Link } from 'react-router'

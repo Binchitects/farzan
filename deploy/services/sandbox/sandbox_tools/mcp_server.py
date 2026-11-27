@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """A plugin's own MCP server, run in the sandbox: no network, a read-only root,
 its own user, killed at its time limit (runner.py).
 

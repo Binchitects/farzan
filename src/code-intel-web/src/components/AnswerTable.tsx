@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Children, isValidElement, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import { cellValue, tableRows, type Key, type Sort } from "./table-rows";
 

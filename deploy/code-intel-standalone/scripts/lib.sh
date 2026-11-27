@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Shared by the scripts here: run from anywhere, read .env without executing it.
 set -euo pipefail
 STACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

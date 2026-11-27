@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The science lab's quantum computing, measured: Qiskit HumanEval (qiskit-community/qiskit-human-eval, Apache-2.0: Qiskit
 problems written by Qiskit's advocates, each a function to write with its canonical solution and its tests) asked

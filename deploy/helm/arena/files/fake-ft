@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """`ft serve ARGS` for a stack without FreeToken: the fake server (fake_vllm.py --freetoken), with the arguments
 services/freetoken/serve.py runs it with (the key from FREETOKEN_API_KEY, inside the process)."""
 import os

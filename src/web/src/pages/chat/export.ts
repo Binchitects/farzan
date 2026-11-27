@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Marked } from 'marked'
 import { sanitize } from './markdown-blocks'
 import { toolTitle } from './format'

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The app's own gateway left to run a day under steady use (docs/design/own-gateway.md §7, commit 18's soak): every few
 seconds a person's key asks something of the kinds clients send (a streamed answer, a plain one, a tool call,

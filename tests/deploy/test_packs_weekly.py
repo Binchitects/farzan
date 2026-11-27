@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 tools/packs-weekly.py: which pack of a name is the newest (a week's date after 1.0, 11.12 after 11.5), what keeps a new
 pack out (another embedding model, far fewer pages), the index of the newest of each name with where each is served (a

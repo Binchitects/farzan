@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # The web: the React build, served as static files by nginx.
 # Traefik sends /api, /connect and /.well-known to the app, and everything else here.
 #
@@ -22,6 +24,10 @@ RUN NO_MINIFY=$NO_MINIFY npm run build
 
 # Alpine's own nginx package: no image from Docker Hub beyond the base.
 FROM alpine:3
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only OR LicenseRef-Farzan-Commercial" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 # Alpine's own packages brought up to date first (a fix shipped since the base image was made), then nginx.
 RUN apk upgrade --no-cache \
  && apk add --no-cache nginx \

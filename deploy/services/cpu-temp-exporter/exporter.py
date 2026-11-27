@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """CPU temperature for Prometheus, on Linux and on Windows.
 
 Neither of the stack's existing exporters can do this:

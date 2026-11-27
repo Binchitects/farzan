@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # code-intel: the .NET code index service (index, knowledge packs, MCP, its admin
 # API) with its own React app (src/code-intel-web), on one port.
 #
@@ -116,6 +118,10 @@ CMD ["status", "--config", "/etc/code-intel/config.yaml"]
 
 # --------------------------------------------------------------- server -----
 FROM runtime AS server
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only OR LicenseRef-Farzan-Commercial" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 EXPOSE 7700
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD ["code-intel", "healthcheck"]
 CMD ["serve", "--config", "/etc/code-intel/config.yaml", "--host", "0.0.0.0", "--port", "7700"]

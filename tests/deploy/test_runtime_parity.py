@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The three runtimes run one stack: Docker Compose (deploy/docker-compose.yml, with scale.yml), rootless Podman
 (podman.yml on top) and Kubernetes (the Helm chart, deploy/helm/arena). A service, an environment variable,

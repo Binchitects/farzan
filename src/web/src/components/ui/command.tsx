@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Command as CommandPrimitive } from 'cmdk'
 import { Search } from 'lucide-react'
 import type { ComponentProps } from 'react'

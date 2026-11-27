@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useQueryClient } from '@tanstack/react-query'
 import { LogOut, ShieldCheck } from 'lucide-react'
 import { TwoFactor } from '@/components/app/two-factor'

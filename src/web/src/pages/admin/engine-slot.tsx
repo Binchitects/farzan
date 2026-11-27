@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import type { EngineModel } from './engine-api'
 import { FallbackField } from './engine-fields'
 import type { ChatModelSlot } from './model-form'

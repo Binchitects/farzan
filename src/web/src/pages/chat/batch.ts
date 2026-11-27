@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * Events from a stream, gathered and handed on together: once per frame the page draws, or after `wait` ms when no
  * frame comes (a tab in the background draws none). A streamed answer sends an event per token; drawing the thread

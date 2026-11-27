@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Run the .NET SDK without installing it: ./dn build, ./dn test, ./dn ef ...
 # Runs as the calling user (no root-owned files), shares the NuGet cache
 # between runs, and uses the host network so Testcontainers' mapped ports

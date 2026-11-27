@@ -262,6 +262,7 @@ the web's need `npm ci` in `src/web` once. [testing.md](testing.md) says more.
 | `compliance-docs.py` | the compliance documents from `docs/compliance/controls.yaml` |
 | `grc-catalogs.py` | the frameworks' catalogs |
 | `release-scan.py` | a release's software bill of materials and known vulnerabilities: the release gate |
+| `licence-check.py` | the licensing guard: SPDX and copyright lines on every source file (`--fix` adds them), every shipped package's licence against `docs/compliance/licence-policy.yaml`, `THIRD-PARTY-NOTICES.md` (`--write`), the licence labels and metadata, and who wrote each commit ([LICENSING.md](../LICENSING.md)) |
 | `smoke_test.py` | Farzan Graph's MCP acceptance check (`arenactl check code-intel`) |
 | `agent_client_example.py` | an example agent loop against Farzan Graph's MCP ([code-intel/clients.md](code-intel/clients.md)) |
 

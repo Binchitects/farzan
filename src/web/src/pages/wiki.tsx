@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, BookOpenText, ChevronLeft, ChevronRight, Code2, Database, ExternalLink, FileText, Search } from 'lucide-react'
 import { useState, type FormEvent } from 'react'

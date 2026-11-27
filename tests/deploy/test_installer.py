@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/scripts/make-installer.sh and installer.sh: the offline bundle and the
 installer's commands, against fake docker, podman and curl (support.py,
@@ -102,6 +104,8 @@ class Release:
         (self.repo / "VERSION").write_text("9.9.9\n")
         s.write("LICENSE.md", "AGPL\n", base=self.repo)
         s.write("LICENSING.md", "licensing\n", base=self.repo)
+        s.write("COMMERCIAL-LICENSE.md", "commercial\n", base=self.repo)
+        s.write("THIRD-PARTY-NOTICES.md", "notices\n", base=self.repo)
         s.write("docs/deployment.md", "# Deploying\n", base=self.repo)
         s.write("docs/plan.md", "# Plans\n", base=self.repo)
         # Packs: the newest of each name goes in (an older week's and a file that is no pack stay out).
@@ -1405,13 +1409,14 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual((self.dir / "LICENSE.md").read_text(), "my licence\n")
         # What it could write, it did: VERSION (it held a version), the other licence.
         self.assertEqual((self.dir / "VERSION").read_text().strip(), "9.9.9")
-        self.assertTrue((self.dir / "LICENSING.md").is_file())
+        for f in ("LICENSING.md", "COMMERCIAL-LICENSE.md", "THIRD-PARTY-NOTICES.md"):
+            self.assertTrue((self.dir / f).is_file(), f)
         # Purge takes deploy/ and what it wrote beside it, and nothing else.
         (self.dir / "packs" / "mine.kpack").write_text("a pack\n")
         r = self.r.run("remove", "--dir", str(self.dir), "--yes", "--purge", "--confirm", "PURGE")
         self.assertEqual(r.returncode, 0, self.output(r))
         self.assertFalse((self.dir / "deploy").exists())
-        for gone in ("VERSION", "LICENSING.md"):
+        for gone in ("VERSION", "LICENSING.md", "COMMERCIAL-LICENSE.md", "THIRD-PARTY-NOTICES.md"):
             self.assertFalse((self.dir / gone).exists(), gone)
         self.assertEqual((self.dir / "docs" / "mine.md").read_text(), "my notes\n")
         self.assertEqual((self.dir / "LICENSE.md").read_text(), "my licence\n")

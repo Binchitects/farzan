@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // The plugin runtime: runs each plugin's server code (plugin.yaml's server:) as a worker of its own, apart from the
 // app and from every other plugin, and relays between them. The app drives it over one socket; each worker speaks the
 // framework's protocol (JSON-RPC 2.0, a message a line, on its descriptor 3).

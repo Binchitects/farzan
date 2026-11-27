@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // What the extension computes, apart from the browser: the app's address, the address
 // that hands a page over to it, and a question to the gateway and its answer.
 // A plain script: the popup and the background load it, and node tests it (lib.test.js).

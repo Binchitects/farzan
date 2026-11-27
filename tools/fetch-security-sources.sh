@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # The sources of code-intel's `security` knowledge pack, fetched into one work directory, each part in a folder of its own:
 #
 #   tools/fetch-security-sources.sh [DIR]     (DIR: .packwork/docsrc/security)

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """The security scanners (compose profile "scanners"): a commit code-intel sends, scanned by opengrep's engine with Arena's
 own rules (rules/), Bandit, gitleaks and Trivy's checks of configuration, and what they found merged.
 

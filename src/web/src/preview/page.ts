@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { transform } from 'sucrase'
 
 /** Libraries a previewed component may import, and nothing else: the preview has no network. */

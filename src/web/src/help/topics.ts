@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { codeIntelName, productName } from '@/lib/brand'
 /**
  * The help for each page: what it is for, what each part does, and the common tasks step by

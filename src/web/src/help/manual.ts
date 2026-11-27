@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { lexer, type Token, type Tokens } from 'marked'
 import admin from '@docs/admin.md?raw'
 import architecture from '@docs/architecture.md?raw'

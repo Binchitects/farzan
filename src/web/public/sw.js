@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // The installable app's service worker: the app's shell when offline, the bell's news
 // pushed while no page is open, and what another app shares to Arena (kept until the
 // chat takes it). Never the API: /api, /connect and /.well-known always go to the

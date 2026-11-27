@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/services/vllm/supervisor.sh, run by /bin/sh with tools/fake-vllm as `vllm`: it reconciles the app's desired state
 (models added, removed, changed), runs each on its GPUs only, keeps the key off every command line, puts a model to sleep

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useState, type FormEvent } from "react";
 import { api, megabytes, relTime, type PacksStatus } from "../../api";
 import { useAsync } from "../../components/useAsync";

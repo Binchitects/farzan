@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 LMDeploy's OpenAI-compatible server as the supervisor starts it (services/vllm/supervisor.sh, ENGINE_SERVER=lmdeploy):
 `lmdeploy serve api_server` with its arguments as the app wrote them, the supervisor's name, host and port in LMDeploy's

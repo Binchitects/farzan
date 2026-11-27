@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { AlertTriangle, BellOff, CheckCircle2, CircleDot, Clock, XCircle } from 'lucide-react'
 import { useState, type ReactNode } from 'react'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { CheckCircle2, XCircle } from 'lucide-react'
 import type { Probe } from './ops-api'
 

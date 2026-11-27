@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 Strata's server as the supervisor starts it (services/vllm/supervisor.sh, ENGINE_SERVER=strata), in Strata's own image
 (ghcr.io/niko1221/strata), with its Python. Strata starts its server through `strata launch`, which prepares the model

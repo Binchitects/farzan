@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """The science lab's tools, run in the sandbox: exact mathematics with SymPy, units with Pint, molecules, formulas and
 reactions with RDKit, sequences with Biopython, and quantum computing on simulators: circuits with Qiskit and Aer, error
 correction with Stim and PyMatching, open systems with QuTiP, variational circuits with PennyLane, molecules' energies

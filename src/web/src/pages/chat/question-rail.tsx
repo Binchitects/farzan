@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Tooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { Message } from './types'

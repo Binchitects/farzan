@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Fetch the sqlite-vec loadable extension the .NET code-intel loads into SQLite.
 #
 # The version is the one the Python implementation depends on (pyproject:

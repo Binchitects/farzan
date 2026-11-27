@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/services/sd-serve.sh: the picture and video servers' script, run by /bin/sh with a fake sd-server and nvidia-smi.
 It reads its control file line by line (never as commands), starts the server only for a new generation, never again on

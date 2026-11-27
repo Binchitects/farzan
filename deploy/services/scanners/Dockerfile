@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # The security scanners (compose profile "scanners"): opengrep's engine with Arena's own rules (rules/, tested here on
 # their own examples), Bandit for Python, gitleaks for secrets in the code and its history, and Trivy's checks of
 # configuration (Dockerfiles, Kubernetes, Helm, Terraform). Built once; at run time it reaches nothing, so each one's
@@ -29,6 +31,10 @@ RUN git clone --quiet --branch "v${GITLEAKS_VERSION}" https://github.com/gitleak
  && rm -rf /probe
 
 FROM python:3.13-slim-bookworm
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="(AGPL-3.0-only OR LicenseRef-Farzan-Commercial) AND LGPL-2.1-only AND MIT AND Apache-2.0" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 # PyPI over a slow or lossy link: a minute per read and ten tries before a package counts as missing (a read
 # that timed out read as "no matching distribution"). Only pip reads it.
 ENV PIP_DEFAULT_TIMEOUT=60 PIP_RETRIES=10

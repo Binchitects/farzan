@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Back up everything that cannot be rebuilt: people, keys and conversations
 # (app.db), the code index and installed packs, the gateway's database (keys,
 # budgets, spend) and .env (its LITELLM_SALT_KEY decrypts that database).

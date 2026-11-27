@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/config/traefik/routes.yml in the stack's own Traefik: the routes as Traefik renders them from the environment, every
 request asked about at the app's /api/authz/address first (Settings → Network access), and IP_ALLOW kept by Traefik itself.

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 tools/fake-vllm: the stand-in for vLLM that the app's tests, the supervisor's tests and deploy/fake-gpu.yml run.
 It must answer as vLLM does where the app looks: health, the model list, streamed answers at a known pace,

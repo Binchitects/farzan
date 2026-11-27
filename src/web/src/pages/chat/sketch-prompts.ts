@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** What a sketch becomes, and what the model is asked, in words it follows: one block the chat runs or draws. */
 export interface SketchAsk {
   key: 'page' | 'react' | 'diagram' | 'scene' | 'table'

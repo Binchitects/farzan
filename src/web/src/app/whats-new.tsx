@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, Bot, Calculator, Cpu, ExternalLink, Gauge, Network, Palette, Plug, Repeat, UsersRound, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'

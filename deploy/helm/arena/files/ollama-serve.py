@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 Ollama as the supervisor starts it (services/vllm/supervisor.sh, ENGINE_SERVER=ollama): one `ollama serve` a model, on
 the model's GPUs, behind a front that asks the engine key, since Ollama's own server asks none.

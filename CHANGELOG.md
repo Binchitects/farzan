@@ -15,6 +15,27 @@ Sections used:
   makes weaker (gone, a clause or a check dropped, fewer tests), by its id,
   and why ([compliance](docs/compliance/README.md#when-a-change-weakens-a-control))
 
+## Unreleased
+
+### :sparkles: New features & Enhancements
+
+- **The commercial license, written out, with royalties.** COMMERCIAL-LICENSE.md sets the terms Binchitects licenses
+  Farzan Arena on for uses the AGPL does not allow: a royalty on every sale of a product or service built with it, in
+  tiers of the licensee's cumulative gross sales (15% up to $500,000, 10% up to $2,000,000, 5% above), with reports,
+  payment, audit, no warranty, a limit of liability and an indemnity. LICENSING.md says when it is needed, and that
+  a published engine built from Farzan Arena is under the AGPL as a whole, with its source, or needs it.
+- **A licensing guard, in CI and in the release gate.** `tools/licence-check.py` fails when a source file has no
+  SPDX and copyright lines (`--fix` adds them; every file has them now), when a shipped package's licence is not one
+  `docs/compliance/licence-policy.yaml` allows or accepts with why (strong copyleft and unstated licences fail), when
+  THIRD-PARTY-NOTICES.md is not current, when LICENSE.md is not the AGPL unchanged, when the licence labels and
+  metadata disagree, or when a commit is by someone other than the copyright holders and not signed off.
+  `tools/release-scan.py` runs it first, and the SBOM gives each component its licence.
+- **Third-party notices.** THIRD-PARTY-NOTICES.md lists the 606 components the release ships (npm, NuGet, Python
+  packages, programs and base images) with their licences; the bundle and the installer carry it and the commercial
+  license beside LICENSE.md. LICENSING.md makes the written offer of the GPL and LGPL source in the published images.
+- Every image says whose it is and its licences (`org.opencontainers.image.licenses`, `vendor`, `source`), and every
+  assembly its copyright and licence.
+
 ## v8.3.0 (2026-11-27)
 
 ### :rocket: Epics and highlights

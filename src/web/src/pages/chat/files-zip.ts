@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { makeZip, uniqueNames } from '@/lib/zip'
 import { downloadUrl } from './api'
 import type { FileItem } from './files'

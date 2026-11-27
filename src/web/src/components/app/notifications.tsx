@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, AudioLines, BadgeCheck, Bell, Brain, BellOff, CalendarClock, Coins, Download, GitPullRequest, Image as ImageIcon, MessageSquareText, SquareSlash, type LucideIcon, Workflow, Wrench, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'

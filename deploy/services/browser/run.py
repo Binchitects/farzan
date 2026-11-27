@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """The browser agent's browser: Chromium headless with its DevTools on 127.0.0.1, and a forwarder that lets the app
 reach them from its network.
 

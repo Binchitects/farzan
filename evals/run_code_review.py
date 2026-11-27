@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Agentic code review of a real driver, with and without the packs.
 
 Everything measured so far answered questions. This reviews code: the model is

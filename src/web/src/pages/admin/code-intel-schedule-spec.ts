@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { weekdays } from '@/lib/schedule'
 
 /** How a repository is brought up to date by itself, as code-intel stores it: "", pass, off, hours:N, daily:HH:MM, weekly:D:HH:MM. */

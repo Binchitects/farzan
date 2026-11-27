@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # llama.cpp in router mode: the models the app lists (Admin -> Models writes
 # /presets/models.ini), loaded and unloaded live with no restart.
 #

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import type { FlowStep, RunStep, StepKind, TriggerKind } from './studio-api'
 
 /** Where a step is: its index in the top lane, then in which inner lane (then, else, a loop's steps) and its index there. */

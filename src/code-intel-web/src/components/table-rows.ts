@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** What a column sorts and filters by, for one row. */
 export type Key<T> = (row: T) => string | number | boolean | null | undefined;
 

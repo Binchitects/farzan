@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { slugify } from './slug'
 import { topics, type HelpTopic, type ManualLink, type TopicId } from './topics'
 import { codeIntelName } from '@/lib/brand'

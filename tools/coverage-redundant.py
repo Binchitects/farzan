@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Which tests run no line that another test does not: from coverage per test (tools/coverage-per-test.sh).
 
     python3 tools/coverage-redundant.py .cov/tests > .cov/redundant.md

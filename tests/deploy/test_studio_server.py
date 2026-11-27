@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """deploy/services/studio/server.py: how a text is cut for the voice model, which models are there, and one at a time,
 with torch, FastAPI and the audio libraries stubbed (no GPU, no models)."""
 from __future__ import annotations

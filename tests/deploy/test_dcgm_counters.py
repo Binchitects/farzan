@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """deploy/config/dcgm-counters.csv: dcgm-exporter collects every DCGM field a dashboard panel or an alert rule reads.
 
 The image's own default-counters.csv leaves out SM activity, NVLink bytes, throttle reasons, ECC and retired pages, so

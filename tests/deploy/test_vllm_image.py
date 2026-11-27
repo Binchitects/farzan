@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 arena-vllm, read without building or pulling anything: deploy/services/vllm.Dockerfile (vLLM's own image, pinned, with its
 GGUF plugin) is what compose builds and names, so ./arenactl build builds it with the vllm feature and make-installer.sh

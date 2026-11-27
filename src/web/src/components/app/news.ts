@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import type { NewsItem } from './notifications'
 
 /** "now", "5 min", "3 h", then "Yesterday 14:05", then the date. */

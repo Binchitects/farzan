@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, RotateCcw, RotateCw, Save, Search, Undo2, Zap } from 'lucide-react'
 import { Fragment, useMemo, useState, type ReactNode } from 'react'

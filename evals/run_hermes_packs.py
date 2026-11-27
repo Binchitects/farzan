@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Does Hermes answer correctly from each installed pack?
 
 One question per pack, each with a ground-truth token taken from the pack

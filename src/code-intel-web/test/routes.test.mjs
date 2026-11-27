@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // Every route of App.tsx has its help, and an address with none is not shown another page's.
 // Plain Node (npm test): help.ts is made JavaScript by the TypeScript the build uses.
 import assert from "node:assert/strict";

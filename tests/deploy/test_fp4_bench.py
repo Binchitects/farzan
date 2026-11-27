@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/scripts/fp4-bench.py, the FP4 against FP8 and BF16 measurement: its questions the same for every model, the
 answers read from what a model says, vLLM's memory lines read from its log, and a sweep and the quality check run against

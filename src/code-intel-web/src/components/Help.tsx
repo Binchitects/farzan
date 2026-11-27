@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "../auth";

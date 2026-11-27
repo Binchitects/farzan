@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """A plugin's own MCP server in the sandbox: the helper authors write it with
 (sandbox_tools/mcp_server.py), and one call as the app runs it there
 (Chat/Tools/SandboxServerTool.cs: initialize and the request on its input, its

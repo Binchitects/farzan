@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # One bundle for a host with no network: every image, this folder, the models and
 # the speech server's models, each checked against its SHA-256 before it is used.
 #

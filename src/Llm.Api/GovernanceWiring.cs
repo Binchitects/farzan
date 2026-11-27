@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace Llm.Api;
 
 /// <summary>Retention and legal hold, groups' credit, API keys' rate limits, prices and costs, the gateway's guardrail, storage and compliance: their services and endpoints.</summary>

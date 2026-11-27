@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { readdirSync, readFileSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
 import { lexer, type Token } from 'marked'

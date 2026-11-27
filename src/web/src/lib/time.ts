@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** A time range as the dashboards use it: Grafana-style relative strings or absolute times. */
 export interface TimeRange {
   from: string

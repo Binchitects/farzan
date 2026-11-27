@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Escape and limit tests for the Python sandbox (profile sandbox), against the
 running container: jobs go through the sandbox-jobs volume exactly as the app
 sends them, as the app's user.

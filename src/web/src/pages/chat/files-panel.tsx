@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { AppWindow, ArrowLeft, Download, ExternalLink, FileArchive, FileCode2, FileDown, FileSearch, FileText, Image as ImageIcon, Maximize2, Minimize2, Play, X, ZoomIn, ZoomOut } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'

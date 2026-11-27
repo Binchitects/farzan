@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 A vLLM general plugin (entry point arena_gguf_rope in vllm.general_plugins, which vLLM loads in each of its processes) for
 llama GGUF files. llama.cpp's converter reorders a llama model's query and key weights for its own rotary layout (GPT-J's,

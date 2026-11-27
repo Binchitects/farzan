@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 What restore-test.sh and rollback-test.sh check, through the app's API. Python's
 standard library only; secrets come from the environment and are never printed.

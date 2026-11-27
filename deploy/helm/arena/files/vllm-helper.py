@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The JSON and HTTP side of supervisor.sh (vLLM's and SGLang's images have python3; the standard library only). Nothing here starts or
 stops a process: the supervisor does, by what this writes.

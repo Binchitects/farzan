@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Is every part of the stack up and answering? Exit status = number of failures.
 source "$(dirname "$0")/lib.sh"
 

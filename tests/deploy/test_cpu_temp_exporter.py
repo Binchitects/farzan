@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """deploy/services/cpu-temp-exporter/exporter.py: every series it reports is a temperature of the CPU itself, since the dashboards take the hottest and the average of all of them."""
 from __future__ import annotations
 

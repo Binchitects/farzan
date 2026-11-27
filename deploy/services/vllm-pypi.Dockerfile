@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # arena-vllm from PyPI: vLLM pinned, with the GGUF plugin and the stack's supervisor, for a host that cannot pull
 # vLLM's own image from Docker Hub (vllm.Dockerfile builds arena-vllm from that one; docs/multi-gpu-server.md §6).
 #
@@ -19,6 +21,10 @@
 # fetches one itself).
 ARG BASE_IMAGE=python:3.13-slim
 FROM ${BASE_IMAGE}
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="(AGPL-3.0-only OR LicenseRef-Farzan-Commercial) AND Apache-2.0" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 
 ARG VLLM_VERSION=0.34.0
 ARG LMCACHE_VERSION=

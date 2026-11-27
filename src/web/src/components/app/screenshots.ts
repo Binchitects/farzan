@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** Screenshots sent with feedback: at most this many, each made small enough to send (the server takes 2 MB). */
 export const maxScreenshots = 3
 const maxBytes = 2 * 1024 * 1024

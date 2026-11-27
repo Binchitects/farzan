@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { cva, type VariantProps } from 'class-variance-authority'
 import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react'
 import type { ComponentProps, ReactNode } from 'react'

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Generate the question set FROM the packs, so ground truth is never mine.
 
 Every previous attempt wrote questions from memory and checked them

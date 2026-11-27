@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 What vLLM and SGLang read beside a model that a GGUF file has in its own header: the model's Hugging Face config and
 tokenizer (transformers reads them from the file) and its generation config (the tokens that end an answer, and the

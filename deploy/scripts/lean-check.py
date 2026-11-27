@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Checks of the science lab's proof checker (profile lean), against the running container: Lean files go through
 the lean-jobs volume exactly as the app sends them, as the app's user (sandbox-check.py's client).
     python3 scripts/lean-check.py

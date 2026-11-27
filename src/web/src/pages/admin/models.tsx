@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowRightLeft, AudioLines, Boxes, CircleDot, Clapperboard, Clock, Eye, FlaskConical, Info, Search, HelpCircle, Image as ImageIcon, Loader2, Mic, Moon, Pencil, Pin, Plus, Power, PowerOff, Sparkles, Trash2, TriangleAlert, XCircle } from 'lucide-react'
 import { useState, type ReactNode } from 'react'

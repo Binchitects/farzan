@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
 import { expectAccessible, screenshot, watchConsole } from './helpers.ts'

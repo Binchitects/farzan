@@ -195,6 +195,13 @@ A release is a tag, `vX.Y.Z`, on a commit of `main` whose suites all pass.
    makes a control weaker is under **Weakened controls** in the changelog.
    The release scan passes: `python3 tools/release-scan.py` writes the SBOM
    and exits 0 ([supply chain](compliance/README.md#supply-chain)).
+   The licence check passes after a restore: `./tools/dn restore src/Llm.Api`,
+   `./tools/dn restore src/CodeIntel`, then `python3 tools/licence-check.py
+   --nuget` exits 0 (every source file's SPDX and copyright lines, every
+   package's licence against `docs/compliance/licence-policy.yaml`,
+   THIRD-PARTY-NOTICES.md current, the licence labels, and every commit by the
+   copyright holders or signed off). A new dependency: `python3
+   tools/licence-check.py --write` lists it ([LICENSING.md](../LICENSING.md)).
 4. An upgrade from the oldest release the bundle takes (5.2.0) keeps every
    person, chat and setting: `./arenactl check upgrade --from v5.2.0
    --stop-live`. Each migration applies on that release's schema.

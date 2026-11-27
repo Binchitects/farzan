@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Deployment acceptance test -- does this code-intel actually serve agents?
 
 Run against a deployment BEFORE pointing developers at it. Every check is a

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The science lab's mathematics, measured: problems of MATH-500 (Hendrycks et al.'s MATH test set as HuggingFaceH4
 publishes it, each with its reference answer) asked through Arena's chat, each model alone (no tools) and in a lab

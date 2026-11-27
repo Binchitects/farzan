@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 FP4 against FP8 and BF16: each copy of a model served by the same engine on the same GPUs, measured the same way.
 For each one it says the memory its weights and its token cache take, its decoding speed with one person and with many

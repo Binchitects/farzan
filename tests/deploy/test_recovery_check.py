@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/scripts/recovery-check.py: what a backup's dump holds, and the checks
 through the API, against a small fake of the app on a real socket.

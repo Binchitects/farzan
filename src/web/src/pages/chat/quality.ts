@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import type { LiveArena } from './live'
 import type { ChatTree } from './tree'
 import type { ArenaMatch, ChatModel, FeedbackReason, Message } from './types'

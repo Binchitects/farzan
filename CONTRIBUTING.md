@@ -55,7 +55,29 @@ contribution (a pull request, a patch, an issue with code) you agree that:
 3. you grant Binchitects a perpetual, worldwide, non-exclusive, no-charge,
    royalty-free, irrevocable licence to use, reproduce, modify, sublicense and
    distribute it, under the AGPL and under other licences, commercial ones
-   included.
+   included (royalties under the commercial license are Binchitects' own);
+4. it contains no code copied from elsewhere unless that code's licence is one
+   [docs/compliance/licence-policy.yaml](docs/compliance/licence-policy.yaml)
+   allows, and you say where it came from; and
+5. you grant, for it, the patent licence section 11 of the AGPL describes, under
+   both licences.
+
+Show that you agree by signing off every commit, the Developer Certificate of
+Origin's way (<https://developercertificate.org>):
+
+```
+git commit -s
+```
+
+which adds `Signed-off-by: Your Name <you@example.com>` to the message. A commit
+by anyone but the copyright holders that is not signed off fails
+`tools/licence-check.py`, and is not merged.
+
+Every new source file starts with the two lines LICENSING.md shows (the SPDX
+identifier and the copyright); `python3 tools/licence-check.py --fix` adds them.
+A new dependency must have a licence the policy allows: the check fails on one
+it does not, and THIRD-PARTY-NOTICES.md must list it
+(`python3 tools/licence-check.py --write`).
 
 You keep the copyright in what you wrote. Mark a pull request "not under these
 terms" if you cannot agree, and it will not be merged.

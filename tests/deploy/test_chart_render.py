@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 What `helm template` renders, read as a cluster would take it (helm and PyYAML here, else skipped): every module on.
 What must hold: no environment value is a number Go wrote in scientific notation (a quoted 31536000 became

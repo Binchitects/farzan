@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { BookOpen, Search } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router'

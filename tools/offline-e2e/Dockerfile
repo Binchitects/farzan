@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # A fresh offline host for the installer's end-to-end test (tools/offline-e2e/run.sh): Debian with
 # systemd and what a server has, nothing of the stack: no Docker, no NVIDIA toolkit. Built once, with
 # the network; the test runs it with none.

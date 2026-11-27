@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useRef, useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { useAuth } from "../auth";

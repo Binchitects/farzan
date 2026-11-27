@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Atom, AudioLines, Box, Brain, Sparkles, ListChecks, Calculator, Clapperboard, Clock, Database, Dna, FilePen, FlaskConical, FileText, Globe, Image as ImageIcon, Library, MessageCircleQuestion, Network, Orbit, Plug, Presentation, Scale, SearchCode, SquareCode, SquareTerminal, Telescope, type LucideIcon } from 'lucide-react'
 import type { ChatTool } from './types'
 

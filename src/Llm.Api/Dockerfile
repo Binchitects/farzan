@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # The API: sign-in, OIDC, the chat, the admin and every /api route.
 # The web (src/web) is its own image; Traefik sends /api, /connect and
 # /.well-known here and everything else there.
@@ -36,6 +38,10 @@ RUN dotnet publish src/Llm.Api/Llm.Api.csproj -c Release --no-restore -o /out ${
 
 # Chiseled: no shell, no package manager, runs as a non-root user.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only OR LicenseRef-Farzan-Commercial" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 WORKDIR /app
 COPY --from=api /out ./
 # Time zones for the chat's date and time tool: the chiseled image has none,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace Llm.Api.Operations;
 
 /// <summary>One of the stack's features (deploy/features): what it runs and what it needs.</summary>

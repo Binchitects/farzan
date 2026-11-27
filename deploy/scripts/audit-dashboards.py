@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Run every dashboard panel's queries in the app and judge the data.
 
 Catches what a healthy-looking page hides: queries that error (bad PromQL,

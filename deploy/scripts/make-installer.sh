@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # One file per release for hosts with no network: dist/arena-VERSION-offline.run, a
 # shell script with the bundle after it, and its .sha256. airgap.sh packs the images, deploy/,
 # the models and the speech models; this adds the installer, the docs, the licences, Code
@@ -50,7 +52,7 @@
 #                  upgrade tells the files a host changed from the ones it was shipped with
 #                  (5.2.0's tag must be here: git fetch --tags)
 #   models/, audio/  as airgap.sh packs them; models/library/ has the embedding model always
-#   docs/, LICENSE.md, LICENSING.md, VERSION, packs/
+#   docs/, LICENSE.md, LICENSING.md, COMMERCIAL-LICENSE.md, THIRD-PARTY-NOTICES.md, VERSION, packs/
 #
 # The file is the installer's shell header, then a small tar (the installer, MANIFEST,
 # SHA256SUMS, deploy/, docs/: enough for a dry run, status and remove), then the rest.
@@ -251,7 +253,7 @@ if [[ $DRY -eq 1 ]]; then
   [[ -n "$WITHOUT" ]] && say "  features left out: ${WITHOUT//,/ } (their services: ${LEAVE//,/ })"
   "${AIRGAP_ENV[@]}" "${AIRGAP[@]}" --dry-run "$WORK/plan.tar" | sed -n '2,$p' | sed 's/^/  /'
   say "  the embedding model ($EMBED_FILE): $(case "$EMBEDDING" in packed) echo "from $MODELS_DIR" ;; missing) echo "NOT IN $MODELS_DIR: the embedding server would wait for it on the other host" ;; *) echo "$EMBEDDING" ;; esac)"
-  say "  then gzipped, with installer.sh, docs/, LICENSE.md, LICENSING.md, VERSION, known/ ($(printf '%s\n' ${KNOWN[@]+"${KNOWN[@]}"} | cut -f2 | paste -sd' ' -))"
+  say "  then gzipped, with installer.sh, docs/, the licences, VERSION, known/ ($(printf '%s\n' ${KNOWN[@]+"${KNOWN[@]}"} | cut -f2 | paste -sd' ' -))"
   [[ -n "$KNOWN_MISSING" ]] && say "  known/: NOT MADE: $KNOWN_MISSING"
   [[ -n "$DEPS_ARG" ]] && say "  the host's dependencies, from $DEPS_ARG: $(cut -f1,2 "$DEPS_ARG/DEPS" | tr '\t' ' ' | paste -sd, -)"
   say "  knowledge packs: $([[ $PACKS -eq 1 ]] && echo "${#PACK_FILES[@]} from packs/" || echo "none (--packs)")"
@@ -364,7 +366,7 @@ for s in "${BUILT[@]}"; do left "$s" || printf '%s\tarena-%s:%s\n' "$s" "$s" "$V
 say "==> the installer, the docs, the licences"
 cp -p "$ROOT/scripts/installer.sh" "$B/installer.sh" && chmod 755 "$B/installer.sh" || die "no scripts/installer.sh"
 echo "$VERSION" > "$B/VERSION"
-for f in LICENSE.md LICENSING.md; do cp -p "$REPO/$f" "$B/$f" || die "no $f in $REPO"; done
+for f in LICENSE.md LICENSING.md COMMERCIAL-LICENSE.md THIRD-PARTY-NOTICES.md; do cp -p "$REPO/$f" "$B/$f" || die "no $f in $REPO"; done
 # The names people read, as this bundle's images were built with them: beside installer.sh, and in deploy/
 # for the installation's scripts (make-cert.sh, its own installer.sh).
 for f in "$B/branding.env" "$B/deploy/branding.env"; do
@@ -375,7 +377,7 @@ done
 mkdir -p "$B/docs" && cp -a "$REPO/docs/." "$B/docs/" || die "no docs/ in $REPO"
 # The project's own plans are not documentation for those who run it.
 rm -f "$B/docs/plan.md"
-say "  installer.sh, $(find "$B/docs" -type f | wc -l) docs, LICENSE.md, LICENSING.md, VERSION"
+say "  installer.sh, $(find "$B/docs" -type f | wc -l) docs, LICENSE.md, LICENSING.md, COMMERCIAL-LICENSE.md, THIRD-PARTY-NOTICES.md, VERSION"
 
 if [[ -n "$DEPS_ARG" ]]; then
   say "==> the host's dependencies (deps/)"

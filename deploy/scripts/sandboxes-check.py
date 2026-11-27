@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Every sandbox of the stack that is on, checked for real against the running containers:
     python3 scripts/sandboxes-check.py
 - the code sandbox (profile sandbox): scripts/sandbox-check.py, its jobs, isolation and limits;

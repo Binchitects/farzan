@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """deploy/services/scanners/scan.py: what a scan unpacks, which files the rules read, how findings are merged, that a
 secret's text never comes back, and the HTTP around it; the scanners themselves are stubbed (the image's build runs
 the real engine on the rules' own examples)."""

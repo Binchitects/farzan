@@ -1,8 +1,14 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # The media studio's own models (server.py): on the GPU BiRefNet lite, Chatterbox, ACE-Step; on the CPU CLIPSeg.
 # PyTorch from PyPI (its Linux wheels bring CUDA 13); the models' own pins (older torch and
 # transformers) are not taken: they run on these. The weights are not in the image: the app
 # fetches them into the model library (MODELS_DIR/studio), and this reads them from there.
 FROM python:3.13-slim
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only OR LicenseRef-Farzan-Commercial" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 # The base's own packages brought up to date first: a fix Debian has shipped is in the image even when the base
 # image on the registry is older than it.
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*

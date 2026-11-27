@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // The options: the app's address, and for asking in the popup the API key, a model and the gateway.
 const ext = globalThis.browser ?? globalThis.chrome
 const fields = ['app', 'apiKey', 'model', 'gateway']

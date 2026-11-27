@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Bring-up check of a GPU server for the engines (docs/deployment.md, "Multi-GPU server"): what
 # vLLM and llama.cpp need of the host, before any model is placed on it. Read only: it changes
 # nothing, needs no root, and pulls nothing.

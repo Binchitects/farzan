@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 tools/grc-catalogs.py --texts: the shareable clauses in their own words, as the grc knowledge pack's pages: NIST's
 parameters printed as the publication prints them, its items under their labels, and the AI Act's points on their lines.

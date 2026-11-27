@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """The frameworks' catalogs written from their published sources: docs/compliance/catalogs/<framework>.yaml.
 
     python3 tools/grc-catalogs.py --from DIR

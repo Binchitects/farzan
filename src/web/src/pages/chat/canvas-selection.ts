@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** A part of a canvas the person selected: its text, where it is, and its lines (from 1). */
 export interface CanvasSelection {
   text: string

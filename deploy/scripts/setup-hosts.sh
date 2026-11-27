@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Add the stack's hostnames to /etc/hosts.
 #
 # Browsers resolve any *.localhost name to 127.0.0.1 by specification, but

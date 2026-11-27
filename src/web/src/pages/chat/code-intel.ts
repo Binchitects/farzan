@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * code-intel's answers, read for what they are. Its tools return rows of code
  * locations (find_symbol, find_references, search_code, semantic_search) or a

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Archive, Boxes, Database, FileStack, HardDrive, RotateCw } from 'lucide-react'
 import type { ReactNode } from 'react'

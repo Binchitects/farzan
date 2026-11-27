@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useState } from "react";
 
 /** A secret shown exactly once, with a copy button and a plain warning. */

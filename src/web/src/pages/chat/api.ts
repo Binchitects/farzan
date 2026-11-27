@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { api, ApiError } from '@/lib/api'
 import type { CallEvent } from './room-call'
 import type { Assistant, AssistantSummary, Attachment, ChatConfig, ChatEvent, ChatShare, Conversation, ConversationSummary, Named, QueuedMessage, RewindPreview, Rewound, SharedChat } from './types'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Activity, AppWindow, BookOpenText, FolderKanban, ListOrdered, Megaphone, MessageSquareHeart, BadgeCheck, AudioLines, Brain, GitPullRequest, ListTodo, BarChart, BarChart3, Blocks, Bot, Boxes, Database, FlaskConical, HardDrive, Home, KeyRound, LayoutDashboard, Library, LineChart, Logs, MessageSquare, Package, Palette, Plug, Presentation, ScanSearch, ScrollText, Settings, ShieldAlert, ShieldCheck, Siren, SquareSlash, Telescope, ThumbsUp, Timer, Trophy, Users, UsersRound, Workflow, Wrench, type LucideIcon, Calculator, Gauge, Shield, Sparkles } from 'lucide-react'
 import { codeIntelName } from '@/lib/brand'
 

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # arena-vllm: vLLM's own image (vllm/vllm-openai, pinned) with its GGUF plugin and the stack's supervisor, the stack's
 # vLLM engine. Compose builds it with the vllm feature on (./arenactl build, or docker compose --profile vllm build vllm);
 # vllm-pypi.Dockerfile builds the same from PyPI for a host that cannot pull from Docker Hub (vllm-build.yml).
@@ -11,6 +13,10 @@
 # fetches one itself).
 ARG VLLM_IMAGE=vllm/vllm-openai:v0.34.0
 FROM ${VLLM_IMAGE}
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="(AGPL-3.0-only OR LicenseRef-Farzan-Commercial) AND Apache-2.0" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 
 # GGUF files from the library: vLLM 0.31 moved GGUF out of its tree into vllm-gguf-plugin (its CUDA kernels built for
 # CUDA 13 and torch's stable ABI) and gguf, both pinned by hash, in a layer of their own on vLLM's. --no-deps: pip changes

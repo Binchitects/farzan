@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * Categorical series colours, in a fixed order (validated for colour-vision
  * deficiency against this app's light and dark card surfaces). A series keeps

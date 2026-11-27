@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { ArrowUp, Bot, Check, Square, X } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'

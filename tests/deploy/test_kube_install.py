@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 scripts/kube-install.sh (installer.sh --kubernetes) against fake kubectl, helm and docker on PATH: a cluster that is
 a JSON file (its version, namespaces, rights, storage classes, nodes, ingress classes, issuers, secrets) and a log

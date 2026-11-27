@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The code host and Arena's model API for a real Code workspace (RealWorkspaceTests): GitLab's API as the app asks
 it (the person, a project, a branch), the project's git over smart HTTP (git http-backend) with the person's token as

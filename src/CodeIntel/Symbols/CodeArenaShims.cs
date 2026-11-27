@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 using System.Text;
 
 // What the code index and graph linked from Code Arena (code-intel.csproj) read through Code Arena's own helpers, as code-intel

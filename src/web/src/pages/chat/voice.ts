@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * Talk's parts that need no page: hearing when someone speaks (voice activity),
  * cutting an answer into sentences as it is written, and reading them aloud in order.

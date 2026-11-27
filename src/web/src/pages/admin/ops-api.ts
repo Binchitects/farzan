@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { codeIntelName } from '@/lib/brand'
 /** What an code-intel index run's exit code means (src/code-intel/Cli/Commands.cs). */
 export const indexExit: Record<string, string> = {

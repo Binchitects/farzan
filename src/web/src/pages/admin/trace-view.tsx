@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useQuery } from '@tanstack/react-query'
 import { Bot, Clock, Cpu, Hourglass, Network, Timer, Wrench, type LucideIcon } from 'lucide-react'
 import { QueryError } from '@/components/app/query-state'

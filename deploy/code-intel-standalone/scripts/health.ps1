@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Is every part of the stack up and answering? Exit code = number of failures.
 . "$PSScriptRoot\lib.ps1"
 $port = EnvGet 'CODE_INTEL_HTTP_PORT' '8080'

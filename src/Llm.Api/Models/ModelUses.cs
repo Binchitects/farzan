@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace Llm.Api.Models;
 
 /// <summary>Something a model can be used for here: its id, what it is called, and where it is taken as that.</summary>

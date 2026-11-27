@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { waitFor } from '@testing-library/react'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { fakeApi, member, renderApp } from '@/test/utils'

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # A throwaway Arena for making plugins and for the plugins' browser tests, from this checkout, beside anything else on
 # the host: nothing of the live stack is touched (its own container names, ports and database), nothing is downloaded
 # (Postgres and node:22-alpine must be on the host already), and no image of Arena's is built.

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Takes the plugin framework's conformance suite (its manifests and their expected errors, its packages and what
 # verifying each must say, and the publisher's public key) into tests/fixtures/plugins, and records which framework
 # commit it came from, with each file's SHA-256, in plugins/framework.lock. Arena's tests hold Arena to that suite.

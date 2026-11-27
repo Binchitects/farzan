@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // The popup: hand the page (or the selection) to the app, or ask the gateway here with
 // the person's API key (set in the options).
 const ext = globalThis.browser ?? globalThis.chrome

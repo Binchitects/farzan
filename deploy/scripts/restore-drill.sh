@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # A restore drill for point-in-time recovery (pitr.yml): restores the pgBackRest repository in BACKUP_DIR
 # into a scratch container, to a moment (default: ten minutes ago), starts it, and checks the databases
 # are there and hold people. It never touches the stack's own Postgres, its volume or its port.

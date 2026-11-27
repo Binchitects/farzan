@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import type { Plugin } from 'vite'
 
 // Colours with an alpha over a token (bg-primary/10, the selection's tint) are color-mix() over a var(). Chrome and Edge

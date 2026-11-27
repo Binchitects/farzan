@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Claude Code -> code-intel.  NOT EXECUTED on this machine (claude is not installed);
 # transcribed from Anthropic's documented `claude mcp add` interface. Treat it
 # as a starting point and verify against your own version.

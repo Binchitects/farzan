@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Sourced by restore-test.sh and rollback-test.sh, not run: a throwaway compose
 # project beside the live one, and the guards that keep everything they do away
 # from the live project (arena) and its volumes.

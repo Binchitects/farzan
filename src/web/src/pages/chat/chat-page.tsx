@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Archive, ArrowDown, ChevronsUp, CloudOff, Code2, FileUp, GitFork, Lightbulb, Lock, MessageSquare, Reply, Search, Sparkles, SquareTerminal, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'

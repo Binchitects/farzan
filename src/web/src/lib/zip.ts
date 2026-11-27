@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** A file to put in a zip: its path inside (folders by "/") and its bytes. */
 export interface ZipEntry {
   name: string

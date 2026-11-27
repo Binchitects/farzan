@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/scripts/gpu-check.sh, with fake nvidia-smi and rocm-smi on PATH (nothing real is asked): a good four-GPU server,
 an old driver, GPUs without peer to peer or across sockets, a low power cap, MIG on, an AMD host, a CPU-only host, and

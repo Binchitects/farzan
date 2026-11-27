@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """The compliance documents written from docs/compliance/controls.yaml and frameworks.yaml.
 
     python3 tools/compliance-docs.py           writes docs/compliance/controls.md and frameworks/<framework>.md

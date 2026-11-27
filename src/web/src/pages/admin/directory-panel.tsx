@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation } from '@tanstack/react-query'
 import { AlertTriangle, BookOpen, CheckCircle2, ChevronRight, PlugZap, UserCheck, XCircle } from 'lucide-react'
 import { useState } from 'react'

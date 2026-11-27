@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // Every table's sort and filter (components/table-rows.ts), made JavaScript by the TypeScript the build uses.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

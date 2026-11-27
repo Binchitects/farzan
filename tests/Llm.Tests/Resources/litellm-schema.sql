@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+-- Copyright (C) 2026 Binchitects
 -- The gateway's tables as a running LiteLLM creates them (pg_dump --schema-only),
 -- without foreign keys to tables the tests do not need.
 

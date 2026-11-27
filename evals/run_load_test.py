@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Where does the single-SQLite design actually break?
 
 The case for moving to Postgres is concurrency, not per-query speed: a

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Clock3, ListStart, Pencil, TextQuote, X } from 'lucide-react'
 import { useState, type KeyboardEvent } from 'react'
 import { Button } from '@/components/ui/button'

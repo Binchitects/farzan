@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // Stroke icons, inline so they render identically everywhere (no icon font, no emoji).
 const paths: Record<string, string> = {
   chat: "M4 5h16v11H8l-4 4z",

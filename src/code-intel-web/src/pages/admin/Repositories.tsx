@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useEffect, useMemo, useState } from "react";
 import { api, inTime, relTime, type BatchResult, type LogLine, type Repo, type RepoProgress, type RepoState, type ReposView } from "../../api";
 import { useAsync } from "../../components/useAsync";

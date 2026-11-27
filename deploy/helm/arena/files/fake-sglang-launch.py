@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """`python -m sglang.launch_server ARGS` for a stack without SGLang (PYTHONPATH=/fake-vllm/sglang-module): the fake server,
 as SGLang, with the arguments services/sglang/serve.py runs it with (its key among them, inside the process)."""
 import os

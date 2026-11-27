@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** How far an code-intel index run is: the whole run, and each repository in it. */
 
 /** Where one repository is in the run going now, as code-intel's index process reports it. */

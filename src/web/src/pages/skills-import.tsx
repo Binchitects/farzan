@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileArchive, FolderOpen, ShieldAlert, Upload } from 'lucide-react'
 import { useRef, useState, type ReactNode } from 'react'

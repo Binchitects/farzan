@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Text;

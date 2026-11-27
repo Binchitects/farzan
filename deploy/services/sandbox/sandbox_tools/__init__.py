@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Tools the chat calls by name, run in the sandbox like any other job.
 
 The app sends a one-line program:

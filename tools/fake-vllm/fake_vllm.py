@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 A stand-in for vLLM's OpenAI-compatible server, and for SGLang's (--sglang, which the fake sglang
 package beside it passes: see sglang-module), for tests and for a stack without a big GPU.

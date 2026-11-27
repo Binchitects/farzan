@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """What a test run cost and what it covered: per class time from TRX files, line and branch coverage per feature
 (a source folder) from Cobertura files.
 

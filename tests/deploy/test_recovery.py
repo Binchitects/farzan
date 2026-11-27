@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/scripts/restore-test.sh, rollback-test.sh and test-project.sh: their
 arguments, their plans, and the guards that keep them off the live project,

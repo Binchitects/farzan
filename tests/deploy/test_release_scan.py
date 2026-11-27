@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 tools/release-scan.py: the SBOM (CycloneDX) of what a release ships, its known vulnerabilities from OSV, and the
 gate (a critical one not accepted fails the release), against fakes of OSV and of `dotnet list package`.

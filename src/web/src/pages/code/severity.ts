@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** A finding's severity, worst first, and the badge each wears. */
 export const severities = ['critical', 'high', 'medium', 'low'] as const
 

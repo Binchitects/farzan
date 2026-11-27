@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy, CornerDownRight, FileCode2, FileText, FoldVertical, GitFork, Info, Pencil, RefreshCw, Reply, Rewind, Square, Telescope, TextQuote, Timer } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Alert } from '@/components/ui/alert'

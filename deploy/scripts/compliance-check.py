@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """The compliance checks against the running stack (docs/compliance/README.md).
 
 From outside, what a browser sees: TLS 1.2 or later and nothing older, the

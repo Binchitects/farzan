@@ -1,3 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # `vllm` for a stack without vLLM: the fake server, with the same command line (vllm serve MODEL --port N ...).
 exec python3 "$(dirname "$0")/fake_vllm.py" "$@"

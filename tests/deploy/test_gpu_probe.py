@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/services/gpu-probe.py: what GPUs a machine has, for any vendor, with fake nvidia-smi and rocm-smi on PATH:
 NVIDIA cards of different sizes, AMD cards, a driver without memory.reserved, and a machine with no GPU at all.

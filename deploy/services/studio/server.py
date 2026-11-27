@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The media studio's own models over HTTP, on the GPU: a picture's background taken away
 (BiRefNet lite), a text spoken in the voice of a short sample (Chatterbox), and music from

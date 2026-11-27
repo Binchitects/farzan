@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace Llm.Api.Bots;
 
 /// <summary>Configuration section "Bots": the chat platforms' bots and email in (Settings → Chat bots).</summary>

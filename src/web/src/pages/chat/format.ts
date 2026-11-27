@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import type { ChatConfig, InLine, Message } from './types'
 
 /** What an answer waiting for its turn says: whose line it is in, and how many go first. */

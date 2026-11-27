@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 tools/images-for.py: the stack's images a change is in, read from deploy/docker-compose.yml and the Dockerfiles it
 builds, so a redeploy builds and starts again every one that holds the change.

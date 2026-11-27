@@ -22,6 +22,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with: { global-json-file: global.json }
       - run: dotnet test tests/Llm.Tests -c Release --logger "console;verbosity=normal"
+      - name: Licensing, with the .NET packages
+        # Every NuGet package the app and Farzan Graph resolve, against docs/compliance/licence-policy.yaml, and
+        # THIRD-PARTY-NOTICES.md current with them (LICENSING.md).
+        run: |
+          dotnet restore src/Llm.Api && dotnet restore src/CodeIntel
+          python3 tools/licence-check.py --nuget
 
   code-intel:
     # The code index service. Universal Ctags decides which symbols exist, and
@@ -216,6 +222,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # every commit, for the licence check's authors
+      - name: Licensing
+        # SPDX and copyright lines on every source file, each shipped package's licence, the notices, the licence
+        # labels, and every commit by the copyright holders or signed off (tools/licence-check.py, LICENSING.md).
+        run: python3 tools/licence-check.py
       - name: docker compose config
         run: |
           # DATA_DIR as the installer sets it (compose only reads it here: nothing is made there).

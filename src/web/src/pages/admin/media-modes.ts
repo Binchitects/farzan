@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** What a media model does, as the gateway names it. */
 export type MediaMode = 'image_generation' | 'video_generation' | 'audio_transcription' | 'audio_speech'
 

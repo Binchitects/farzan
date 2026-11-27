@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, CheckSquare, ListChecks, Loader2, MessageSquareText, Plus, RefreshCw, Search, Trash2, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'

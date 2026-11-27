@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # A picture or video server (stable-diffusion.cpp) running the model the app names.
 #
 # The app writes /control/$NAME.conf, read line by line and never run:

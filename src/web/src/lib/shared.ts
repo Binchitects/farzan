@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** What another app shared to Arena (the installed app's share target): kept by the service worker until the chat takes it. */
 export const sharedCache = 'shared-v1'
 

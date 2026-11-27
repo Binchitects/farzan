@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """A working agent loop against a live code-intel MCP server.
 
 This is the client half of the measurements in docs/code-intel/pack-measurements.md, in a

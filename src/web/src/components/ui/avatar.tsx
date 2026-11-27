@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { cn } from '@/lib/utils'
 
 /** The circle's colour for a hue: dark enough that its white initials keep 4.5:1 or more at every hue (avatar.test.ts). */

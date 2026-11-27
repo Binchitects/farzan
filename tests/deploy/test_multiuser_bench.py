@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/scripts/multiuser-bench.py's new scenarios against the fake vLLM (tools/fake-vllm), as CI runs them: a concurrency
 ramp with aggregate tok/s and time to first token, many people sharing one long system prompt, a conversation coming

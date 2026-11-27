@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // What the code index covers, as the Indexing page's heading says it: repositories, the branches beside them, and
 // symbols. From the index's own summary, never from the rows on screen (a repository indexed on three branches is
 // three rows). Plain functions: test/index-counts.test.mjs.

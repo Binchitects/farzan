@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # arena-sglang: SGLang pinned from PyPI, with the stack's supervisor (services/vllm/supervisor.sh with
 # ENGINE_SERVER=sglang), for a host that cannot pull lmsysorg/sglang from Docker Hub.
 #
@@ -12,6 +14,10 @@
 # fetches one itself).
 ARG BASE_IMAGE=python:3.13-slim
 FROM ${BASE_IMAGE}
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="(AGPL-3.0-only OR LicenseRef-Farzan-Commercial) AND Apache-2.0" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 
 ARG SGLANG_VERSION=0.5.23
 

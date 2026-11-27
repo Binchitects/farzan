@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # The 3D sandbox (compose profile "3d"): Blender headless, run by the Python sandbox's runner (runner.py with
 # SANDBOX_RUN=blender), each job as a user of its own, at run time with no network at all. The model writes
 # Blender Python (bpy); what the job writes (.glb, .blend, .stl, renders) comes back to the chat.
@@ -5,6 +7,10 @@
 # Blender 4.5 LTS from download.blender.org, its checksum pinned. CPU only: renders with Workbench or EEVEE's
 # software path; Cycles on the CPU when asked.
 FROM python:3.13-slim-bookworm
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="(AGPL-3.0-only OR LicenseRef-Farzan-Commercial) AND GPL-2.0-or-later" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 
 ARG BLENDER_VERSION=4.5.14
 ARG BLENDER_SHA256=9ba871ff2ecd36526b77432745980b7e6664ecd0c7ca11c48849073dcfe06da3

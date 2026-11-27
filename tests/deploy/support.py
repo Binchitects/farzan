@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 A throwaway copy of deploy/ for the script tests: the scripts under test, a few
 files around them, and fake docker and podman commands on PATH that log every

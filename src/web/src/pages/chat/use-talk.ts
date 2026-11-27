@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from '@/components/ui/toaster'
 import { api, ApiError, errorMessage } from '@/lib/api'

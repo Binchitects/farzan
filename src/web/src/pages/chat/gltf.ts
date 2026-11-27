@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * A .glb read for the chat's 3D viewer: its meshes as flat arrays in world space (positions, normals, UVs, indices),
  * each with its material (colour, texture, metal, roughness, glow, see-through), its pictures, and its lights. Enough of

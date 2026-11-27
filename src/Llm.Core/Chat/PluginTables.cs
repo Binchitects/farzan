@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace Llm.Core.Chat;
 
 /// <summary>Whether a plugin runs: on, turned off by an admin, or turned off by itself after failing (its breaker).</summary>

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The launchers of the LMDeploy and Strata engines (deploy/services/lmdeploy/serve.py, deploy/services/strata/serve.py), and
 arena-lmdeploy's image (services/lmdeploy.Dockerfile, lmdeploy-build.yml), read and run without a GPU: the supervisor's

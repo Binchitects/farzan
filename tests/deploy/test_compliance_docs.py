@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 tools/compliance-docs.py: the controls and each framework's clauses written from controls.yaml and frameworks.yaml,
 current in the repository, every clause a control cites listed, every document the clauses name there.

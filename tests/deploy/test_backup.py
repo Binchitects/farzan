@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/scripts/backup.sh: removing old backups on request (--prune, what Admin ->
 Storage previews, since the app sees the backups read only), and a backups folder

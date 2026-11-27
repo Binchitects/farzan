@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Tools direct or as code: the same questions, the same model, the two ways of giving it its tools.
 
     direct   every tool's definition, one call at a time (Admin -> Models -> Tools: Direct)

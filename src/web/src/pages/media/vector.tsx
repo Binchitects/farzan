@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Code2, Crosshair, Download, Film, History, PenTool, Plus, Sparkles, Trash2, Upload, Wand2, X } from 'lucide-react'
 import { useRef, useState } from 'react'

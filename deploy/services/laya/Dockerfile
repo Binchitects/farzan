@@ -1,7 +1,13 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Laya, the decision model (server.py), on the CPU: the GPU is the chat model's.
 # The weights are not in the image: the app fetches them into the model library
 # (MODELS_DIR/laya/english and multilingual), and this reads them from there.
 FROM python:3.13-slim
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only OR LicenseRef-Farzan-Commercial" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 # The base's own packages brought up to date first: a fix Debian has shipped is in the image even when the base
 # image on the registry is older than it.
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*

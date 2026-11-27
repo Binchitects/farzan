@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # The media studio's video, cut in the sandbox: each shot's clip (made longer, its last frame held, when its narration
 # is longer), the narration over it, captions from the narration, music under it (quieter while someone speaks), as one
 # H.264 MP4. In: story.json ({"shots": [{"clip", "speech", "text", "seconds"}], "music", "rtl"}) and the files it names.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Link } from "react-router";
 import { api, money, type IndexStatus, type Overview as OverviewData, type PacksStatus } from "../../api";
 import { TimeWindowPicker, useTimeWindow } from "../../components/TimeWindowPicker";

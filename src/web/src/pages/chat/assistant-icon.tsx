@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { BookOpen, Bot, Briefcase, Building2, ChartColumn, Check, Code2, FlaskConical, Globe, GraduationCap, Lock, PenLine, Shield, Sparkles, Users, Wrench, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Reach } from './types'

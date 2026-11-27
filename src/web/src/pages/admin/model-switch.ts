@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** KEY=value lines of a sample's model block; the host's own model directory is kept. */
 export function blockChanges(block: string): { key: string; value: string }[] {
   return block

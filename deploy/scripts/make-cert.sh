@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Traefik's certificate, made with openssl: a CA of this deployment's own and,
 # signed by it, a certificate for DOMAIN, gateway.DOMAIN and CODE_INTEL_HOST.DOMAIN (and
 # *.DOMAIN). Or a company's certificate, installed as it is.

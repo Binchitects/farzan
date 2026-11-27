@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useQuery } from '@tanstack/react-query'
 import { BookOpen, Columns2, Download, Gift, LifeBuoy, LogOut, Maximize2, MessageSquareHeart, Monitor, Moon, Palette, RectangleHorizontal, Sun, SwatchBook, UserRound } from 'lucide-react'
 import { useState } from 'react'

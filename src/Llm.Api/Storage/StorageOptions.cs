@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace Llm.Api.Storage;
 
 /// <summary>Configuration section "Storage": when a disk is too full, each person's room for files, and the clean-ups' defaults.</summary>

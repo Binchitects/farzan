@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { api } from '@/lib/api'
 
 /** The known tags (Tags:Known) and the person's own in use. */

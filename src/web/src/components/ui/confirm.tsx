@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { AlertDialog as AD } from 'radix-ui'
 import { createContext, use, useCallback, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'

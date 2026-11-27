@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Every script the stack ships or a person runs is at least valid: each Python file compiles and each shell
 script parses. A rename once left `code-intel = ...` as a variable in clients-check.py, which no test ran."""
 from __future__ import annotations

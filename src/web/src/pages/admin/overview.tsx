@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { PluginPanels } from '@/plugins/plugin-page'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, Coins, Copy, Database, HardDrive, ShieldCheck, Users, WalletCards } from 'lucide-react'

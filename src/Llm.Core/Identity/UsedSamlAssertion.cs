@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace Llm.Core.Identity;
 
 /// <summary>A SAML assertion that has signed someone in, kept until it expires: the same one never signs anyone in again.</summary>

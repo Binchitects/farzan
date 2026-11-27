@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, MessagesSquare, RefreshCw, Wrench } from 'lucide-react'
 import { useState } from 'react'

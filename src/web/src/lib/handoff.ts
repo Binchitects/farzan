@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * What the browser extension hands over: a page's title, address and text, or a
  * selection of it. It comes in /ask's fragment (#title=…&url=…&text=…), which the

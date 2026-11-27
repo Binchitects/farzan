@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 A stand-in for curl on PATH, for the installer's tests: the app's /api/info and
 code-intel's metrics answer with the version of the image the fake engine

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useState } from 'react'
 import { TimeZonePicker } from '@/components/app/time-zone-picker'
 import { Alert } from '@/components/ui/alert'

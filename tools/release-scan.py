@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """A release's software bill of materials and its known vulnerabilities: the release gate.
+
+The licence check (tools/licence-check.py) runs first: a release whose licensing does not check out does not ship, and
+the bill of materials gives each component its licence, as THIRD-PARTY-NOTICES.md lists it.
 
     python3 tools/release-scan.py                 dist/arena-VERSION.cdx.json (CycloneDX 1.5) and its .sha256;
                                                   exits 1 when a critical vulnerability is not accepted
@@ -183,19 +188,46 @@ def accepted(path: Path, today: date) -> dict[str, dict]:
     return {i["id"]: i for i in items if "id" in i and date.fromisoformat(i.get("until", "1970-01-01")) >= today}
 
 
-def bom(version: str, components: list[dict], findings: list[dict]) -> dict:
-    """CycloneDX 1.5, its components with their package URLs, and the vulnerabilities found."""
+def licence_check():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("licence_check", ROOT / "tools" / "licence-check.py")
+    lc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(lc)  # type: ignore[union-attr]
+    return lc
+
+
+def licences() -> dict:
+    """{(ecosystem, name, version): SPDX expression}, as THIRD-PARTY-NOTICES.md lists them, in this file's ecosystems."""
+    lc = licence_check()
+    eco = {"nuget": "nuget", "npm": "npm", "pypi": "pypi", "image": "docker"}
+    out = {(eco[e], n, v): lic for (e, n, v), lic in lc.read_notices().items() if e in eco}
+    for prog in lc.policy().get("programs", []):
+        for kind, name in BINARIES.values():
+            if name == prog["name"] or f"/{prog['name']}" in f"{name}/":
+                out[(kind, name, "*")] = prog["licence"]
+    return out
+
+
+def bom(version: str, components: list[dict], findings: list[dict], licensed: dict | None = None) -> dict:
+    """CycloneDX 1.5, its components with their package URLs and licences, and the vulnerabilities found."""
+    licensed = licensed or {}
     kind = {"nuget": "nuget", "npm": "npm", "pypi": "pypi", "docker": "docker", "golang": "golang", "generic": "generic"}
     refs = {}
     comps = []
     for c in components:
         ref = purl(kind[c["ecosystem"]], c["name"], c["version"])
         refs[(c["ecosystem"], c["name"], c["version"])] = ref
-        comps.append({"type": "container" if c["ecosystem"] == "docker" else "library", "bom-ref": ref, "name": c["name"], "version": c["version"], "purl": ref})
+        comp = {"type": "container" if c["ecosystem"] == "docker" else "library", "bom-ref": ref, "name": c["name"], "version": c["version"], "purl": ref}
+        lic = licensed.get((c["ecosystem"], c["name"], c["version"])) or licensed.get((c["ecosystem"], c["name"], "*"))
+        if lic:
+            comp["licenses"] = [{"expression": lic}]
+        comps.append(comp)
     return {
         "bomFormat": "CycloneDX", "specVersion": "1.5", "version": 1,
         "metadata": {"timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                     "component": {"type": "application", "name": "arena", "version": version, "bom-ref": f"arena@{version}"}},
+                     "component": {"type": "application", "name": "arena", "version": version, "bom-ref": f"arena@{version}",
+                                   "licenses": [{"expression": "AGPL-3.0-only OR LicenseRef-Farzan-Commercial"}],
+                                   "copyright": "Copyright (C) 2026 Binchitects"}},
         "components": comps,
         "vulnerabilities": [{"id": f["id"], "source": {"name": "OSV", "url": f"https://osv.dev/vulnerability/{f['id']}"},
                              "ratings": [{"severity": f["severity"]}], "description": f["summary"],
@@ -214,6 +246,9 @@ def main(argv: list[str] | None = None, opener=urllib.request.urlopen, run=subpr
     components += python_packages(dockerfiles) + binaries(dockerfiles) + images(dockerfiles)
     print(f"release-scan: {version}, {len(components)} components "
           f"({', '.join(f'{sum(1 for c in components if c['ecosystem'] == e)} {e}' for e in ('nuget', 'npm', 'pypi', 'golang', 'generic', 'docker'))})")
+    if licence_check().main([]) != 0:
+        print("release-scan: the licence check fails (above): the release does not ship", file=sys.stderr)
+        return 1
     try:
         findings = scan(components, opener)
     except (urllib.error.URLError, TimeoutError, OSError) as e:
@@ -223,7 +258,7 @@ def main(argv: list[str] | None = None, opener=urllib.request.urlopen, run=subpr
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     sbom = out / f"arena-{version}.cdx.json"
-    sbom.write_text(json.dumps(bom(version, components, findings), indent=1) + "\n")
+    sbom.write_text(json.dumps(bom(version, components, findings, licences()), indent=1) + "\n")
     digest = hashlib.sha256(sbom.read_bytes()).hexdigest()
     (out / f"{sbom.name}.sha256").write_text(f"{digest}  {sbom.name}\n")
     blocking = []

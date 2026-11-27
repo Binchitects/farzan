@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Power caps and a temperature policy for the GPUs and the CPU, from .env, so that long model runs
 # never cook the machine. Checked every THERMAL_CHECK_S seconds (a reboot or a driver reload resets
 # a cap: it is put back at the next check).

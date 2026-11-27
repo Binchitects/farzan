@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # Coverage per test of Llm.Tests: the run under dotnet-coverage (one session, its counts reset after each test by
 # PerTestCoverageAttribute), each test's lines kept in .cov/tests/, then tools/coverage-redundant.py on them.
 #   tools/coverage-per-test.sh                       every test (an hour or two)

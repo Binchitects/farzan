@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """The security knowledge pack's pages, written from the sources tools/fetch-security-sources.sh fetched.
 
     python3 tools/security-texts.py --from .packwork/docsrc/security --out .packwork/docsrc/security-texts

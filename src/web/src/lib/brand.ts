@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * The names people see, set at build time (the repository's branding.env, or PRODUCT_NAME and CODE_INTEL_NAME in the
  * build's environment): the product's and its code-intelligence service's. Text uses these and never spells a name out.

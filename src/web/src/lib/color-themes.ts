@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * The colour themes: Arena's own (the default), the calm named ones, and VS Code's most used, each with a light and a
  * dark mode. Their colours

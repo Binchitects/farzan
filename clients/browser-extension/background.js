@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // The context menu: "Ask Arena about …" on a selection or a page opens the app's
 // /ask with it. Chrome runs this as a service worker (lib.js imported here); Firefox
 // as a background script, after lib.js (manifest.json lists both).

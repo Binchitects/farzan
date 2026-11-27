@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowLeft, ArrowUp, Copy, Download, FileText, FolderOpen, History, MoreHorizontal, Palette, Pencil, Play, Plus, Presentation, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/services/llamacpp/router.sh, run by /bin/sh with a fake llama-server: an admin's restart file (a new gen=)
 starts the server again, as a change to the model list does, and a server that ignores TERM is killed once the

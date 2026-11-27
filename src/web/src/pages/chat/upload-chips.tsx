@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { EyeOff, FileText, X } from 'lucide-react'
 import { formatValue } from '@/lib/format'
 import { cn } from '@/lib/utils'

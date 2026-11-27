@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 The images' own vulnerabilities, before a release: Trivy over each image the stack runs (its OS packages, its language
 packages and the Go and .NET it carries), from a saved copy of the image (no engine's socket goes into Trivy).

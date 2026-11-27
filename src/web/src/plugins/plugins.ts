@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Blocks, type LucideIcon } from 'lucide-react'
 import { api } from '@/lib/api'
 import type { NavItem, NavSection } from '@/app/nav'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * The widest a legend name may draw on a chart this wide: two names always
  * share the legend's line, beside the pager when there are more to page to, so

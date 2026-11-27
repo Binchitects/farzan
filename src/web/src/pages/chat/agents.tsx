@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { Check, ChevronRight, ChevronsDownUp, ChevronsUpDown, CircleSlash, CircleX, Clock, Loader2 } from 'lucide-react'
 import { Collapsible } from 'radix-ui'
 import { useMemo, useState } from 'react'

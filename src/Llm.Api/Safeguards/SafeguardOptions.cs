@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace Llm.Api.Safeguards;
 
 /// <summary>Configuration section "Safeguards": what keeps the chat from being abused, or used to harm. Every part can be turned off.</summary>

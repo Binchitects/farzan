@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 namespace CodeIntel.Cli;
 
 /// <summary>A usage error: argparse prints usage and exits 2.</summary>

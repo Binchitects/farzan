@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, CircleCheck, CircleStop, CircleX, Clock, Download, FileText, LoaderCircle, Tag } from 'lucide-react'
 import { useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'

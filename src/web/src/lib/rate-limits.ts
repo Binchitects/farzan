@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** One limit a minute and where it comes from: their own, a group's (named), the company's, or none set anywhere. */
 export interface RateLimit {
   /** null: no limit. */

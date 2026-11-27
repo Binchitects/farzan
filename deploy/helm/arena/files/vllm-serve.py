@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 vLLM's server as the supervisor starts it (services/vllm/supervisor.sh, ENGINE_SERVER=vllm): `vllm serve` with its arguments
 as given. For a GGUF file from the library it first writes the model's config, tokenizer and generation config from the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** The Settings page's data, as /api/admin/config sends it. */
 export interface SettingView {
   key: string

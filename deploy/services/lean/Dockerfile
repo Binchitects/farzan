@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # The science lab's proof checker (compose profile "lean"): Lean 4 with Mathlib, run by the sandbox's runner
 # (sandbox/runner.py, SANDBOX_RUN=lean) as the 3D sandbox runs Blender: each job a Lean file checked as its own
 # user, with no network at all, a read-only root and limits. A proof is "checked" only when Lean accepts it with
@@ -7,6 +9,10 @@
 # releases, Mathlib and the packages it needs from GitHub, and Mathlib's compiled library from its cache
 # (lake exe cache get): about 13 GB as an image. Apache-2.0 (Lean, Mathlib, and its packages).
 FROM python:3.13-slim-bookworm
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="(AGPL-3.0-only OR LicenseRef-Farzan-Commercial) AND Apache-2.0" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 
 ARG ELAN_VERSION=4.2.4
 ARG ELAN_SHA256=42b94d4244e8353142c456ec0e4ca6528fd898a6c604d4059f494e706e431f63

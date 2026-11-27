@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 tools/image-scan.py: what fails a release. Trivy's report stands in (scan() is replaced): a critical the accepted list
 names passes, one it does not fails, an image that could not be scanned fails, and the kernel's headers are not the

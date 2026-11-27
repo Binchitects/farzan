@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/services/power-limits.sh: the power caps and the temperature policy, one check at a time
 (POWER_ONCE), against a fake nvidia-smi and a fake /sys (POWER_SYS) with Intel's RAPL limits or a

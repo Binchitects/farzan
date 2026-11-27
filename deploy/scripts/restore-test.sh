@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # A backup, restored into a throwaway project and checked through the API: the
 # people, the chats and the settings are there. Then the project and its volumes go.
 #

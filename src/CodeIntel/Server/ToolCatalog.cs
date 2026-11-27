@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 using Branding;
 // The tools as a model sees them: names, descriptions and JSON schemas.
 // They are the prompt surface of every agent that connects, so they change

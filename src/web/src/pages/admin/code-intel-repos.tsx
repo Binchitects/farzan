@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarClock, CircleCheck, CircleX, Eraser, FileText, GitBranch, Info, Loader2, MoreHorizontal, RefreshCw, RotateCw, ScrollText, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # --- added by the 3D tool before the script: part(), material() and texture() for models made of simple shapes ---
 # part() builds one part from a plain description: a shape, its size in metres, where the middle of its bottom sits, a
 # turn, a colour, a texture (a pattern drawn by Blender, or images made before) and a shader (glass, metal, light...).

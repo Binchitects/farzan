@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /** The kinds of model the bench tests: chat, and each media model by what it does. */
 export const benchKinds: Record<string, { what: string; capability: string; capacity: string }> = {
   image_generation: { what: 'a picture', capability: 'It makes a picture, as big as asked (checked from its header).', capacity: 'Pictures a minute (the GPU makes one at a time).' },

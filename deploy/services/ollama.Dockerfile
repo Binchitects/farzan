@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # arena-ollama: Ollama (github.com/ollama/ollama, MIT) pinned, with the stack's supervisor (services/vllm/supervisor.sh with
 # ENGINE_SERVER=ollama), its launcher and its front (services/ollama/serve.py), which need Python: Ollama's own program
 # and libraries (its CUDA backends) from its image, on the python image the stack already has.
@@ -14,6 +16,10 @@ ARG OLLAMA_IMAGE=ollama/ollama:0.40.18
 ARG BASE_IMAGE=python:3.13-slim
 FROM ${OLLAMA_IMAGE} AS ollama
 FROM ${BASE_IMAGE}
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="(AGPL-3.0-only OR LicenseRef-Farzan-Commercial) AND MIT" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 
 COPY --from=ollama /usr/bin/ollama /usr/bin/ollama
 COPY --from=ollama /usr/lib/ollama /usr/lib/ollama

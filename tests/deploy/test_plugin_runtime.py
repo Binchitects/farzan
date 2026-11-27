@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """deploy/services/plugins: the plugin runtime, in its real container with compose's limits, broken on purpose.
 
 The framework's chaos plugin (tests/fixtures/plugins/packages/chaos.fap) hangs, spins, leaks its heap and buffers

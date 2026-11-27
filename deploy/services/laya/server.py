@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 Laya, the decision model, over HTTP: a state (a text, or JSON) and typed questions in,
 a probability for every option out, in one forward pass on the CPU (the GPU is the chat

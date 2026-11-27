@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import DOMPurify from 'dompurify'
 import { Info, Table2, TrendingUp } from 'lucide-react'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import type { ComponentType } from 'react'
 import type { RouteObject } from 'react-router'
 import { HomePage } from '@/pages/home'

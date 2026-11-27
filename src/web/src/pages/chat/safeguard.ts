@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { ApiError } from '@/lib/api'
 
 /** A safeguard rule that asks the person before the message goes: to confirm (warn), or to give a reason (justify). */

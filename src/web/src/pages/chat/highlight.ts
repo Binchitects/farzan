@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import hljs from 'highlight.js/lib/core'
 import bash from 'highlight.js/lib/languages/bash'
 import c from 'highlight.js/lib/languages/c'

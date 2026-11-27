@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 Point-in-time recovery (deploy/pitr.yml): backup.sh --pitr runs pgBackRest in the stack's Postgres, and restore-drill.sh
 restores the repository into a scratch container and volume of its own, never the stack's, with fake docker on PATH

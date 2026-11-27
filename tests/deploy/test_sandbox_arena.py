@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 deploy/services/sandbox/arena: the chat's tools as Python functions for a program run_code runs, each call one JSON
 line to the runner's socket, against a fake of that socket.

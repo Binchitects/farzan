@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import {
   Bell, Bot, ClipboardList, Clock, Database, FileText, GitBranch, GitMerge, GitPullRequest, Globe, Hand, Hourglass, Library, Mail, MessageSquare, MessageSquareCode, MessagesSquare, OctagonX, Play,
   Repeat, ScanSearch, Send, SquareTerminal, Type, Webhook, Wrench, type LucideIcon,

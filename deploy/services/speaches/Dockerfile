@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # arena-audio: speaches (speech to text and text to speech, on the CPU) with what its image carries brought up to
 # date. Its newest release (0.9.0-rc.3) ships packages with known vulnerabilities (Pillow, urllib3, cryptography,
 # starlette, python-multipart, protobuf; Ubuntu's OpenSSL and apt): each is raised to at least the version that fixes
@@ -5,6 +7,10 @@
 # which pip check does not know), onnxruntime and the app import. Compose builds it with the speech feature on.
 ARG SPEACHES_IMAGE=ghcr.io/speaches-ai/speaches:0.9.0-rc.3-cpu
 FROM ${SPEACHES_IMAGE}
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="(AGPL-3.0-only OR LicenseRef-Farzan-Commercial) AND MIT" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 
 USER root
 # uv's download cache, left in the image by its build, holds the old packages again (Pillow 10.4, Gradio 5.49): nothing

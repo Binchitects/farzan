@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 FreeToken's server as the supervisor starts it (services/vllm/supervisor.sh, ENGINE_SERVER=freetoken): `ft serve` with
 the app's arguments, the model's path as its --model, the supervisor's name, host and port, its GPU, and the key.

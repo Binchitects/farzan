@@ -1,8 +1,14 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # The browser agent's browser (compose profile "browser"): Debian's Chromium, headless, driven by the app over the
 # DevTools protocol (Chat/Tools/Browser). It reaches nothing by itself: its network is internal, and every page goes
 # through the app's proxy, which allows public sites only (and an admin's lists). Its root is read-only and it runs as
 # its own user; each chat gets its own browser context (cookies and storage apart), closed when the chat is done with it.
 FROM python:3.13-slim-bookworm
+# Whose image this is, and under which licences (LICENSING.md; tools/licence-check.py keeps it).
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only OR LicenseRef-Farzan-Commercial" \
+      org.opencontainers.image.vendor="Binchitects" \
+      org.opencontainers.image.source="https://github.com/Binchitects/farzan"
 
 RUN apt-get update \
  && apt-get upgrade -y \

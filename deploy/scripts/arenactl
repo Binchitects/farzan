@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # arenactl: an installation's one command, for everything an operator does with it. The installer
 # puts it on the PATH (/usr/local/bin/arenactl as root, ~/.local/bin/arenactl otherwise), for the
 # installation it last installed, upgraded or repaired; --dir DIR names another.

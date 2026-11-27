@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """The stack's images a change is in: the services of deploy/docker-compose.yml built here whose Dockerfile copies a
 file that changed (or is the file that changed). Those are the images to build again, and the services to start again,
 for the change to run.

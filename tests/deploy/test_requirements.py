@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 installer.sh requirements: what the host needs, checked, and put right with --fix (the system's
 packages, the container toolkit wired into the engine, the host's settings), each step checked

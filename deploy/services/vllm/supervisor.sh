@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 # vLLM, SGLang, LMDeploy, Strata, FreeToken and Ollama serve one model a process here, with no router:
 # this runs one server for each model the app wants, as the app's desired state says, with no
 # Docker socket (the same way llamacpp/router.sh follows models.ini and sd-serve.sh its control

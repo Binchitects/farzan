@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import type { Cell, ChartSpec, ResultColumn } from '@/pages/data/data-api'
 
 /** How a result is drawn: one figure, bars or lines over x (one value axis, at most eight series), or a table. */

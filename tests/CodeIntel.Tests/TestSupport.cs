@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 using CodeIntel.Configuration;
 using CodeIntel.Store;
 using Microsoft.Data.Sqlite;

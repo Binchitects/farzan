@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Run a .NET test project as N shards at once: built once, then N `dotnet test` processes side by side, each with
 its classes (balanced by their measured time) and its own fixtures (its own Postgres and app). The run takes about the
 longest shard's time instead of the sum. Separate processes, so nothing a test holds in memory is shared.

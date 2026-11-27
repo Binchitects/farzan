@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 import { screenshotUrls } from './screenshots'
 
 /** The screenshots sent with feedback, small; each opens full size in a tab of its own. */

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 Many people at once: the chat (its fair-use queue), the API (each person's key),
 and the Python sandbox (a burst of jobs), against the deployed stack.

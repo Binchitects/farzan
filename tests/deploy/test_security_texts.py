@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 tools/security-texts.py: MITRE's structured text and example code, CodeQL's query help and metadata, and Bandit's
 reStructuredText, read as the security pack's Markdown.

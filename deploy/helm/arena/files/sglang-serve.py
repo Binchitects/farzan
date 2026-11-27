@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """
 SGLang's server as the supervisor starts it (services/vllm/supervisor.sh, ENGINE_SERVER=sglang): its arguments as given,
 and the key from the environment (SGLANG_API_KEY), added here, inside the process, so it is never on a command line that

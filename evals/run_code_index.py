@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+# Copyright (C) 2026 Binchitects
 """Code Arena with its code index, or with grep alone: the same tasks, the same model, measured.
 
     grep     Code Arena as it is (codeIndex off): grep, glob, read_file, git and run_shell

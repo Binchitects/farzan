@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 // A report's time window (the overview's and people's spend), as the address keeps it: from and to, a preset's words
 // (now-7d, now/M, now-1M/M, as Arena's reports have them) or two days. Plain functions: test/time-window.test.mjs.
 

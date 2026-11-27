@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * The sign-in page's scene, as numbers: where the eyes go and when each opens and
  * closes. One turn (CYCLE ms): the logo appears; as it goes, eyes open from where it

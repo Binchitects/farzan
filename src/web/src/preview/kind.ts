@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Farzan-Commercial
+// Copyright (C) 2026 Binchitects
 /**
  * What the chat can show live: a page, a picture, a diagram or a React
  * component. Shared by the chat (which offers Preview) and the runner at
