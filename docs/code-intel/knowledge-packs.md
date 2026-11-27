@@ -303,7 +303,9 @@ code-intel pack build --source iso --work-dir "$PWD/.packwork/docsrc/iso" --out 
 
 The fetch is three files, about 79 MB (the deliverables' JSON Lines, 76 MB;
 the committees', 2 MB; the ICS's XML, 0.5 MB); writing the pages takes 15
-seconds. The provenance is the three files' SHA-256s. ISO renews the open data
+seconds. The pack has 84,151 pages, 218,719 passages and 135,065 symbols, about
+476 MB; its first build (2026-11-27) embedded for about half an hour on one GPU.
+The provenance is the three files' SHA-256s. ISO renews the open data
 each day, so `tools/packs-weekly.py` builds the pack again every week, and the
 embedding cache keeps that to the pages that changed.
 
