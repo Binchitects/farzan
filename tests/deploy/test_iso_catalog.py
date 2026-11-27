@@ -31,11 +31,15 @@ class IsoCatalog(unittest.TestCase):
         self.assertEqual("ISO/TR 10013", ic.base("ISO/DTR 10013"))
         self.assertEqual("ISO/IEC TR 27103", ic.base("ISO/IEC DTR 27103"))
         self.assertEqual("ISO/IEC/IEEE 8802-3", ic.base("ISO/IEC/IEEE 8802-3:2017"))
+        self.assertEqual("ISO/IEC TS 17961", ic.base("ISO/IEC NP TS 17961"))
+        self.assertEqual("ISO Guide 73", ic.base("ISO Guide 73:2009"))
+        self.assertEqual("ISO/HL7 27931", ic.base("ISO/HL7 27931:2009"))
 
     def test_A_supplement_belongs_to_the_edition_it_amends(self):
         self.assertEqual("ISO/IEC 27001:2022", ic.parent("ISO/IEC 27001:2022/Amd 1:2024"))
         self.assertEqual("ISO/IEC 27001:2013", ic.parent("ISO/IEC 27001:2013/DAmd 1"))
         self.assertEqual("ISO 9001:1994", ic.parent("ISO 9001:1994/Cor 1:1995"))
+        self.assertEqual("ISO/IEC 9594-8:2020", ic.parent("ISO/IEC 9594-8:2020/PDAM 1"))
         self.assertIsNone(ic.parent("ISO 9001:2015"))
 
     def test_Stages_are_statuses(self):

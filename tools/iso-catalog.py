@@ -110,26 +110,26 @@ def stage_text(stage: int) -> str:
 
 def base(reference: str) -> str:
     """The undated number a reference belongs to: "ISO/IEC 27001:2022/Amd 1:2024" and "ISO/IEC DIS 27001" -> "ISO/IEC 27001",
-    "ISO/NP TS 19115-3" -> "ISO/TS 19115-3"."""
-    m = re.match(r"^(.*?)\s*(\d[^:/]*)", reference)
+    "ISO/NP TS 19115-3" -> "ISO/TS 19115-3". The designation keeps its own separators ("ISO Guide 73", "ISO/HL7 27931")."""
+    m = re.match(r"^(.*?)\s+(\d[^:/]*)", reference)
     if not m:
         return reference
     designation, number = m.group(1), m.group(2).strip()
-    orgs, kinds = [], []
-    for word in re.split(r"[/ ]+", designation.strip()):
-        if not word or word in DRAFT:
+    out, pending = "", None
+    for sep, word in re.findall(r"([/ ]*)([^/ ]+)", designation):
+        if word in DRAFT:
+            # A type after a dropped stage takes the stage's separator ("ISO/NP TS" -> "ISO/TS").
+            pending = pending if pending is not None else sep
             continue
         word = DRAFT_TYPE.get(word, word)
-        (kinds if word in TYPE_WORDS else orgs).append(word)
-    designation = "/".join(orgs)
-    if kinds:
-        designation += ("/" if len(orgs) == 1 else " ") + " ".join(kinds)
-    return f"{designation} {number}".strip()
+        out += (pending if pending is not None else sep) + word
+        pending = None
+    return f"{out} {number}".strip()
 
 
 def parent(reference: str) -> str | None:
-    """The edition a supplement amends: "ISO/IEC 27001:2022/Amd 1:2024" -> "ISO/IEC 27001:2022"."""
-    m = re.match(r"^(.*?\d[^/]*?)/(?:[A-Z]+ )*(?:D|F|FD|PD|CD |DIS |WD |NP |AWI |PWI )?(?:Amd|Cor|Add|Suppl|Ext)\b", reference)
+    """The edition a supplement amends: "ISO/IEC 27001:2022/Amd 1:2024" and "ISO/IEC 9594-8:2020/PDAM 1" -> the edition."""
+    m = re.match(r"^(.*?\d[^/]*?)/[A-Za-z ]*?(?:Amd|AMD|AM|Cor|COR|Add|Suppl|Ext)\b", reference)
     return m.group(1) if m else None
 
 
