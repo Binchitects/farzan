@@ -1,0 +1,54 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<fields xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ICS-simple.xsd">
+  <field>
+    <identifier>03</identifier>
+    <title xml:lang="en">Services. Company organization, management and quality. Administration. Transport. Sociology</title>
+    <title xml:lang="fr">Services. Organisation de l'entreprise. Gestion et qualité. Administration. Transport. Sociologie</title>
+  </field>
+  <field>
+    <identifier>35</identifier>
+    <title xml:lang="en">Information technology</title>
+    <title xml:lang="fr">Technologies de l'information</title>
+  </field>
+  <group>
+    <identifier>03.100</identifier>
+    <field>03</field>
+    <title xml:lang="en">Company organization and management. Management systems</title>
+    <title xml:lang="fr">Organisation et gestion d'entreprise. Systèmes de management</title>
+  </group>
+  <group>
+    <identifier>03.120</identifier>
+    <field>03</field>
+    <title xml:lang="en">Quality</title>
+    <title xml:lang="fr">Qualité</title>
+  </group>
+  <group>
+    <identifier>35.030</identifier>
+    <field>35</field>
+    <title xml:lang="en">IT Security</title>
+    <title xml:lang="fr">Sécurité des technologies de l’information</title>
+    <scope xml:lang="en">Including encryption</scope>
+    <scope xml:lang="fr">Y compris le chiffrement</scope>
+  </group>
+  <subGroup>
+    <identifier>03.100.70</identifier>
+    <group>03.100</group>
+    <title xml:lang="en">Management systems</title>
+    <title xml:lang="fr">Systèmes de management</title>
+    <scope xml:lang="en">Including environmental management systems (EMS), road traffic management systems, energy management systems, health care management systems, etc.</scope>
+    <scope xml:lang="fr">Y compris les systèmes de management environnemental (SME), les systèmes de management de la circulation routière, les systèmes de management de l'énergie, les sysèmes de management dans le domaine de la santé, etc.</scope>
+  </subGroup>
+  <subGroup>
+    <identifier>03.120.10</identifier>
+    <group>03.120</group>
+    <title xml:lang="en">Quality management and quality assurance</title>
+    <title xml:lang="fr">Management et assurance de la qualité</title>
+    <references>
+      <reference>
+        <identifier>03.100.70</identifier>
+        <note xml:lang="en">Quality management systems</note>
+        <note xml:lang="fr">Systèmes de management de la qualité</note>
+      </reference>
+    </references>
+  </subGroup>
+  </fields>

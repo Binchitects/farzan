@@ -19,6 +19,19 @@ Sections used:
 
 ### :sparkles: New features & Enhancements
 
+- **Every ISO standard in Farzan Graph: the `iso` knowledge pack.** ISO's catalogue of all 81,910 deliverables, from
+  ISO Open Data (`iso_deliverables_metadata`, `iso_technical_committees` and `iso_ics`, © ISO, under ODC-By 1.0). It
+  holds 26,600 current, 29,860 withdrawn, 5,397 under development and 20,053 cancelled projects. Each page gives the
+  reference, titles, status and stage, edition, publication date, committee, ICS codes, what it replaces and what
+  replaced it, its amendments, its other editions and drafts, and the abstract as the open data gives it. The 860
+  committees and 1,381 ICS codes have a page each, listing their deliverables. `docs_lookup` finds a standard by its
+  reference (`ISO/IEC 27001:2022`) or by its undated number on the current edition (`ISO 9001`, `ISO 27001`). It finds
+  a committee (`ISO/TC 176`) or an ICS code (`35.030`) the same way. Each status, the committees and the ICS are
+  facets. No standard's text is in it: ISO sells them, its Online Browsing Platform may not be scraped, and the
+  Publicly Available Standards site is closed (its free copies are for one reader). Each page links to the standard
+  on iso.org, and ISO/IEC 27001 and 27002 link to Farzan Arena's own control mapping. `tools/iso-catalog.py` writes
+  the pages, and `tools/packs-weekly.py` renews the pack each week from the open data
+  ([knowledge-packs.md](docs/code-intel/knowledge-packs.md#iso-standards-the-iso-pack)).
 - **The commercial license, written out, with royalties.** COMMERCIAL-LICENSE.md sets the terms Binchitects licenses
   Farzan Arena on for uses the AGPL does not allow: a royalty on every sale of a product or service built with it, in
   tiers of the licensee's cumulative gross sales (15% up to $500,000, 10% up to $2,000,000, 5% above), with reports,

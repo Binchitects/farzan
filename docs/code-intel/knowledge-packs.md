@@ -145,7 +145,7 @@ Rev. 3, the Cybersecurity Framework 2.0 (with its implementation examples),
 the AI RMF 1.0 with its Playbook, and the EU AI Act's articles and annexes.
 ISO's, PCI DSS's, the CCM's and the Common Criteria's texts are not shared, so
 they are not in it; [docs/compliance](../compliance/README.md) names their
-clauses.
+clauses, and the [iso pack](#iso-standards-the-iso-pack) holds ISO's catalogue.
 
 A clause's id is its symbol (`AC-2(1)`, `03.01.01`, `GV.OC-01`, `GOVERN 1.1`,
 `Art.50`, `Annex III`), and each framework is a facet: `lang="nist80053"`,
@@ -162,6 +162,62 @@ code-intel pack build --source grc --work-dir "$PWD/.packwork/docsrc/grc" --out 
 
 It has 1,437 pages and 5,349 passages, about 10 MB; the embedding takes a few
 minutes on a GPU.
+
+## ISO standards: the iso pack
+
+The `iso` pack is ISO's catalogue of every deliverable, as ISO publishes it in
+[ISO Open Data](https://www.iso.org/open-data.html) under the Open Data Commons
+Attribution License v1.0 (ODC-By 1.0): 81,910 deliverables (International
+Standards, technical specifications and reports, guides, PAS, IWAs, the old
+ISO Recommendations, and their amendments and corrigenda), 810 technical
+committees and the ICS. A page per deliverable gives its reference, English and
+French titles, status and stage, type, edition, publication date, pages,
+languages, committee, ICS codes, what it replaces and what replaced it, its
+amendments and corrigenda, the other editions and drafts of its number, and
+its abstract as the open data gives it. A page per committee and per ICS code
+lists their deliverables.
+
+The standards' texts are ISO's and sold, so they are not in it, and neither
+is anything from ISO's Online Browsing Platform (its terms forbid scraping).
+ISO's Publicly Available Standards site (standards.iso.org/ittf) is closed;
+the free copies the ISO and IEC webstores now give are for the reader's own
+use, not to be shared, so none of them is in the pack either. Every page links
+to the standard's page on iso.org. ISO/IEC 27001 and 27002 link, too, to
+Farzan Arena's own mapping of its controls
+([iso27001.md](../compliance/frameworks/iso27001.md)), which names their
+controls.
+
+| Status (facet) | Deliverables | Stages |
+|---|---|---|
+| `current` | 26,600 | 60.60 published and 90 review, and a withdrawal not yet decided (95.20, 95.60) |
+| `withdrawn` | 29,860 | 95.99 |
+| `development` | 5,397 | 00 to 60.00 |
+| `cancelled` | 20,053 | a project deleted or abandoned (xx.98) |
+
+`committees` (860 pages: ISO's 810 and those its deliverables name that it no
+longer lists) and `ics` (1,381) are facets too.
+
+A reference is a symbol (`ISO/IEC 27001:2022`, `ISO/DIS 9001`,
+`ISO/IEC 27001:2022/Amd 1:2024`), and so is its undated number, on the
+edition that is current, else the newest there is: `ISO 9001` finds ISO
+9001:2026, `ISO 8601` (now in parts) its last edition, `ISO 8601-1` the part.
+An ISO/IEC number answers to `ISO 27001` too, where no ISO deliverable has that
+number. Committees (`ISO/TC 176/SC 2`, `ISO/IEC JTC 1/SC 27`) and ICS codes
+(`ICS 35.030`, `35.030`) are their pages' symbols. A withdrawn standard's page
+says what replaced it, and a search finds a standard by its title, abstract,
+committee or ICS.
+
+```bash
+python3 tools/iso-catalog.py --fetch .packwork/iso-sources
+python3 tools/iso-catalog.py --from .packwork/iso-sources --out .packwork/docsrc/iso
+code-intel pack build --source iso --work-dir "$PWD/.packwork/docsrc/iso" --out packs/iso-1.0.kpack --version 1.0
+```
+
+The fetch is three files, about 79 MB (the deliverables' JSON Lines, 76 MB;
+the committees', 2 MB; the ICS's XML, 0.5 MB); writing the pages takes 15
+seconds. The provenance is the three files' SHA-256s. ISO renews the open data
+each day, so `tools/packs-weekly.py` builds the pack again every week, and the
+embedding cache keeps that to the pages that changed.
 
 ## Security: the security pack
 
@@ -391,7 +447,7 @@ tools/packs-weekly.py --publish           # and the GitHub release packs-YYYY.MM
 
 For each pack in turn it fetches its source again (git repositories as a
 shallow fetch of their branch; SQLite's and cppreference's newest archives;
-the security and GRC sources through their scripts; the advisories through
+the security, GRC and ISO sources through their scripts; the advisories through
 `code-intel pack renew`), each swapped in only when whole. A pack whose source
 is the one its newest build came from is kept as it is. The others are built
 by the code-intel image against a temporary embedder on the GPU (the stack's

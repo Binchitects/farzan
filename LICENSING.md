@@ -145,8 +145,9 @@ Also under their own licenses: the language, speech, picture and video models
 Admin → Models → **Find on Hugging Face** shows it before a download), Laya
 (Apache-2.0), sqlite-vec's Linux build in `native/` (MIT or Apache-2.0, taken from
 its published wheel and checked against its SHA-256), the Lucide icons (ISC), and
-the knowledge packs (CC-BY-4.0, CC-BY-SA-3.0, PSF-2.0, GFDL-1.3 or public domain,
-per pack; `code-intel pack info <name>` prints each).
+the knowledge packs (CC-BY-4.0, CC-BY-SA-3.0, PSF-2.0, GFDL-1.3, ODC-By-1.0 or public
+domain, per pack: the iso pack is ISO Open Data's catalogue, © ISO, under ODC-By-1.0, and
+holds no standard's text; `code-intel pack info <name>` prints each).
 
 ### Source of the container images
 

@@ -92,6 +92,34 @@ public sealed class GrcTexts : IndexedTexts
 }
 
 /// <summary>
+/// ISO's catalogue of every deliverable, from ISO Open Data (ODC-By 1.0): a page per standard, technical specification,
+/// technical report, guide, amendment and corrigendum, published, withdrawn, under development or cancelled, with its
+/// titles, status and stage, edition, publication date, ICS codes, committee, what it replaces and what replaced it, and its
+/// abstract as the open data gives it; a page per technical committee and per ICS code with their deliverables. The
+/// standards' texts are ISO's and sold, so they are not in it; each page links to the standard's page on iso.org.
+/// <c>tools/iso-catalog.py</c> writes the work directory from the open data's three files, with their checksums as the
+/// provenance. A reference is a symbol ("ISO/IEC 27001:2022", "ISO/DIS 9001"), and so is the undated number on its current
+/// edition ("ISO 9001", "ISO/IEC 27001", "ISO 27001"); so are committees ("ISO/TC 176") and ICS codes ("35.030"). Each
+/// status is a facet, and the committees and the ICS too. ISO/IEC 27001's controls are named in docs/compliance, not here.
+/// </summary>
+public sealed class IsoCatalog : IndexedTexts
+{
+    public override string Name => "iso";
+    public override string RepoUrl => "https://www.iso.org/open-data.html";
+    public override string License => "ODC-By-1.0";
+    public override string LicenseUrl => "https://opendatacommons.org/licenses/by/1-0/";
+    public override string Attribution =>
+        "Contains ISO Open Data (the datasets iso_deliverables_metadata, iso_technical_committees and iso_ics), © ISO, the International " +
+        "Organization for Standardization, https://www.iso.org/open-data.html, made available under the Open Data Commons Attribution " +
+        "License v1.0 (ODC-By 1.0, https://opendatacommons.org/licenses/by/1-0/). The standards' own texts are ISO's, sold by ISO, and not in this pack.";
+    protected override string Writer => "tools/iso-catalog.py --from <ISO Open Data's three files> --out";
+
+    /// <summary>lang="current", "withdrawn", "development" or "cancelled" keeps a search to deliverables of that status; "committees" and "ics" to those pages.</summary>
+    public override IReadOnlyList<(string Name, string Prefix)> Facets =>
+        [.. new[] { "current", "withdrawn", "development", "cancelled", "committees", "ics" }.Select(f => (f, f + "/"))];
+}
+
+/// <summary>
 /// What is known of software weaknesses and how to find and fix them, for the security review and Fix it: MITRE's CWE and
 /// CAPEC; OWASP's Cheat Sheet Series, ASVS 5.0, Web Security Testing Guide and Top 10s (web 2025 and 2021, API 2023, LLM
 /// applications 2025); CodeQL's security queries' help (never its engine); and the analyzers' rules (.NET's security

@@ -1,0 +1,338 @@
+{
+ "provenance": "deliverables=1922cfb1da4a,committees=04cd74fca741,ics=a5f593caeb09",
+ "docs": [
+  {
+   "path": "withdrawn/42103-iso-iec-27001-2005.md",
+   "title": "ISO/IEC 27001:2005 Information technology — Security techniques — Information security management systems — Requirements",
+   "url": "https://www.iso.org/standard/42103.html",
+   "symbols": [
+    {
+     "name": "ISO/IEC 27001:2005",
+     "kind": "is",
+     "namespace": "ISO/IEC JTC 1/SC 27",
+     "signature": "ISO/IEC 27001:2005 (withdrawn): Information technology — Security techniques — Information security management systems — Requirements"
+    }
+   ]
+  },
+  {
+   "path": "withdrawn/54534-iso-iec-27001-2013.md",
+   "title": "ISO/IEC 27001:2013 Information technology — Security techniques — Information security management systems — Requirements",
+   "url": "https://www.iso.org/standard/54534.html",
+   "symbols": [
+    {
+     "name": "ISO/IEC 27001:2013",
+     "kind": "is",
+     "namespace": "ISO/IEC JTC 1/SC 27",
+     "signature": "ISO/IEC 27001:2013 (withdrawn): Information technology — Security techniques — Information security management systems — Requirements"
+    }
+   ]
+  },
+  {
+   "path": "withdrawn/62085-iso-9001-2015.md",
+   "title": "ISO 9001:2015 Quality management systems — Requirements",
+   "url": "https://www.iso.org/standard/62085.html",
+   "symbols": [
+    {
+     "name": "ISO 9001:2015",
+     "kind": "is",
+     "namespace": "ISO/TC 176/SC 2",
+     "signature": "ISO 9001:2015 (withdrawn): Quality management systems — Requirements"
+    }
+   ]
+  },
+  {
+   "path": "current/66204-iso-ts-9002-2016.md",
+   "title": "ISO/TS 9002:2016 Quality management systems — Guidelines for the application of ISO 9001:2015",
+   "url": "https://www.iso.org/standard/66204.html",
+   "symbols": [
+    {
+     "name": "ISO/TS 9002:2016",
+     "kind": "ts",
+     "namespace": "ISO/TC 176/SC 2",
+     "signature": "ISO/TS 9002:2016 (current): Quality management systems — Guidelines for the application of ISO 9001:2015"
+    },
+    {
+     "name": "ISO/TS 9002",
+     "kind": "ts",
+     "namespace": "ISO/TC 176/SC 2",
+     "signature": "ISO/TS 9002:2016 (current): Quality management systems — Guidelines for the application of ISO 9001:2015"
+    }
+   ]
+  },
+  {
+   "path": "withdrawn/66805-iso-iec-27001-2013-cor-1-2014.md",
+   "title": "ISO/IEC 27001:2013/Cor 1:2014 Information technology — Security techniques — Information security management systems — Requirements — Technical Corrigendum 1",
+   "url": "https://www.iso.org/standard/66805.html",
+   "symbols": [
+    {
+     "name": "ISO/IEC 27001:2013/Cor 1:2014",
+     "kind": "cor",
+     "namespace": "ISO/IEC JTC 1/SC 27",
+     "signature": "ISO/IEC 27001:2013/Cor 1:2014 (withdrawn): Information technology — Security techniques — Information security management systems — Requirements — Technical Corrigendum 1"
+    }
+   ]
+  },
+  {
+   "path": "withdrawn/69378-iso-iec-27001-2013-cor-2-2015.md",
+   "title": "ISO/IEC 27001:2013/Cor 2:2015 Information technology — Security techniques — Information security management systems — Requirements — Technical Corrigendum 2",
+   "url": "https://www.iso.org/standard/69378.html",
+   "symbols": [
+    {
+     "name": "ISO/IEC 27001:2013/Cor 2:2015",
+     "kind": "cor",
+     "namespace": "ISO/IEC JTC 1/SC 27",
+     "signature": "ISO/IEC 27001:2013/Cor 2:2015 (withdrawn): Information technology — Security techniques — Information security management systems — Requirements — Technical Corrigendum 2"
+    }
+   ]
+  },
+  {
+   "path": "cancelled/82873-iso-iec-27001-2013-damd-1.md",
+   "title": "ISO/IEC 27001:2013/DAmd 1 Information technology — Security techniques — Information security management systems — Requirements — Amendment 1",
+   "url": "https://www.iso.org/standard/82873.html",
+   "symbols": [
+    {
+     "name": "ISO/IEC 27001:2013/DAmd 1",
+     "kind": "amd",
+     "namespace": "ISO/IEC JTC 1/SC 27",
+     "signature": "ISO/IEC 27001:2013/DAmd 1 (cancelled): Information technology — Security techniques — Information security management systems — Requirements — Amendment 1"
+    }
+   ]
+  },
+  {
+   "path": "current/82875-iso-iec-27001-2022.md",
+   "title": "ISO/IEC 27001:2022 Information security, cybersecurity and privacy protection — Information security management systems — Requirements",
+   "url": "https://www.iso.org/standard/82875.html",
+   "symbols": [
+    {
+     "name": "ISO/IEC 27001:2022",
+     "kind": "is",
+     "namespace": "ISO/IEC JTC 1/SC 27",
+     "signature": "ISO/IEC 27001:2022 (current): Information security, cybersecurity and privacy protection — Information security management systems — Requirements"
+    },
+    {
+     "name": "ISO/IEC 27001",
+     "kind": "is",
+     "namespace": "ISO/IEC JTC 1/SC 27",
+     "signature": "ISO/IEC 27001:2022 (current): Information security, cybersecurity and privacy protection — Information security management systems — Requirements"
+    },
+    {
+     "name": "ISO 27001",
+     "kind": "is",
+     "namespace": "ISO/IEC JTC 1/SC 27",
+     "signature": "ISO/IEC 27001:2022 (current): Information security, cybersecurity and privacy protection — Information security management systems — Requirements"
+    }
+   ]
+  },
+  {
+   "path": "withdrawn/88431-iso-9001-2015-amd-1-2024.md",
+   "title": "ISO 9001:2015/Amd 1:2024 Quality management systems — Requirements — Amendment 1: Climate action changes",
+   "url": "https://www.iso.org/standard/88431.html",
+   "symbols": [
+    {
+     "name": "ISO 9001:2015/Amd 1:2024",
+     "kind": "amd",
+     "namespace": "ISO/TC 176/SC 2",
+     "signature": "ISO 9001:2015/Amd 1:2024 (withdrawn): Quality management systems — Requirements — Amendment 1: Climate action changes"
+    }
+   ]
+  },
+  {
+   "path": "current/88435-iso-iec-27001-2022-amd-1-2024.md",
+   "title": "ISO/IEC 27001:2022/Amd 1:2024 Information security, cybersecurity and privacy protection — Information security management systems — Requirements — Amendment 1: Climate action changes",
+   "url": "https://www.iso.org/standard/88435.html",
+   "symbols": [
+    {
+     "name": "ISO/IEC 27001:2022/Amd 1:2024",
+     "kind": "amd",
+     "namespace": "ISO/IEC JTC 1/SC 27",
+     "signature": "ISO/IEC 27001:2022/Amd 1:2024 (current): Information security, cybersecurity and privacy protection — Information security management systems — Requirements — Amendment 1: Climate action changes"
+    }
+   ]
+  },
+  {
+   "path": "current/88464-iso-9001-2026.md",
+   "title": "ISO 9001:2026 Quality management systems — Requirements",
+   "url": "https://www.iso.org/standard/88464.html",
+   "symbols": [
+    {
+     "name": "ISO 9001:2026",
+     "kind": "is",
+     "namespace": "ISO/TC 176/SC 2",
+     "signature": "ISO 9001:2026 (current): Quality management systems — Requirements"
+    },
+    {
+     "name": "ISO 9001",
+     "kind": "is",
+     "namespace": "ISO/TC 176/SC 2",
+     "signature": "ISO 9001:2026 (current): Quality management systems — Requirements"
+    }
+   ]
+  },
+  {
+   "path": "development/91841-iso-dis-9002.md",
+   "title": "ISO/DIS 9002 Quality management systems — Guidance for the application of ISO 9001",
+   "url": "https://www.iso.org/standard/91841.html",
+   "symbols": [
+    {
+     "name": "ISO/DIS 9002",
+     "kind": "is",
+     "namespace": "ISO/TC 176/SC 2",
+     "signature": "ISO/DIS 9002 (under development): Quality management systems — Guidance for the application of ISO 9001"
+    },
+    {
+     "name": "ISO 9002",
+     "kind": "is",
+     "namespace": "ISO/TC 176/SC 2",
+     "signature": "ISO/DIS 9002 (under development): Quality management systems — Guidance for the application of ISO 9001"
+    }
+   ]
+  },
+  {
+   "path": "committees/iso-iec-jtc-1-sc-27.md",
+   "title": "ISO/IEC JTC 1/SC 27 Information security, cybersecurity and privacy protection",
+   "url": "https://www.iso.org/committee/45306.html",
+   "symbols": [
+    {
+     "name": "ISO/IEC JTC 1/SC 27",
+     "kind": "committee",
+     "namespace": "ISO committees",
+     "signature": "ISO/IEC JTC 1/SC 27: Information security, cybersecurity and privacy protection"
+    }
+   ]
+  },
+  {
+   "path": "committees/iso-tc-176-sc-2.md",
+   "title": "ISO/TC 176/SC 2 Quality systems",
+   "url": "https://www.iso.org/committee/53896.html",
+   "symbols": [
+    {
+     "name": "ISO/TC 176/SC 2",
+     "kind": "committee",
+     "namespace": "ISO committees",
+     "signature": "ISO/TC 176/SC 2: Quality systems"
+    }
+   ]
+  },
+  {
+   "path": "ics/03.md",
+   "title": "ICS 03 Services. Company organization, management and quality. Administration. Transport. Sociology",
+   "url": "https://www.iso.org/ics/03.html",
+   "symbols": [
+    {
+     "name": "ICS 03",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 03: Services. Company organization, management and quality. Administration. Transport. Sociology"
+    }
+   ]
+  },
+  {
+   "path": "ics/03.100.md",
+   "title": "ICS 03.100 Company organization and management. Management systems",
+   "url": "https://www.iso.org/ics/03.100.html",
+   "symbols": [
+    {
+     "name": "ICS 03.100",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 03.100: Company organization and management. Management systems"
+    },
+    {
+     "name": "03.100",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 03.100: Company organization and management. Management systems"
+    }
+   ]
+  },
+  {
+   "path": "ics/03.100.70.md",
+   "title": "ICS 03.100.70 Management systems",
+   "url": "https://www.iso.org/ics/03.100.70.html",
+   "symbols": [
+    {
+     "name": "ICS 03.100.70",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 03.100.70: Management systems"
+    },
+    {
+     "name": "03.100.70",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 03.100.70: Management systems"
+    }
+   ]
+  },
+  {
+   "path": "ics/03.120.md",
+   "title": "ICS 03.120 Quality",
+   "url": "https://www.iso.org/ics/03.120.html",
+   "symbols": [
+    {
+     "name": "ICS 03.120",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 03.120: Quality"
+    },
+    {
+     "name": "03.120",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 03.120: Quality"
+    }
+   ]
+  },
+  {
+   "path": "ics/03.120.10.md",
+   "title": "ICS 03.120.10 Quality management and quality assurance",
+   "url": "https://www.iso.org/ics/03.120.10.html",
+   "symbols": [
+    {
+     "name": "ICS 03.120.10",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 03.120.10: Quality management and quality assurance"
+    },
+    {
+     "name": "03.120.10",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 03.120.10: Quality management and quality assurance"
+    }
+   ]
+  },
+  {
+   "path": "ics/35.md",
+   "title": "ICS 35 Information technology",
+   "url": "https://www.iso.org/ics/35.html",
+   "symbols": [
+    {
+     "name": "ICS 35",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 35: Information technology"
+    }
+   ]
+  },
+  {
+   "path": "ics/35.030.md",
+   "title": "ICS 35.030 IT Security",
+   "url": "https://www.iso.org/ics/35.030.html",
+   "symbols": [
+    {
+     "name": "ICS 35.030",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 35.030: IT Security"
+    },
+    {
+     "name": "35.030",
+     "kind": "ics",
+     "namespace": "ICS",
+     "signature": "ICS 35.030: IT Security"
+    }
+   ]
+  }
+ ]
+}
