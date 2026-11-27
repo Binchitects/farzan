@@ -15,7 +15,7 @@ Sections used:
   makes weaker (gone, a clause or a check dropped, fewer tests), by its id,
   and why ([compliance](docs/compliance/README.md#when-a-change-weakens-a-control))
 
-## v8.3.0 (unreleased)
+## v8.3.0 (2026-11-27)
 
 ### :rocket: Epics and highlights
 
