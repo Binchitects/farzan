@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+"""`ollama serve` and `ollama create NAME -f MODELFILE` for a stack without Ollama: the fake server (fake_vllm.py
+--ollama) on OLLAMA_HOST, and its create, as services/ollama/serve.py runs them."""
+import json
+import os
+import sys
+import urllib.request
+
+argv = sys.argv[1:]
+here = os.path.dirname(os.path.abspath(__file__))
+if argv[:1] == ["serve"]:
+    os.execv(sys.executable, [sys.executable, os.path.join(here, "fake_vllm.py"), "serve", "--ollama"])
+if argv[:1] == ["create"] and len(argv) == 4 and argv[2] == "-f":
+    lines = open(argv[3]).read().splitlines()
+    source = next((l[5:].strip() for l in lines if l.startswith("FROM ")), "")
+    host = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434")
+    ask = urllib.request.Request(f"http://{host}/api/create", data=json.dumps({"model": argv[1], "from": source}).encode(),
+                                 headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(ask, timeout=30) as r:
+            print(json.load(r).get("status"))
+            sys.exit(0)
+    except urllib.error.HTTPError as e:
+        print(f"Error: {e.read().decode()}", file=sys.stderr)
+        sys.exit(1)
+print("fake ollama: only `ollama serve` and `ollama create NAME -f FILE` are here", file=sys.stderr)
+sys.exit(2)

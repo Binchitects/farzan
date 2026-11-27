@@ -1,11 +1,22 @@
 # Plugins and APIs
 
-Ready-made tools for the chat. A plugin is a folder with a `plugin.yaml` and
-the files it names: an API (its OpenAPI document) or an MCP server, how its
-calls sign in, which calls change something, the settings an admin fills in;
-and what else it brings: skills, assistants, safeguard rules
-and toolsets. **No plugin code runs in the app**: its tools are a remote MCP
-server, or an API the app calls with each operation's arguments.
+A plugin is a folder (or a signed `.fap` package) with a `plugin.yaml` and the
+files it names. It may bring tools for the chat (an API by its OpenAPI
+document, an MCP server, or functions in its own code), skills, assistants,
+safeguard rules and toolsets, and, since 8.3, **code and pages of its own**:
+server code with routes, hooks, events and scheduled jobs, and pages, panels,
+menu items, a settings screen and chat actions, with access to Arena's chats,
+projects, models, knowledge, files, people and settings through a versioned
+host API ([below](#plugins-with-code-and-pages)). **No plugin code runs in the
+app**: a plugin's code runs in the plugin runtime, each plugin apart, and its
+pages in sandboxed frames.
+
+Plugins are made with the plugin framework,
+[Binchitects/farzan-arena-plugin-framework](https://github.com/Binchitects/farzan-arena-plugin-framework):
+its SDKs, its CLI (`arena-plugin`), its docs and examples. Arena is held to its
+conformance suite (`tests/fixtures/plugins`, from the commit
+`plugins/framework.lock` names; `tools/plugin-framework-sync.sh` takes a newer
+one).
 
 Installed, a plugin is a tool like any other in **Admin → Tools**: on or off,
 for everyone or some groups, on in new chats, asking before each call. Its
@@ -271,3 +282,111 @@ installed from it:
 ```bash
 openssl dgst -sha256 -sign catalog-key.pem index.json | base64 -w0 > index.json.sig
 ```
+
+## Plugins with code and pages
+
+`apiVersion: arena.plugins/v3`, a superset of the manifest above: every field
+keeps its meaning, and a plugin installed before 8.3 is made v3 by the upgrade
+(its manifest and every version kept, with `apiVersion` first and a version like
+1.2.3). The framework's docs say every field; in short:
+
+```yaml
+apiVersion: arena.plugins/v3
+name: ticket-desk
+version: 1.0.0
+arena: ">=8.3.0 <9.0.0"            # refused outside these versions
+permissions: [chats.read, storage, notify, { network: [tickets.example.com] }]
+server: { entry: server/index.js, memoryMb: 128, timeoutMs: 15000 }
+tools: { functions: [{ name: create_ticket, description: Opens a ticket., writes: true }] }
+routes: [{ method: GET, path: /tickets, access: person }]
+hooks: [{ on: chat.message.before_model, mode: observe }]
+events: [chat.message.created]
+jobs: [{ name: digest, cron: "0 7 * * 1-5" }]
+ui:
+  pages: [{ id: board, title: Ticket board, path: board, entry: ui/board.html }]
+  menu: [{ page: board, section: build }]
+  panels: [{ id: related, title: Tickets of this chat, slot: chat.sidebar, entry: ui/panel.html }]
+  settings: { entry: ui/settings.html }
+```
+
+### Installing one
+
+A plugin with code or pages installs only from a `.fap` **signed by a trusted
+publisher**: Admin → Plugins → **Trusted publishers** takes a publisher's public
+key (`arena-plugin keygen` writes it; a private key is refused). Settings →
+Plugins → **Allow unsigned plugins with code** lets unsigned ones in, for a test
+Arena. Installing shows what it asks for in words (its code, its pages, each
+host API scope, each internet host) and needs the admin's yes; Arena checks
+every file against the package's signed list first.
+
+On its card: **On / Off**, and why it is off (an admin, or its breaker: below);
+who signed it; **What it may reach**: each scope and host it asks for, ticked
+when granted (an admin with Grant plugins may grant less, or take a grant back:
+refused from the plugin's next call on); **Worker and logs**: its process in the
+runtime, its memory and restarts, the last lines it wrote; **Its own settings**,
+the plugin's screen, for its managers. Who may use it is set in Admin → Tools
+as for any tool (everyone, admins, or some groups): its tools, pages, panels,
+events and hooks are only for them.
+
+Permissions: **plugins.grant** (what plugins may reach, the trusted keys),
+**plugins.enable** (on and off), beside plugins.read, install, configure and
+remove; a plugin's **managers** (people or groups) may configure that plugin
+only. **feature.plugins.develop** pushes dev installs (below).
+
+### How it runs
+
+- **Its code** runs in the `plugins` service (deploy/services/plugins, the
+  `plugins` feature): one worker a plugin, its own user, its code where it can
+  read and not change it, no network at all, rlimits (processes, open files,
+  file size, CPU), a heap cap and a watch on its memory and CPU, a deadline on
+  every call. A crash fails only its own call; the worker starts again on the
+  next (waiting longer each time it crashes again with no call answered).
+- **Its pages** are frames with an opaque origin (`sandbox allow-scripts`, and
+  the same as the files' own policy): no cookies, storage or Arena of their own,
+  no network. They reach Arena only through the page around them, which answers
+  only its own frame, 50 calls a second, and shows a frame that does not start
+  within 8 seconds, or floods it, as not working, while the page goes on.
+- **Every host API call** is checked: the plugin on, the scope granted, the
+  call's person allowed the plugin and holding the feature, then only their own
+  things. `http.fetch` is made by the app, to the granted hosts only, https,
+  public addresses only. Denials and every write or outward call are audited
+  (`plugin.denied`, `plugin.call`).
+- **The breaker**: five of its own failures in a row, or ten of its last twenty
+  within ten minutes, turn the plugin off by itself: its worker stopped, its
+  admins told on the bell, audited `plugin.auto_disabled`. An admin turns it on.
+- **Hooks** (a message before the model reads it, an answer once it is
+  finished, a tool call before it runs, a file a person uploads before it is
+  kept) run within their deadlines; a failing one is skipped unless it fails
+  closed with hooks.block granted. A changed answer replaces the words on the
+  person's page; a refused upload is not kept. **Events** (chats, messages,
+  projects, tasks, uploads, people made, group members, plugins installed or
+  set) are delivered at least once in the background; **jobs** run on their
+  cron, once across replicas.
+- **IDE panels** show in Code Studio: the Code page's Plugins tab, and beside
+  each review, which the panel is told (`context.review`).
+
+### Publishing and dev installs
+
+`POST /api/plugins/packages` takes a `.fap` with a person's API key
+(`arena-plugin publish`): one who may install plugins installs a new one with
+only what needs nobody's yes granted (off until an admin grants the rest), or
+updates one that asks for nothing more. With `?dev=true` (`arena-plugin dev`),
+and Settings → Plugins → **Developers' own installs** on, a person with
+feature.plugins.develop pushes a dev install of their own: its own name, a
+version of its own each push, seen and used by them only.
+
+`tools/plugin-dev-stack.sh up` starts a throwaway Arena from this checkout for
+making plugins (Postgres and the runtime from local images, the app by
+`tools/dn run`, the web by vite, on http://localhost:5173); its browser tests
+are `src/web/e2e/plugins.spec.ts`.
+
+### How it is tested
+
+`tests/deploy/test_plugin_runtime.py` runs the runtime's container with
+compose's limits and breaks the framework's chaos plugin every way (isolation,
+timeouts, memory, processes, files, crashes, the protocol);
+`PluginRuntimeTests` drives the app with the real runtime (signatures, tools,
+routes, grants, the frames' files, the breaker, hooks, events, dev installs);
+`PluginConformanceTests` holds Arena to the framework's manifests and packages;
+`PluginsV3MigrationTests` upgrades v2 installs; `plugin-bridge.test.ts` and
+`e2e/plugins.spec.ts` the frames in a browser.

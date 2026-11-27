@@ -21,9 +21,9 @@ public sealed record EngineCapabilities(string Kind, string Label, bool Managed,
 
 /// <summary>
 /// The kinds of engine. A new one is a new entry here, a backend in Llm.Api/Models (IEngineBackend: list, load, unload,
-/// sleep, capacity, health), and its advisor; nothing else asks which kind a model is beyond these. vLLM, SGLang, LMDeploy
-/// and Strata are one server a model, run by the same supervisor (<see cref="ServerPerModel"/>): only their
-/// arguments, launchers and metrics differ.
+/// sleep, capacity, health), and its advisor; nothing else asks which kind a model is beyond these. vLLM, SGLang, LMDeploy,
+/// Strata, FreeToken and Ollama are one server a model, run by the same supervisor (<see cref="ServerPerModel"/>):
+/// only their arguments, launchers and metrics differ.
 /// </summary>
 public static class EngineKinds
 {
@@ -32,6 +32,8 @@ public static class EngineKinds
     public const string Sglang = "sglang";
     public const string Lmdeploy = "lmdeploy";
     public const string Strata = "strata";
+    public const string FreeToken = "freetoken";
+    public const string Ollama = "ollama";
     /// <summary>An OpenAI-compatible server the app does not manage (another vLLM, SGLang, TGI, Ollama, a cloud): Admin → Models → Other GPU servers.</summary>
     public const string External = "external";
 
@@ -56,11 +58,23 @@ public static class EngineKinds
     public static readonly EngineCapabilities StrataCapabilities = new(Strata, "Strata", Managed: true, TensorParallel: false, Sleep: false,
         PrefixCache: true, SlotPinning: false, SpillToRam: true, Replicas: false, KvTiers: [], Backends: ["cuda"], Formats: ["gguf"]);
 
+    /// <summary>
+    /// FreeToken (FlashML): MoE models on one GPU as GGUF files or snapshots, the experts that do not fit there kept in RAM and
+    /// fetched or run on the CPU as each token needs them; its radix cache shares every prefix.
+    /// </summary>
+    public static readonly EngineCapabilities FreeTokenCapabilities = new(FreeToken, "FreeToken", Managed: true, TensorParallel: false, Sleep: false,
+        PrefixCache: true, SlotPinning: false, SpillToRam: true, Replicas: false, KvTiers: [], Backends: ["cuda"], Formats: ["gguf", "safetensors"]);
+
+    /// <summary>Ollama: a GGUF file made into its model (nothing pulled), the layers that do not fit its GPUs in RAM, one copy.</summary>
+    public static readonly EngineCapabilities OllamaCapabilities = new(Ollama, "Ollama", Managed: true, TensorParallel: false, Sleep: false,
+        PrefixCache: false, SlotPinning: false, SpillToRam: true, Replicas: false, KvTiers: [], Backends: ["cuda"], Formats: ["gguf"]);
+
     public static readonly EngineCapabilities ExternalCapabilities = new(External, "Another server (OpenAI-compatible)", Managed: false, TensorParallel: false,
         Sleep: false, PrefixCache: false, SlotPinning: false, SpillToRam: false, Replicas: false, KvTiers: [], Backends: [], Formats: []);
 
     public static IReadOnlyList<EngineCapabilities> All { get; } =
-        [LlamaCppCapabilities, VllmCapabilities, SglangCapabilities, LmdeployCapabilities, StrataCapabilities, ExternalCapabilities];
+        [LlamaCppCapabilities, VllmCapabilities, SglangCapabilities, LmdeployCapabilities, StrataCapabilities, FreeTokenCapabilities, OllamaCapabilities,
+        ExternalCapabilities];
 
     /// <summary>A kind's capabilities; null for a kind there is not.</summary>
     public static EngineCapabilities? Of(string? kind) => All.FirstOrDefault(k => k.Kind == kind);
@@ -69,14 +83,14 @@ public static class EngineKinds
     public static bool Managed(string? kind) => Of(kind) is { Managed: true };
 
     /// <summary>
-    /// vLLM, SGLang, LMDeploy and Strata: one server a model (and a copy), from a Hugging Face snapshot or a GGUF
+    /// vLLM, SGLang, LMDeploy, Strata, FreeToken and Ollama: one server a model (and a copy), from a Hugging Face snapshot or a GGUF
     /// file as the kind takes, on its own GPUs, run by the supervisor (services/vllm/supervisor.sh) as the app's desired state
     /// says, with its answers at once in each copy and no slots.
     /// </summary>
-    public static bool ServerPerModel(string? kind) => kind is Vllm or Sglang or Lmdeploy or Strata;
+    public static bool ServerPerModel(string? kind) => kind is Vllm or Sglang or Lmdeploy or Strata or FreeToken or Ollama;
 
     /// <summary>The kinds of <see cref="ServerPerModel"/>, for a query of the models on them.</summary>
-    public static readonly string[] ServerKinds = [Vllm, Sglang, Lmdeploy, Strata];
+    public static readonly string[] ServerKinds = [Vllm, Sglang, Lmdeploy, Strata, FreeToken, Ollama];
 
     /// <summary>The kinds that schedule by a request's priority (vLLM's and SGLang's own field): the chat goes ahead of API keys there.</summary>
     public static bool Priority(string? kind) => kind is Vllm or Sglang;

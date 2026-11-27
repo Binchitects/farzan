@@ -193,4 +193,26 @@ describe('code', () => {
     renderApp('/code/fixes')
     expect(await screen.findByText('Fix it is not among what you may use')).toBeInTheDocument()
   })
+
+  it('shows the plugins’ IDE panels on the Code page and beside a review, told which review', async () => {
+    const plugin = {
+      name: 'lint', title: 'Lint', version: '1.0.0', base: '/api/plugin-ui/lint/1.0.0/k/', dev: false, writes: [], pages: [], menu: [], panels: [],
+      settings: null, composerActions: [], messageActions: [], idePanels: [{ id: 'checks', title: 'Lint checks', entry: 'ui/checks.html' }],
+    }
+    fakeApi(member, {
+      'GET /api/plugins/mine': () => ({ json: [plugin] }),
+      'GET /api/code/reviews': () => ({ json: [] }),
+      'GET /api/code/reviews/v1': () => ({
+        json: { review: brief, summary: 'The change counts.', ci: null, model: null, headSha: null, previousId: null, roomId: null, promptTokens: 0, completionTokens: 0, by: 'Mo', mine: true, findings: [] },
+      }),
+    })
+    const { router } = renderApp('/code')
+    await userEvent.click(await screen.findByRole('tab', { name: 'Plugins' }))
+    const panel = await screen.findByRole('region', { name: 'Lint checks' })
+    const frame = panel.querySelector('iframe[data-plugin="lint"]')!
+    expect(frame.getAttribute('data-slot')).toBe('ide-panel')
+    expect(frame.getAttribute('src')).toBe('/api/plugin-ui/lint/1.0.0/k/ui/checks.html')
+    await router.navigate('/code/reviews/v1')
+    expect((await screen.findByRole('region', { name: 'Lint checks' })).querySelector('iframe[data-slot="ide-panel"]')).not.toBeNull()
+  })
 })

@@ -46,14 +46,22 @@ ALLOWED: dict[tuple[str, str, str], str] = {
     ("env", "app", "Modules__studio"): "as Modules__imagegen",
     ("env", "app", "Database__RootCertificate"): "externalDatabase.caSecret; compose sets it in the override",
     ("env", "postgres", "PGDATA"): "a volume's root is not empty on some storage (lost+found)",
+    ("env", "app", "PluginRuntime__Tcp"): "Kubernetes: the app reaches the plugin runtime over TCP with a key; compose by its socket on a volume",
+    ("env", "app", "PluginRuntime__Key"): "as PluginRuntime__Tcp",
+    ("env", "plugins", "PLUGINS_LISTEN"): "as PluginRuntime__Tcp",
+    ("env", "plugins", "PLUGINS_KEY"): "as PluginRuntime__Tcp",
+    ("env", "plugins", "PLUGINS_SOCKET_GID"): "compose: the socket's group is the app's; the chart has no socket",
     # Mounts.
     ("mount", "app", "/backups"): "backup.sh's backups, for Admin -> Storage: compose only",
+    ("mount", "app", "/plugin-runtime"): "the plugin runtime's socket (compose); the chart reaches it over TCP",
     ("mount", "app", "/db-ca"): "externalDatabase.caSecret; compose mounts the CA in the override",
     ("mount", "llamacpp", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
     ("mount", "vllm", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
     ("mount", "sglang", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
     ("mount", "lmdeploy", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
     ("mount", "strata", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
+    ("mount", "freetoken", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
+    ("mount", "ollama", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
     ("mount", "postgres", "/dev/shm"): "compose's shm_size, as an emptyDir in memory",
     ("mount", "imagegen", "/tmp"): "the chart gives every read-only pod a /tmp; compose's imagegen needs none",
     ("mount", "prometheus", "/tmp"): "the scrape tokens' files: an emptyDir in the chart, the container's own /tmp in compose",
@@ -136,7 +144,7 @@ def helm_rendered() -> dict[str, dict[str, set[str]]] | None:
         return None
     if helm is None:
         return None
-    on = ["laya.enabled=true", "scanners.enabled=true", "studio.enabled=true", "blender.enabled=true", "lean.enabled=true", "videogen.enabled=true", "vllm.enabled=true", "sglang.enabled=true", "lmdeploy.enabled=true", "strata.enabled=true", "valkey.enabled=true", "codeIntel.packLibraryClaim=packs", "gitlab.caCert=a-ca"]
+    on = ["laya.enabled=true", "scanners.enabled=true", "studio.enabled=true", "blender.enabled=true", "lean.enabled=true", "videogen.enabled=true", "vllm.enabled=true", "sglang.enabled=true", "lmdeploy.enabled=true", "strata.enabled=true", "freetoken.enabled=true", "ollama.enabled=true", "valkey.enabled=true", "codeIntel.packLibraryClaim=packs", "gitlab.caCert=a-ca"]
     out: dict[str, dict[str, set[str]]] = {}
     # This chart's Postgres, and an external one with a CA of its own: together, every variable a pod can be given.
     # The output holds the Secret it made up: it is read here and never printed.

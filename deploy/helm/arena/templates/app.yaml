@@ -44,7 +44,7 @@ spec:
             {{- end }}
             {{- include "arena.secretEnv" (list $ "Database__Password" "DB_PASSWORD") | nindent 12 }}
             {{- include "arena.secretEnv" (list $ "Engine__ApiKey" "ENGINE_KEY") | nindent 12 }}
-            - { name: Engine__Enabled, value: {{ or .Values.llamacpp.enabled .Values.vllm.enabled .Values.sglang.enabled .Values.lmdeploy.enabled .Values.strata.enabled | quote }} }
+            - { name: Engine__Enabled, value: {{ or .Values.llamacpp.enabled .Values.vllm.enabled .Values.sglang.enabled .Values.lmdeploy.enabled .Values.strata.enabled .Values.freetoken.enabled .Values.ollama.enabled | quote }} }
             - { name: Engine__LlamaCpp, value: {{ .Values.llamacpp.enabled | quote }} }
             - { name: Engine__FirstModel, value: {{ .Values.model | quote }} }
             - { name: Engine__DefaultModels, value: {{ .Values.defaultModels | default "" | quote }} }
@@ -56,6 +56,11 @@ spec:
             - { name: Engine__EmbedGpu, value: {{ .Values.engines.embedGpu | quote }} }
             - { name: Engine__LmcacheRemote, value: {{ .Values.engines.lmcacheRemote | quote }} }
             {{- include "arena.secretEnv" (list $ "CodeIntel__AdminToken" "CODE_INTEL_KEY") | nindent 12 }}
+            {{- if .Values.plugins.enabled }}
+            # The plugin runtime, over TCP with the app's key (compose: its socket on the plugin-runtime volume).
+            - { name: PluginRuntime__Tcp, value: "plugins:7700" }
+            - { name: PluginRuntime__Key, valueFrom: { secretKeyRef: { name: arena-plugins, key: PLUGINS_KEY } } }
+            {{- end }}
             - { name: CodeIntel__GitlabUrl, value: {{ .Values.gitlab.url | quote }} }
             - { name: CodeIntel__Host, value: {{ .Values.codeIntel.host | quote }} }
             {{- if .Values.gitlab.caCert }}

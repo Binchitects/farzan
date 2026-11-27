@@ -12,9 +12,12 @@ public static class PluginTemplate
     private static readonly (string Name, string Text)[] Files =
     [
         ("plugin.yaml", """
-            # The plugin's manifest: docs/plugins.md says every field.
+            # The plugin's manifest: docs/plugins.md says every field. For server code, pages and the host API, start from
+            # the plugin framework instead: npx @farzan-arena/plugin-cli init my-plugin (docs/plugins.md, Plugins with code).
+            apiVersion: arena.plugins/v3
             name: weather-desk
             version: 0.1.0
+            arena: ">=8.3.0"
             title: Weather desk
             description: Today's weather for a city, and a forecaster assistant.
             author: Your team

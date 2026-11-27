@@ -15,6 +15,7 @@ import { Markdown } from '@/pages/chat/markdown'
 import { decideFinding, reviewAgain, reviewQuery, reviewRoom, type Finding } from './api'
 import { ReviewState } from './code'
 import { ShareReview } from './review-share'
+import { PluginIdePanels } from '@/plugins/plugin-page'
 
 const severityVariant = { critical: 'destructive', major: 'warning', minor: 'default', nit: 'secondary' } as const
 
@@ -174,6 +175,10 @@ export function ReviewPage() {
           </CardContent>
         </Card>
       )}
+      {/* Plugins' IDE panels, told which review they are beside. */}
+      <div className="mb-6">
+        <PluginIdePanels review={{ id: r.id, project: r.project, title: r.title, mergeRequest: r.iid, fromRef: r.fromRef, toRef: r.toRef }} />
+      </div>
       {r.status === 'done' && (
         <>
           <h2 className="mb-3 text-lg font-semibold">Findings ({kept.length})</h2>

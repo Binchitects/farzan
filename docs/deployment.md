@@ -209,12 +209,15 @@ on; its API answers 404; and its background work does not run.
 | `sglang` | no | `sglang` (with `SGLANG_IMAGE`) | a GPU |
 | `lmdeploy` | no | `lmdeploy` (arena-lmdeploy, built by `lmdeploy-build.yml`) | an NVIDIA GPU |
 | `strata` | no | `strata` (with `STRATA_IMAGE`) | an NVIDIA GPU, RAM for the experts that do not fit it |
+| `freetoken` | no | `freetoken` (arena-freetoken, built on `SGLANG_IMAGE`) | an NVIDIA GPU (driver r580+, CUDA 13), RAM for the experts that do not fit it |
+| `ollama` | no | `ollama` (arena-ollama, built from `OLLAMA_IMAGE`) | an NVIDIA GPU, RAM for the layers that do not fit it |
 | `knowledge` | yes | `embed` | |
 | `code-intel` | yes | `code-intel` | a GitLab |
 | `pictures` | yes | `imagegen` | a GPU |
 | `video` | yes | `videogen` | a GPU |
 | `speech` | yes | `audio` | |
 | `sandbox` | yes | `sandbox` | |
+| `plugins` | yes | `plugins` (the plugin runtime: no network, each plugin its own worker) | |
 | `web-search` | yes | `searxng` | |
 | `browser` | no | `browser` | |
 | `3d` | no | `blender` | |
@@ -527,6 +530,7 @@ how). **no**: missing, with the reason.
 | `imagegen`, `videogen` | yes, every GPU | yes, CDI | differs: whole GPUs each; `videogen` off by default |
 | `sandbox` | yes | yes | differs: no network by a NetworkPolicy (the CNI must enforce it); no `pids_limit` (the node's pod PID limit) |
 | `laya` | off (the `laya` feature) | the same | off (`laya.enabled`); a NetworkPolicy for compose's internal network |
+| `plugins` | yes: no network, the app by its socket on the `plugin-runtime` volume | yes | differs: TCP with a key the chart makes (the `arena-plugins` Secret); a NetworkPolicy lets only the app in and nothing out |
 | `prometheus`, `alertmanager`, `loki` | yes | yes | yes |
 | `valkey` (LMCache's shared store) | off (the `valkey` feature) | the same | off (`valkey.enabled`) |
 | `dcgm-exporter` | off (the `dcgm` feature) | the same, CDI | no: the cluster's (GPU Operator) |
@@ -644,6 +648,36 @@ how). **no**: missing, with the reason.
   in `strata-data`. Its metrics are vLLM's names, with the engine key. Its CUDA
   13 image holds machine code for RTX 20 to RTX 50 and PTX the driver compiles
   for Hopper (H100, H200) on its first start. Kubernetes: `strata.enabled`.
+- **FreeToken** is off until asked for: the `freetoken` feature,
+  `--with freetoken`. arena-freetoken is built here on `SGLANG_IMAGE`
+  (`services/freetoken.Dockerfile`, about 0.4 GB from PyPI): FreeToken 0.2.3
+  (Apache-2.0, github.com/FlashML-org/FreeToken) goes into SGLang's own Python
+  with no resolve of its dependencies, so PyTorch 2.14.1 for CUDA 13, Triton,
+  FlashInfer 0.7.2 (with its kernels for every GPU) and CUDA 13's `nvcc` are the
+  image's and nothing else is fetched. It runs a MoE model on one GPU, GGUF file
+  or snapshot, the experts that do not fit there in RAM. The same supervisor
+  runs it (`ENGINE_SERVER=freetoken`): `services/freetoken/serve.py` runs
+  `ft serve` per model on its one GPU (`--gpu`), the key by
+  `FREETOKEN_API_KEY`. Its kernels are compiled on its GPU as they are first
+  used (about three minutes on an RTX 3090) into `freetoken-cache`, so a second
+  start compiles nothing. Its `/health` answers 200 while it loads, with
+  `"status": "loading"`: the supervisor waits for it to say it is ready. It
+  needs a driver of r580 or later (CUDA 13). Its load is read from its
+  `/v1/stats`. Kubernetes: `freetoken.enabled`.
+- **Ollama** is off until asked for: the `ollama` feature, `--with ollama`.
+  arena-ollama is built here from `OLLAMA_IMAGE` (`ollama/ollama:0.40.18`, 3.4
+  GB, MIT): Ollama's own program and its CUDA 12 and 13 backends on the python
+  image (`services/ollama.Dockerfile`). Ollama's own server asks no key, so
+  `services/ollama/serve.py` runs `ollama serve` on its container's loopback
+  only, on a port of its own, and answers the supervisor's port itself: every
+  request needs the engine key there and is passed on; `/health` is 200 once
+  the model is loaded and `/metrics` counts the requests running, with vLLM's
+  names. A GGUF file of the library is made Ollama's model (`ollama create`
+  from a Modelfile: its context), nothing is pulled and nothing runs from
+  ollama.com (`OLLAMA_NO_CLOUD`); Ollama keeps its own copy of the file in
+  `ollama-data`, so give that volume room for the files it runs. The model
+  stays loaded (`OLLAMA_KEEP_ALIVE=-1`), its layers that do not fit the GPUs in
+  RAM. Kubernetes: `ollama.enabled`.
 - **Which engine**: llama.cpp for GGUF files, one machine, layers or experts in
   RAM when the GPU is short, and a few people at once. vLLM or SGLang for
   safetensors snapshots (or a GGUF file, more slowly), tensor parallel over GPUs, many people at once, copies
@@ -652,15 +686,18 @@ how). **no**: missing, with the reason.
   prompt); vLLM adds LMCache's tiers on disk and in a shared store. LMDeploy's
   TurboMind is a fast C++ engine for the common dense and MoE families. Strata
   runs a MoE model larger than the GPUs with its experts in RAM, faster than
-  llama.cpp does it, for one or a few people at once. The RAM
+  llama.cpp does it, for one or a few people at once; FreeToken does the same
+  on one GPU for more families, GGUF files or snapshots. Ollama runs a GGUF file as Ollama runs it,
+  for those who know it, its layers in RAM when the GPUs are short. The RAM
   llama.cpp keeps for conversations that lost their slot (8 GB a loaded model
   by default) is its prompt cache filling up as designed, not a leak: Admin →
   Settings → *RAM for chats that lost their slot* sizes it.
 - **Without a big GPU**, `fake-gpu.yml` (compose and Podman) or `vllm.fake`,
-  `sglang.fake`, `lmdeploy.fake` and `strata.fake` (Helm) runs the real
-  supervisor and launchers over the fake servers (`tools/fake-vllm`: the fake
-  vLLM, and the fake sglang and lmdeploy packages and strata command), on the
-  python image the stack already has, with no GPU.
+  `sglang.fake`, `lmdeploy.fake`, `strata.fake`,
+  `freetoken.fake` and `ollama.fake` (Helm) runs the real supervisor and
+  launchers over the fake servers (`tools/fake-vllm`: the fake vLLM, the fake
+  sglang and lmdeploy packages, and the fake strata, ft and ollama
+  commands), on the python image the stack already has, with no GPU.
 - **Engines evaluated and not added**: TensorRT-LLM (`trtllm-serve`) runs on
   Hopper and is OpenAI-compatible, but its stable release (1.2.1) has no API key
   on its routes, no served model name and no FP8 cache flag (1.4 adds them, as

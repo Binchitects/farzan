@@ -39,6 +39,9 @@ LMDEPLOY_IMAGE       | Models        | text    | arena-lmdeploy:0.18.0 | LMDeplo
 LMDEPLOY_SHM         | Models        | size    | 16gb          | LMDeploy's shared memory
 STRATA_IMAGE         | Models        | text    | ghcr.io/niko1221/strata:0.2.22-cuda13 | Strata's image (the strata feature)
 STRATA_SHM           | Models        | size    | 2gb           | Strata's shared memory
+FREETOKEN_SHM        | Models        | size    | 8gb           | FreeToken's shared memory
+OLLAMA_IMAGE         | Models        | text    | ollama/ollama:0.40.18 | The Ollama image arena-ollama is built from (the ollama feature)
+OLLAMA_SHM           | Models        | size    | 1gb           | Ollama's shared memory
 KVCACHE_DIR          | Models        | path    | ./kvcache     | LMCache's disk tier for vLLM models: fast NVMe
 GITLAB_URL           | GitLab        | url     | -             | The GitLab the code-intelligence service indexes
 GITLAB_TOKEN         | GitLab        | secret  | -             | Its read-only token (read_api and read_repository)

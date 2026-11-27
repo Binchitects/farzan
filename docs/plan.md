@@ -285,6 +285,125 @@ Left of v8.2 (released 2026-11-26), each to do:
   the data export, Accounting narrowed by person, group, project, model, source and kind, the usage exports by model,
   source and project.
 
+## v8.3 (asked 2026-11-26)
+
+Branch `v8.3` from `origin/v8.2`; `origin/v8.2` (then `origin/main` once 8.2.0 is tagged) merged in often. The
+framework is its own repository, `Binchitects/farzan-arena-plugin-framework` (MIT): the manifest's schema, the host
+API's contract, the SDKs (TypeScript for the UI and for plugins' servers on Node 22), the CLI (`arena-plugin`: init,
+build, test, package, sign, verify, publish, dev), docs, examples and a conformance suite. Its plan,
+`docs/plan.md` there, holds the architecture, the isolation and security models and the API's versioning; this
+section is Arena's side of it.
+
+Headlines: **plugins with code, pages and access to Arena, installed like today's**; **a plugin that breaks takes
+only itself down** (the chaos plugin crashes, hangs and eats memory while everything else answers, then is turned
+off by itself); **grants an admin can read**: what each plugin may reach, for which groups, and everything it did.
+
+### Plugins v2 extended, not replaced
+
+- **Today.** Plugins v2 is declarative: an OpenAPI document or an MCP server (remote, or Python run per call in the
+  sandbox), sign-in, writes, settings, skills, assistants, safeguard rules, toolsets, task templates; catalog with
+  SHA-256 and a signed index, grants at install and at updates, group settings, pinning, rollback, health, a tool off
+  after 25 failures. An install is an `McpServer` row (`Plugin`, `Manifest`, `PluginSettings`, `PluginPermissions`).
+  No plugin code runs, and there is no UI, event, hook, job or data API for plugins.
+- **Fix.** One manifest (`apiVersion: arena.plugins/v3`, a superset of v2), one installer, one admin page. New tables
+  only (not more columns on `mcp_servers`): `plugin_states` (on, off or tripped and why, the signer, a dev install's
+  owner), `plugin_publishers`, `plugin_managers`, `plugin_store` (plugin-wide or per person, with quotas),
+  `plugin_events` (at-least-once delivery), `plugin_jobs` (claimed as Automations' are), `plugin_package_blobs`.
+  Grants stay where v2 kept them (the install's granted permissions: `scope:` and `host:` keys beside v2's);
+  enablement per group is Admin → Tools' access for the plugin's tool row, as for any tool. A migration moves every installed v2 plugin
+  into them (manifest rewritten with `apiVersion`, grants carried), with an upgrade test from 7.x and 8.x data.
+
+### The runtime: `plugins`, a service with no network
+
+- A new feature `plugins` (deploy/features, its compose profile; on by default) runs `deploy/services/plugins`: a
+  supervisor on `node:22-alpine` (already on this machine), `network_mode: none`, a read-only root, no capabilities
+  but SETUID, SETGID and KILL, its memory, CPU and process caps, no Docker socket. The app reaches it over a unix
+  socket on the `plugins` volume (Kubernetes: TCP with a key, and a NetworkPolicy with no egress).
+- One worker process a plugin, its own uid, its own 0700 folder, rlimits (CPU seconds, processes, open files, file
+  size, no core), a V8 heap cap and a resident-memory watchdog, a deadline per call, a bounded queue; started again
+  with backoff after a crash. Probed 2026-11-26 in `node:22-alpine`: a heap past its cap aborts, a busy loop is
+  killed at its CPU limit, `fetch` fails with ENETUNREACH, the worker runs as its own uid.
+- The breaker: 5 failures in a row, or half of the last 20 calls in 10 minutes, turns the plugin off, tells its
+  admins, audits `plugin.auto_disabled`.
+
+### The host API, and access
+
+- `/api/plugins` (admin) and the runtime's calls into the app reach one dispatcher: the plugin's granted scopes ∩ the
+  acting person's permissions and features ∩ the plugin enabled for their groups. Areas in v1: chats, projects,
+  models (through the gateway, as the person), knowledge, files, people and groups, settings, storage, `http.fetch`
+  (by the app, to granted hosts only), notify, audit. Events and hooks (observe, or modify with its own grant) with
+  deadlines; jobs on cron; code-defined tools for models (they ask first when they write); routes under
+  `/api/p/{plugin}/...`, each declaring its access as every route does (EndpointAccessTests).
+- New permissions: `plugins.grant`, `plugins.enable`, `feature.plugins.develop` (dev installs, one's own only). Plugin
+  scopes are their own catalogue, not entries of `Permissions.All`.
+- Every install, grant, enable, disable, auto-disable, setting, outward call, write and denial is audited `plugin.*`.
+
+### The UI
+
+- Slots in the web: pages (`/p/{plugin}/{page}`) and their menu items, panels (chat sidebar, project, admin), settings
+  screens, chat composer and message actions, Code Studio and Code Arena panels. Each is an iframe served by the app
+  under `/plugin-ui/{plugin}/{version}/` with the preview's CSP (an opaque origin, `connect-src 'none'`), reaching
+  Arena only through a checked `postMessage` bridge, inside an error boundary with a load deadline, a heartbeat and
+  a rate limit.
+- Admin → Plugins: what each plugin asks for and was granted (in words), per-group enablement, managers, state and
+  the reason it is off, health, its audit, the trusted publisher keys and whether unsigned packages may install.
+
+### Proof
+
+Tests that break a plugin on purpose, one per item: isolation (another plugin's folder, the network, the socket),
+timeouts, resource limits (heap, CPU, fork bomb, file size, open files), crash containment (exit, throw, garbage on
+its output), automatic disable (and turning it back on), UI error boundaries (throws, never loads, floods the bridge,
+tries the top window, cookies and the API). The framework's conformance suite run against Arena. The upgrade from 7.x
+and 8.x with installed v2 plugins. The offline scenarios, since compose, the features and the bundle change.
+
+### Order
+
+Done (2026-11-26, on `v8.3`): 1 to 6, and of 7 the migration with its upgrade test, compose, the feature, Helm, the
+docs and the compliance control (OPS-03); the framework released as v0.1.0. To do before 8.3.0: the whole Llm.Tests
+run, the offline scenarios (compose and the bundle changed), release-scan and image-scan, the upgrade from 7.x and
+8.x on a real install, the framework's 0.1.1. Done since (2026-11-27): IDE panels (Code Studio's Code page and each
+review), the after_model and before_store hooks and person.created, with the framework's 0.2.0, which runs every
+extension point its manifest takes.
+
+1. The framework's contract and CLI (its repository). 2. Its server SDK and harness. 3. The runtime service and its
+chaos tests. 4. The registry, the tables and the v2 migration, the host API, tools, routes, events, hooks, jobs,
+audit. 5. The UI slots, the bridge, the error boundaries, the admin pages. 6. The UI SDK, `arena-plugin dev` and
+`publish`. 7. Compose, the feature, Helm, the offline bundle, docs; every suite, the compliance check, release-scan,
+image-scan, the upgrade from 7.x and 8.x, the offline scenarios; then framework 1.0.0 and, after 8.2.0, Arena 8.3.0.
+
+### Engines (asked 2026-11-26, in 8.3.0)
+
+Newest versions of the engines' images, and four engines more: TokenSpeed, FreeToken, Unsloth and Ollama.
+
+- **Where they stand.** vLLM v0.34.0, SGLang v0.5.23, LMDeploy 0.18.0 and Strata 0.2.22 are their latest releases;
+  llama.cpp runs the floating `server-cuda` tag (the live stack's copy, from 2026-11-25) and vLLM's PyPI build
+  0.31.0. Fix: llama.cpp pinned to a build tag (`server-cuda-b12767`, llamacpp and embed), the PyPI build to v0.34.0;
+  the local `server-cuda` tag is never moved (the live stack runs it).
+- **The new kinds**, each run by the same supervisor as vLLM (one server a model, on its GPUs), its own feature and
+  compose profile (off until asked for), Helm Deployment, launcher (`services/KIND/serve.py`), fake for tests, the
+  key by the environment only (IAM-08), readiness on `/health`, its load from `/metrics` where it has one:
+  - **TokenSpeed** 0.1.1 (LightSeek, MIT): weighed and left out (2026-11-26). Its image, the latest release, fails as it
+    starts: `flashinfer-jit-cache` 0.6.18 against FlashInfer 0.7.1rc2 (and with the version check skipped, the two do
+    not fit: a function one asks is not in the other), so it never serves. Its release candidate rc-377b78 (9.1 GB)
+    was not tried. Back once a release serves (its launcher and wiring are in git: be23631c).
+  - **FreeToken** 0.2.3 (FlashML, Apache-2.0): MoE models with experts in RAM on one GPU, GGUF or snapshots;
+    `ft serve`; built from PyPI on CUDA 13 (its kernels compiled in the image, nothing at first use).
+  - **Ollama** 0.40.18 (MIT): GGUF files of the library made into its models with no pull; it has no key of its own,
+    so its launcher fronts it with one, else it is not a managed engine.
+  - **Unsloth** (Apache-2.0, beta): weighed and left out (2026-11-26). Its server is Unsloth Studio, an application with
+    its own accounts and passwords and the keys it mints itself (`sk-unsloth-`), which cannot take the engine key; its
+    image (10.5 GB) carries JupyterLab (a shell on the GPU host) and a Cloudflare tunnel and checks from the internet
+    whether its port answers; and what it serves runs on its prebuilt llama.cpp, which Arena runs already, newer.
+    Unsloth's own GGUF files (the library's `unsloth/`) run on llama.cpp, Ollama and FreeToken.
+- **Where it stands** (2026-11-26): FreeToken and Ollama done and run for real on the RTX 3090 (SmolLM2-135M from the
+  library: the key asked, answers through the launcher; FreeToken's first start compiles its kernels, about 3 minutes);
+  llama.cpp pinned to b12767 (1.1.0-dev, every preset key the app writes still a flag; run for real); the vLLM PyPI
+  build pinned to 0.34.0 (the same vLLM, torch and GGUF plugin as arena-vllm; not rebuilt here). TokenSpeed left out (above).
+- **Proof.** Each launcher's arguments, key and GPUs (test_engine_launchers.py), its kind's settings in the app
+  (EngineKindTests, VllmBackendTests, the advisor), the form (engine-fields), parity with Helm, and each engine run
+  for real on this machine's GPU with a model of the library. The images scanned, the bundle and offline scenarios
+  made again.
+
 ## Next
 
 1. **Farzan Graph's code graphs.** Who calls a method, what implements an interface,

@@ -420,6 +420,181 @@ spec:
 ---
 {{- end }}
 {{- end }}
+{{- /*
+FreeToken: the same supervisor (ENGINE_SERVER=freetoken) running services/freetoken/serve.py in arena-freetoken; its kernels,
+compiled as they are first used, in arena-freetoken-cache. The fake answers as FreeToken through the fake ft command.
+*/}}
+{{- if .Values.freetoken.enabled }}
+{{- range .Values.freetoken.instances }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  labels: {{- include "arena.labels" $ | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: {{- include "arena.selector" (dict "root" $ "name" .name) | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "arena.selector" (dict "root" $ "name" .name) | nindent 8 }}
+      {{- $scripts := list $ "vllm-supervisor.sh" "vllm-helper.py" "gpu-probe.py" "freetoken-serve.py" }}
+      {{- if $.Values.freetoken.fake }}{{ $scripts = concat $scripts (list "fake_vllm.py" "fake-ft") }}{{ end }}
+      annotations: {{- include "arena.scriptsChecksum" $scripts | nindent 8 }}
+    spec:
+      {{- include "arena.podDefaults" $ | nindent 6 }}
+      {{- with .nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: freetoken
+          image: {{ include "arena.image" (dict "root" $ "image" (ternary $.Values.images.python $.Values.images.freetoken $.Values.freetoken.fake)) }}
+          imagePullPolicy: {{ $.Values.images.pullPolicy }}
+          command: [/bin/sh, /vllm/supervisor.sh]
+          env:
+            {{- include "arena.secretEnv" (list $ "ENGINE_KEY" "ENGINE_KEY") | nindent 12 }}
+            - { name: ENGINE_SERVER, value: freetoken }
+            - { name: CUDA_DEVICE_ORDER, value: PCI_BUS_ID }
+            - { name: VLLM_PRESETS, value: /presets/{{ .name }} }
+            - { name: VLLM_STATUS, value: /status/{{ .name }} }
+            - { name: VLLM_BIN, value: "python3 /freetoken/serve.py" }
+            - { name: HF_HUB_OFFLINE, value: "1" }
+            # The fake answers as FreeToken through the fake ft command.
+            - { name: FREETOKEN_CLI, value: {{ ternary "/fake-vllm/ft" "ft" $.Values.freetoken.fake | quote }} }
+          resources:
+            {{- with $.Values.freetoken.resources.requests }}
+            requests: {{- toYaml . | nindent 14 }}
+            {{- end }}
+            {{- if not $.Values.freetoken.fake }}
+            limits: { {{ $.Values.gpuResource }}: {{ .gpus }} }
+            {{- end }}
+          volumeMounts:
+            - { name: config, mountPath: /vllm/supervisor.sh, subPath: vllm-supervisor.sh }
+            - { name: config, mountPath: /vllm/vllm-helper.py, subPath: vllm-helper.py }
+            - { name: config, mountPath: /gpu-probe.py, subPath: gpu-probe.py }
+            - { name: config, mountPath: /fake-vllm/fake_vllm.py, subPath: fake_vllm.py }
+            - { name: config, mountPath: /fake-vllm/ft, subPath: fake-ft }
+            - { name: config, mountPath: /freetoken/serve.py, subPath: freetoken-serve.py }
+            - { name: models, mountPath: /library, readOnly: true }
+            - { name: engine, mountPath: /presets, readOnly: true }
+            - { name: status, mountPath: /status }
+            - { name: data, mountPath: /cache }
+            - { name: shm, mountPath: /dev/shm }
+      volumes:
+        - { name: config, configMap: { name: arena-config, defaultMode: 0555 } }
+        {{- include "arena.claim" (list "models" (include "arena.modelsClaim" $)) | nindent 8 }}
+        {{- include "arena.claim" (list "engine" "arena-engine") | nindent 8 }}
+        {{- include "arena.claim" (list "status" "arena-vllm-status") | nindent 8 }}
+        {{- include "arena.claim" (list "data" "arena-freetoken-cache") | nindent 8 }}
+        - { name: shm, emptyDir: { medium: Memory, sizeLimit: {{ $.Values.freetoken.shmSize }} } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  labels: {{- include "arena.labels" $ | nindent 4 }}
+spec:
+  selector: {{- include "arena.selector" (dict "root" $ "name" .name) | nindent 4 }}
+  ports:
+    {{- range $i := until 16 }}
+    - { name: model-{{ $i }}, port: {{ add 8001 $i }}, targetPort: {{ add 8001 $i }} }
+    {{- end }}
+---
+{{- end }}
+{{- end }}
+{{- /*
+Ollama: the same supervisor (ENGINE_SERVER=ollama) running services/ollama/serve.py, its front asking the engine key, in
+arena-ollama; its models (copies of the library's GGUF files) in arena-ollama-data. The fake answers as Ollama through the
+fake ollama command.
+*/}}
+{{- if .Values.ollama.enabled }}
+{{- range .Values.ollama.instances }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  labels: {{- include "arena.labels" $ | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: {{- include "arena.selector" (dict "root" $ "name" .name) | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "arena.selector" (dict "root" $ "name" .name) | nindent 8 }}
+      {{- $scripts := list $ "vllm-supervisor.sh" "vllm-helper.py" "gpu-probe.py" "ollama-serve.py" }}
+      {{- if $.Values.ollama.fake }}{{ $scripts = concat $scripts (list "fake_vllm.py" "fake-ollama") }}{{ end }}
+      annotations: {{- include "arena.scriptsChecksum" $scripts | nindent 8 }}
+    spec:
+      {{- include "arena.podDefaults" $ | nindent 6 }}
+      {{- with .nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: ollama
+          image: {{ include "arena.image" (dict "root" $ "image" (ternary $.Values.images.python $.Values.images.ollama $.Values.ollama.fake)) }}
+          imagePullPolicy: {{ $.Values.images.pullPolicy }}
+          command: [/bin/sh, /vllm/supervisor.sh]
+          env:
+            {{- include "arena.secretEnv" (list $ "ENGINE_KEY" "ENGINE_KEY") | nindent 12 }}
+            - { name: ENGINE_SERVER, value: ollama }
+            - { name: CUDA_DEVICE_ORDER, value: PCI_BUS_ID }
+            - { name: VLLM_PRESETS, value: /presets/{{ .name }} }
+            - { name: VLLM_STATUS, value: /status/{{ .name }} }
+            - { name: VLLM_BIN, value: "python3 /ollama/serve.py" }
+            - { name: HF_HUB_OFFLINE, value: "1" }
+            - { name: OLLAMA_MODELS, value: /data/models }
+            # The fake answers as Ollama through the fake ollama command.
+            - { name: OLLAMA_CLI, value: {{ ternary "/fake-vllm/ollama" "ollama" $.Values.ollama.fake | quote }} }
+          resources:
+            {{- with $.Values.ollama.resources.requests }}
+            requests: {{- toYaml . | nindent 14 }}
+            {{- end }}
+            {{- if not $.Values.ollama.fake }}
+            limits: { {{ $.Values.gpuResource }}: {{ .gpus }} }
+            {{- end }}
+          volumeMounts:
+            - { name: config, mountPath: /vllm/supervisor.sh, subPath: vllm-supervisor.sh }
+            - { name: config, mountPath: /vllm/vllm-helper.py, subPath: vllm-helper.py }
+            - { name: config, mountPath: /gpu-probe.py, subPath: gpu-probe.py }
+            - { name: config, mountPath: /fake-vllm/fake_vllm.py, subPath: fake_vllm.py }
+            - { name: config, mountPath: /fake-vllm/ollama, subPath: fake-ollama }
+            - { name: config, mountPath: /ollama/serve.py, subPath: ollama-serve.py }
+            - { name: models, mountPath: /library, readOnly: true }
+            - { name: engine, mountPath: /presets, readOnly: true }
+            - { name: status, mountPath: /status }
+            - { name: data, mountPath: /data }
+            - { name: shm, mountPath: /dev/shm }
+      volumes:
+        - { name: config, configMap: { name: arena-config, defaultMode: 0555 } }
+        {{- include "arena.claim" (list "models" (include "arena.modelsClaim" $)) | nindent 8 }}
+        {{- include "arena.claim" (list "engine" "arena-engine") | nindent 8 }}
+        {{- include "arena.claim" (list "status" "arena-vllm-status") | nindent 8 }}
+        {{- include "arena.claim" (list "data" "arena-ollama-data") | nindent 8 }}
+        - { name: shm, emptyDir: { medium: Memory, sizeLimit: {{ $.Values.ollama.shmSize }} } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  labels: {{- include "arena.labels" $ | nindent 4 }}
+spec:
+  selector: {{- include "arena.selector" (dict "root" $ "name" .name) | nindent 4 }}
+  ports:
+    {{- range $i := until 16 }}
+    - { name: model-{{ $i }}, port: {{ add 8001 $i }}, targetPort: {{ add 8001 $i }} }
+    {{- end }}
+---
+{{- end }}
+{{- end }}
 {{- /* Embeddings for code-intel, on the CPU. The app fetches the file into the library's embed folder. */}}
 {{- if .Values.embed.enabled }}
 apiVersion: apps/v1

@@ -79,6 +79,8 @@ export interface ApiInit {
   signal?: AbortSignal
   /** Sent even when the page closes meanwhile (a small body only). */
   keepalive?: boolean
+  /** More headers (a plugin frame's bridge marks its calls). */
+  headers?: Record<string, string>
 }
 
 /**
@@ -98,6 +100,7 @@ export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
       Accept: 'application/json',
       'X-Requested-With': 'fetch',
       ...(init.body === undefined || isForm ? {} : { 'Content-Type': isBlob ? 'application/octet-stream' : 'application/json' }),
+      ...init.headers,
     },
     body: init.body === undefined ? undefined : isForm ? (init.body as FormData) : isBlob ? (init.body as Blob) : JSON.stringify(init.body),
   })

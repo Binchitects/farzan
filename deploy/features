@@ -20,12 +20,15 @@ vllm           | off | vllm | gpu | - | The vLLM engine, for many people at once
 sglang         | off | sglang | gpu | - | The SGLang engine, for many people at once (SGLANG_IMAGE in .env)
 lmdeploy       | off | lmdeploy | gpu | - | The LMDeploy engine (TurboMind), for many people at once (arena-lmdeploy, built by lmdeploy-build.yml)
 strata         | off | strata | gpu | - | The Strata engine, for large MoE GGUF models with experts in RAM (STRATA_IMAGE in .env)
+freetoken      | off | freetoken | gpu | - | The FreeToken engine, for large MoE models on one GPU with experts in RAM (arena-freetoken, built on SGLANG_IMAGE)
+ollama         | off | ollama | gpu | - | The Ollama engine, for GGUF files with layers in RAM (arena-ollama, built from OLLAMA_IMAGE)
 knowledge      | on  | embed | - | - | Company knowledge and search by meaning (the embedding server)
 code-intel     | on  | code-intel | gitlab | - | Code intelligence: the company's GitLab indexed, and knowledge packs
 pictures       | on  | imagegen | gpu | - | Pictures made and edited (stable-diffusion.cpp)
 video          | on  | videogen | gpu | - | Video made from words and pictures
 speech         | on  | audio | - | - | Speech to text and text to speech
 sandbox        | on  | sandbox | - | - | Python and commands run apart, for the chat's tools
+plugins        | on  | plugins | - | - | Plugins with code of their own, each run apart (the plugin runtime)
 web-search     | on  | searxng | - | - | The chat's web search (SearXNG)
 browser        | off | browser | - | - | The browser agent (Chromium)
 3d             | off | blender | - | - | 3D models (Blender)

@@ -21,6 +21,7 @@ import { SetUpTwoFactor } from './set-up-two-factor'
 import { cn } from '@/lib/utils'
 import { CommandMenu } from './command-menu'
 import { useAppIcon } from '@/lib/app-icon'
+import { pluginsQuery, withPluginNav } from '@/plugins/plugins'
 import { findNavItem, mayOpen, spaceOf, spaces, spaceTitle, visibleNavigation, type NavItem, type NavSection, type Space } from './nav'
 import { UserMenu } from './user-menu'
 import { WhatsNew } from './whats-new'
@@ -71,7 +72,8 @@ function SignedIn({ me }: { me: Me }) {
   const [helpOpen, setHelpOpen] = useState(false)
   // The newest release's tour: once by itself after a deploy, again from the account menu or the palette.
   const [whatsNew, setWhatsNew] = useState(false)
-  const sections = visibleNavigation(me)
+  const plugins = useQuery(pluginsQuery)
+  const sections = withPluginNav(visibleNavigation(me), plugins.data)
   const name = info.data?.name ?? `${productName}`
   const icon = useAppIcon(info.data?.icon)
   // The old cheat code, anywhere but a text box.

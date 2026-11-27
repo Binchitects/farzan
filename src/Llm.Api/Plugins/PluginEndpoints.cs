@@ -166,12 +166,17 @@ public static class PluginEndpoints
         Results.Json(new { status = "accept", error = $"{what} asks for more than adding tools: grant it to go on.", permissions }, statusCode: 409);
 
     private static async Task<IResult> InstallAsync(InstallRequest body, PluginCatalog catalog, AppDbContext db, Audit audit, IOptions<AuthOptions> auth,
-        UserManager<AppUser> users, ClaimsPrincipal principal, CancellationToken ct)
+        UserManager<AppUser> users, ClaimsPrincipal principal, IOptionsMonitor<PluginOptions> pluginOptions, PluginEvents events, CancellationToken ct)
     {
         var (found, failed) = await PackageAsync(body, catalog, ct);
         if (found is not { } package)
         {
             return failed!;
+        }
+        package = await PluginContent.TrustAsync(db, package, ct);
+        if (PluginContent.Refusal(package, pluginOptions.CurrentValue.AllowUnsigned) is { } refused)
+        {
+            return AuthEndpoints.Problem(400, "package", refused);
         }
         var permissions = PluginContent.Permissions(package);
         if (PluginContent.NeedingYes(permissions).Any() && !body.Accept)
@@ -198,17 +203,31 @@ public static class PluginEndpoints
         }
         server.PluginPermissions = [.. permissions.Select(p => p.Key)];
         db.McpServers.Add(server);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23505" })
+        {
+            // The same plugin installed at the same moment by another request (its name is unique): that one is the install.
+            return AuthEndpoints.Problem(409, "installed", $"{package.Manifest.Title} is installed already: update it or change its settings.");
+        }
         var adminId = (await users.GetUserAsync(principal))?.Id;
-        db.PluginReleases.Add(PluginContent.Release(server, package, adminId));
+        var release = PluginContent.Release(server, package, adminId);
+        db.PluginReleases.Add(release);
+        PluginContent.Keep(db, release, package);
+        await PluginContent.StateAsync(db, server, package, null, ct);
         await Chat.SkillLibrary.SyncAsync(db, server, package, ct);
         await PluginContent.SyncAsync(db, server, package, adminId, ct);
+        PluginHooks.Forget();
+        await events.EmitAsync("plugin.installed", new System.Text.Json.Nodes.JsonObject { ["plugin"] = package.Manifest.Name, ["version"] = package.Manifest.Version }, null, ct);
         await audit.WriteAsync("plugin.install", package.Manifest.Name, detail: $"{package.Manifest.Version}, {server.Url}; granted {string.Join(", ", server.PluginPermissions)}");
         await ServerTls.AuditAsync(audit, server, TlsCheck.System, null);
         return Results.Created($"/api/admin/plugins/{server.Id}", new { server.Id, toolId = McpServerTool.Prefix + server.Id });
     }
 
-    private static async Task<IResult> SettingsAsync(Guid id, PluginSettingsRequest body, AppDbContext db, Audit audit, IOptions<AuthOptions> auth, CancellationToken ct)
+    private static async Task<IResult> SettingsAsync(Guid id, PluginSettingsRequest body, AppDbContext db, Audit audit, IOptions<AuthOptions> auth, PluginRuntime runtime,
+        PluginEvents events, CancellationToken ct)
     {
         if (await db.McpServers.SingleOrDefaultAsync(s => s.Id == id && s.Plugin != null, ct) is not { } server)
         {
@@ -225,6 +244,9 @@ public static class PluginEndpoints
             return AuthEndpoints.Problem(400, "tls", tls);
         }
         await db.SaveChangesAsync(ct);
+        // Its worker starts again with the settings as they are now, and the plugin hears they changed.
+        await runtime.StopAsync(server.Plugin!, ct);
+        await events.EmitAsync("plugin.settings.changed", new System.Text.Json.Nodes.JsonObject { ["plugin"] = server.Plugin }, null, ct);
         await audit.WriteAsync("plugin.settings", server.Plugin);
         await ServerTls.AuditAsync(audit, server, was, wasCa);
         return Results.NoContent();
@@ -290,7 +312,7 @@ public static class PluginEndpoints
     }
 
     private static async Task<IResult> UpdateAsync(Guid id, UpdateRequest? body, PluginCatalog catalog, AppDbContext db, Audit audit, IOptions<AuthOptions> auth,
-        UserManager<AppUser> users, ClaimsPrincipal principal, CancellationToken ct)
+        UserManager<AppUser> users, ClaimsPrincipal principal, IOptionsMonitor<PluginOptions> pluginOptions, PluginRuntime runtime, CancellationToken ct)
     {
         if (await db.McpServers.SingleOrDefaultAsync(s => s.Id == id && s.Plugin != null, ct) is not { } server)
         {
@@ -307,7 +329,12 @@ public static class PluginEndpoints
             {
                 return AuthEndpoints.Problem(400, "plugin", $"The zip is {package.Manifest.Name}, not {server.Plugin}.");
             }
-            return await InstallVersionAsync(server, package, body?.Accept == true, "plugin.update", db, audit, auth, users, principal, ct);
+            package = await PluginContent.TrustAsync(db, package, ct);
+            if (PluginContent.Refusal(package, pluginOptions.CurrentValue.AllowUnsigned) is { } refused)
+            {
+                return AuthEndpoints.Problem(400, "package", refused);
+            }
+            return await InstallVersionAsync(server, package, body?.Accept == true, "plugin.update", db, audit, auth, users, principal, runtime, ct);
         }
         catch (Exception ex) when (ex is PluginCatalog.PluginException or PluginManifest.ManifestException or HttpRequestException or TaskCanceledException or FormatException)
         {
@@ -320,7 +347,7 @@ public static class PluginEndpoints
     /// admin's yes; its content follows it, and the version is kept to go back to.
     /// </summary>
     private static async Task<IResult> InstallVersionAsync(McpServer server, PluginPackage package, bool accept, string action, AppDbContext db, Audit audit,
-        IOptions<AuthOptions> auth, UserManager<AppUser> users, ClaimsPrincipal principal, CancellationToken ct)
+        IOptions<AuthOptions> auth, UserManager<AppUser> users, ClaimsPrincipal principal, PluginRuntime runtime, CancellationToken ct)
     {
         var permissions = PluginContent.Permissions(package);
         var more = permissions.Where(p => !server.PluginPermissions.Contains(p.Key)).ToList();
@@ -335,8 +362,19 @@ public static class PluginEndpoints
         }
         server.PluginPermissions = [.. permissions.Select(p => p.Key)];
         var adminId = (await users.GetUserAsync(principal))?.Id;
-        db.PluginReleases.Add(PluginContent.Release(server, package, adminId));
+        // A version kept already (going back to it) keeps its package; a new one is kept with its own.
+        if (!(package.Bytes is not null && await db.PluginReleases.AnyAsync(r => r.ServerId == server.Id && r.Version == package.Manifest.Version
+            && db.PluginPackageBlobs.Any(b => b.ReleaseId == r.Id), ct)))
+        {
+            var release = PluginContent.Release(server, package, adminId);
+            db.PluginReleases.Add(release);
+            PluginContent.Keep(db, release, package);
+        }
+        await PluginContent.StateAsync(db, server, package, null, ct);
         await db.SaveChangesAsync(ct);
+        // Its worker is started again with the version installed (and what is granted now), on its next call.
+        await runtime.StopAsync(server.Plugin!, ct);
+        PluginHooks.Forget();
         await Chat.SkillLibrary.SyncAsync(db, server, package, ct);
         await PluginContent.SyncAsync(db, server, package, adminId, ct);
         await audit.WriteAsync(action, server.Plugin, detail: $"{was} → {server.PluginVersion}{(more.Count > 0 ? $"; granted {string.Join(", ", more.Select(p => p.Key))}" : "")}");
@@ -345,7 +383,7 @@ public static class PluginEndpoints
 
     /// <summary>Back to a version installed before (the one before this, or the one named), from the files kept with it.</summary>
     private static async Task<IResult> RollbackAsync(Guid id, RollbackRequest body, AppDbContext db, Audit audit, IOptions<AuthOptions> auth,
-        UserManager<AppUser> users, ClaimsPrincipal principal, CancellationToken ct)
+        UserManager<AppUser> users, ClaimsPrincipal principal, PluginRuntime runtime, CancellationToken ct)
     {
         if (await db.McpServers.SingleOrDefaultAsync(s => s.Id == id && s.Plugin != null, ct) is not { } server)
         {
@@ -357,9 +395,13 @@ public static class PluginEndpoints
         {
             return AuthEndpoints.Problem(404, "version", "There is no earlier version kept to go back to.");
         }
-        var files = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(target.FilesJson) ?? [];
+        // A v3 version from its package (checked again as it is read), a v2 one from its files.
+        var blob = await db.PluginPackageBlobs.AsNoTracking().SingleOrDefaultAsync(b => b.ReleaseId == target.Id, ct);
+        var keys = await db.PluginPublishers.AsNoTracking().Select(p => p.PublicKeyPem).ToListAsync(ct);
+        var package = blob is not null ? PluginCatalog.FromFap(blob.Bytes, keys)
+            : PluginCatalog.FromFiles(System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(target.FilesJson) ?? []);
         // Going back grants nothing new: it asks only for what that version had.
-        return await InstallVersionAsync(server, PluginCatalog.FromFiles(files), accept: true, "plugin.rollback", db, audit, auth, users, principal, ct);
+        return await InstallVersionAsync(server, package, accept: true, "plugin.rollback", db, audit, auth, users, principal, runtime, ct);
     }
 
     private static async Task<IResult> PinAsync(Guid id, PinRequest body, AppDbContext db, Audit audit, CancellationToken ct)
@@ -431,12 +473,13 @@ public static class PluginEndpoints
     }
 
     private static async Task<IResult> RemoveAsync(Guid id, AppDbContext db, Audit audit, AccessService access, ClaimsPrincipal principal, UserManager<AppUser> users,
-        CancellationToken ct)
+        PluginRuntime runtime, CancellationToken ct)
     {
         if (await db.McpServers.SingleOrDefaultAsync(s => s.Id == id && s.Plugin != null, ct) is not { } server)
         {
             return Results.NotFound();
         }
+        await runtime.StopAsync(server.Plugin!, ct);
         var toolId = McpServerTool.Prefix + id;
         await PluginContent.RemoveAsync(db, server.Plugin!, ct);
         db.McpServers.Remove(server);

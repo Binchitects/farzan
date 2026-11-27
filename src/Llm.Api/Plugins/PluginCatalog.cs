@@ -15,6 +15,10 @@ public sealed class PluginOptions
     public string? CatalogUrl { get; set; }
     /// <summary>The catalog publisher's public key (PEM, ECDSA P-256): when set, index.json.sig must verify against it.</summary>
     public string? CatalogKey { get; set; }
+    /// <summary>Plugins with code or pages may install unsigned (or signed by a key not trusted here): for a test Arena, never a company's.</summary>
+    public bool AllowUnsigned { get; set; }
+    /// <summary>Developers may make dev installs of their own (arena-plugin dev), with plugins.develop.</summary>
+    public bool DevInstalls { get; set; }
 }
 
 /// <summary>An assistant a plugin brings (assistants/*.yaml): for everyone, with the plugin's tool among its own.</summary>
@@ -35,6 +39,15 @@ public sealed record PluginPackage(PluginManifest Manifest, string ManifestText,
 
     /// <summary>Its Code Arena skills: each folder's name (as its SKILL.md names it) and its files, by their path in the folder.</summary>
     public IReadOnlyList<PluginSkill> Skills { get; init; } = [];
+
+    /// <summary>A .fap's every file, as bytes (its UI's pictures too); empty for a plugins v2 zip or folder.</summary>
+    public IReadOnlyDictionary<string, byte[]> AllFiles { get; init; } = new Dictionary<string, byte[]>();
+
+    /// <summary>Whether a .fap is signed, and by which key; a v2 zip or folder is not.</summary>
+    public PluginSignature Signature { get; init; } = new(false, null);
+
+    /// <summary>The .fap itself, kept with the version installed.</summary>
+    public byte[]? Bytes { get; init; }
 }
 
 /// <summary>
@@ -53,9 +66,13 @@ public sealed record CatalogEntry(string Name, string Version, string Title, str
 public sealed class PluginCatalog(IOptionsMonitor<PluginOptions> options, IHttpClientFactory http)
 {
     public const string Client = "plugins";
-    private const long MaxZipBytes = 10 * 1024 * 1024;
+    public const long MaxZipBytes = 10 * 1024 * 1024;
 
-    public sealed class PluginException(string message) : Exception(message);
+    public sealed class PluginException(string message, string code = "plugin") : Exception(message)
+    {
+        /// <summary>The framework's code for what is wrong (package.file.changed ...), or "plugin".</summary>
+        public string Code { get; } = code;
+    }
 
     /// <summary>The plugins that come with the app, each a folder with its manifest.</summary>
     public IReadOnlyList<PluginPackage> BuiltIn()
@@ -139,6 +156,10 @@ public sealed class PluginCatalog(IOptionsMonitor<PluginOptions> options, IHttpC
         try
         {
             using var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
+            if (PluginFap.Is(zip))
+            {
+                return FromFap(bytes);
+            }
             var manifest = zip.Entries.Where(e => e.Name == PluginManifest.FileName).OrderBy(e => e.FullName.Length).FirstOrDefault()
                 ?? throw new PluginException($"The zip has no {PluginManifest.FileName}.");
             var root = manifest.FullName[..^PluginManifest.FileName.Length];
@@ -149,6 +170,39 @@ public sealed class PluginCatalog(IOptionsMonitor<PluginOptions> options, IHttpC
         {
             throw new PluginException("The file is not a zip.");
         }
+    }
+
+    /// <summary>
+    /// A .fap: every file checked against its list and its signature (PluginFap), then read as any plugin is; every file
+    /// the manifest names must be in it. Who signed it is kept with it, for the installer to weigh against the trusted keys.
+    /// </summary>
+    /// <param name="trustedKeys">The trusted publishers' keys (PEM): a signature naming one is checked with it.</param>
+    public static PluginPackage FromFap(byte[] bytes, IReadOnlyCollection<string>? trustedKeys = null)
+    {
+        Dictionary<string, byte[]> files;
+        PluginSignature signature;
+        try
+        {
+            (files, signature) = PluginFap.Read(bytes, trustedKeys);
+        }
+        catch (PluginFap.FapException ex)
+        {
+            throw new PluginException(ex.Message, ex.Code);
+        }
+        catch (InvalidDataException)
+        {
+            throw new PluginException("The package is not a zip.", "zip.format");
+        }
+        var texts = PluginFap.Texts(files);
+        var package = Read(name => texts.GetValueOrDefault(name), folder => texts.Keys.Where(k => k.StartsWith(folder + "/", StringComparison.Ordinal)));
+        foreach (var named in package.Manifest.Named())
+        {
+            if (!files.ContainsKey(named) && !files.Keys.Any(k => k.StartsWith(named + "/", StringComparison.Ordinal)))
+            {
+                throw new PluginException($"{named} is named in the manifest but is not in the plugin.", "manifest.file.missing");
+            }
+        }
+        return package with { AllFiles = files, Signature = signature, Bytes = bytes };
     }
 
     /// <summary>A package from the files kept with an installed version (its release).</summary>

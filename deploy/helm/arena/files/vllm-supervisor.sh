@@ -1,11 +1,13 @@
 #!/bin/sh
-# vLLM, SGLang, LMDeploy and Strata serve one model a process and have no router:
+# vLLM, SGLang, LMDeploy, Strata, FreeToken and Ollama serve one model a process here, with no router:
 # this runs one server for each model the app wants, as the app's desired state says, with no
 # Docker socket (the same way llamacpp/router.sh follows models.ini and sd-serve.sh its control
 # file). ENGINE_SERVER says which: vllm (serve.py serve ARGS: `vllm serve`, with a GGUF file's
 # config and tokenizer read from its header first), sglang (sglang/serve.py ARGS: SGLang's
-# launch_server), lmdeploy (lmdeploy/serve.py: `lmdeploy serve api_server`) or strata
-# (strata/serve.py: `strata launch`, in the foreground while it serves).
+# launch_server), lmdeploy (lmdeploy/serve.py: `lmdeploy serve api_server`), strata
+# (strata/serve.py: `strata launch`, in the foreground while it serves), freetoken (freetoken/serve.py:
+# `ft serve`) or ollama (ollama/serve.py: `ollama serve` behind a
+# front that asks the key, Ollama's own asking none).
 #
 #   /presets/vllm/models.json   written by the app (Admin -> Models):
 #     {"models": [{"name", "port", "gpus": [0, 1], "sleep": false, "args": ["/library/hf/...", "--tensor-parallel-size", "2", ...]}]}
@@ -48,7 +50,9 @@ case $server in
   sglang) bin=${VLLM_BIN:-python3 /sglang/serve.py} ;;
   lmdeploy) bin=${VLLM_BIN:-python3 /lmdeploy/serve.py} ;;
   strata) bin=${VLLM_BIN:-python3 /strata/serve.py} ;;
-  *) echo "supervisor: ENGINE_SERVER is vllm, sglang, lmdeploy or strata, not $server" >&2; exit 2 ;;
+  freetoken) bin=${VLLM_BIN:-python3 /freetoken/serve.py} ;;
+  ollama) bin=${VLLM_BIN:-python3 /ollama/serve.py} ;;
+  *) echo "supervisor: ENGINE_SERVER is vllm, sglang, lmdeploy, strata, freetoken or ollama, not $server" >&2; exit 2 ;;
 esac
 helper=${VLLM_HELPER:-$here/vllm-helper.py}
 probe=${GPU_PROBE:-$here/../gpu-probe.py}

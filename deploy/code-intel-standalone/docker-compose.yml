@@ -107,7 +107,7 @@ services:
 
 
   model-init:
-    image: ghcr.io/ggml-org/llama.cpp:${LLAMACPP_IMAGE_TAG:-server-cuda}
+    image: ghcr.io/ggml-org/llama.cpp:${LLAMACPP_IMAGE_TAG:-server-cuda-b12767}
     container_name: model-init
     # One-shot: the image's own healthcheck (for the long-running server) does not apply.
     healthcheck:
@@ -191,7 +191,7 @@ services:
     logging: *default-logging
 
   llamacpp:
-    image: ghcr.io/ggml-org/llama.cpp:${LLAMACPP_IMAGE_TAG:-server-cuda}
+    image: ghcr.io/ggml-org/llama.cpp:${LLAMACPP_IMAGE_TAG:-server-cuda-b12767}
     container_name: llamacpp
     restart: unless-stopped
     networks: [llm-net]

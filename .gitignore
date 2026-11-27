@@ -78,4 +78,5 @@ evals/.cache/
 
 # The installer's record when this checkout is the installation (its rollback copies hold .env)
 /.arena-install/
+.plugin-dev/
 .cov/

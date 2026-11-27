@@ -1,0 +1,7 @@
+apiVersion: arena.plugins/v3
+name: case
+version: 1.0.0
+server: { entry: server/index.js }
+tools:
+  functions: [{ name: ping, description: Answers. }]
+name: again

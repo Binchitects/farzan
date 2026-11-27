@@ -1,12 +1,15 @@
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using Llm.Api.Chat.Tools;
 
 namespace Llm.Api.Plugins;
 
 /// <summary>One of a plugin's settings, filled in by the admin who installs it.</summary>
-/// <param name="Type">"text", "url" or "secret" (stored encrypted, never shown again).</param>
-public sealed record PluginSetting(string Key, string Title, string Type, bool Required, string? Help);
+/// <param name="Type">"text", "url", "secret" (stored encrypted, never shown again), "number", "boolean" or "select".</param>
+public sealed record PluginSetting(string Key, string Title, string Type, bool Required, string? Help)
+{
+    public string? Default { get; init; }
+    public string[] Options { get; init; } = [];
+}
 
 /// <summary>A toolset a plugin brings: its name, and its tools ("self" is the plugin's own; others by their ids: web, python...).</summary>
 public sealed record PluginToolset(string Name, string? Description, string[] Tools);
@@ -17,12 +20,44 @@ public sealed record PluginTask(string Name, string? Description, string Prompt,
 /// <summary>Where a person signs in to the plugin's service, as a template ({setting} filled in).</summary>
 public sealed record PluginOAuth(string Authorize, string Token, string[] Scopes);
 
+/// <summary>A host API scope the plugin asks for; network with the hosts it may reach.</summary>
+public sealed record PluginScope(string Scope, string[] Hosts);
+
+/// <summary>Where its server code is, and the limits it asks for.</summary>
+public sealed record PluginServer(string Entry, int MemoryMb, int TimeoutMs, int Concurrency);
+
+/// <summary>A tool for models defined in the plugin's server code.</summary>
+public sealed record PluginFunction(string Name, string Description, bool Writes, JsonObject? Parameters);
+
+/// <summary>A route of the plugin's at /api/p/{plugin}{path}: for anyone it is on for, or its managers.</summary>
+public sealed record PluginRoute(string Method, string Path, string Access);
+
+public sealed record PluginHook(string On, string Mode, bool FailClosed, int TimeoutMs);
+
+public sealed record PluginJobSpec(string Name, string Cron, string? Description);
+
+public sealed record PluginPage(string Id, string Title, string Path, string Entry, string? Icon);
+
+public sealed record PluginMenuItem(string Page, string Section, string? Title);
+
+public sealed record PluginPanel(string Id, string Title, string Slot, string Entry);
+
+public sealed record PluginAction(string Id, string Title, string? Entry, string? Run);
+
+public sealed record PluginUi(PluginPage[] Pages, PluginMenuItem[] Menu, PluginPanel[] Panels, string? Settings, PluginAction[] ComposerActions,
+    PluginAction[] MessageActions, PluginPanel[] IdePanels)
+{
+    public static readonly PluginUi None = new([], [], [], null, [], [], []);
+    public bool Any => Pages.Length + Panels.Length + ComposerActions.Length + MessageActions.Length + IdePanels.Length > 0 || Settings is not null;
+}
+
 /// <summary>
-/// A plugin's manifest (plugin.yaml): what it is, where its tools are (an OpenAPI document in
-/// the plugin, or an MCP server), how calls authenticate (one key for everyone, or each person's
-/// own API key or OAuth account), which functions change something (they ask first), and the
-/// settings an admin fills in; and what else it brings: skills (folders with a SKILL.md, for the chat's
-/// slash commands and Code Arena), assistants and safeguard rules (YAML files), and toolsets. No plugin code runs in the app.
+/// A plugin's manifest (plugin.yaml, apiVersion arena.plugins/v3), checked with the plugin framework's rules and codes (its
+/// conformance suite, tests/fixtures/plugins): what it is and the Arena versions it runs on; its tools (an OpenAPI document,
+/// an MCP server, a Python server in the sandbox, or functions in its own server code); how calls sign in; the host API
+/// scopes it asks for; its server code (run by the plugin runtime, never in the app), routes, hooks, events and jobs; its
+/// UI (pages, menu items, panels, a settings screen, chat and IDE extensions, each in a sandboxed frame); and what
+/// plugins v2 brought: skills, assistants, safeguard rules, toolsets and task templates.
 /// </summary>
 public sealed partial record PluginManifest(
     string Name, string Version, string Title, string Description,
@@ -36,20 +71,80 @@ public sealed partial record PluginManifest(
     public PluginTask[] Tasks { get; init; } = [];
     /// <summary>The plugin's own MCP server, run in the sandbox: a folder in the plugin with its server.py (and the files beside it).</summary>
     public string? Sandbox { get; init; }
-
-    /// <summary>The address of a server run in the sandbox: sandbox:{plugin}.</summary>
-    public const string SandboxScheme = "sandbox:";
-    /// <summary>Code Arena skills: folders in the plugin, each with its SKILL.md and the files beside it.</summary>
     public string[] Skills { get; init; } = [];
     public string? Author { get; init; }
     public string? Homepage { get; init; }
+    public string? Icon { get; init; }
+    /// <summary>The Arena versions it runs on.</summary>
+    public string Arena { get; init; } = ">=8.3.0";
+    public int HostApi { get; init; } = 1;
+    public PluginScope[] Scopes { get; init; } = [];
+    public PluginServer? Server { get; init; }
+    public PluginFunction[] Functions { get; init; } = [];
+    public PluginRoute[] Routes { get; init; } = [];
+    public PluginHook[] Hooks { get; init; } = [];
+    public string[] Events { get; init; } = [];
+    public PluginJobSpec[] Jobs { get; init; } = [];
+    public PluginUi Ui { get; init; } = PluginUi.None;
 
+    public const string ApiVersion = "arena.plugins/v3";
+    /// <summary>The host API version this Arena serves.</summary>
+    public const int HostApiVersion = 1;
+    /// <summary>The address of a server run in the sandbox: sandbox:{plugin}.</summary>
+    public const string SandboxScheme = "sandbox:";
+    /// <summary>The address of a plugin whose tools (or only its pages) are its own server code, run by the plugin runtime: plugin:{plugin}.</summary>
+    public const string PluginScheme = "plugin:";
     public const string FileName = "plugin.yaml";
+    public const int MostBytes = 256 * 1024;
 
-    public sealed class ManifestException(string message) : Exception(message);
+    /// <summary>Why a manifest is refused: the framework's code for it (manifest.name.invalid ...) and the words.</summary>
+    public sealed class ManifestException(string code, string message) : Exception(message)
+    {
+        public ManifestException(string message) : this("manifest.invalid", message)
+        {
+        }
+
+        public string Code { get; } = code;
+    }
+
+    /// <summary>Whether its tools or pages are its own server code (run by the plugin runtime).</summary>
+    public bool RunsCode => Server is not null;
+
+    /// <summary>Whether the plugin is one Arena's own UI or runtime serves (v3's parts), not only tools and content.</summary>
+    public bool HasOwnParts => Server is not null || Ui.Any;
+
+    /// <summary>Every file the manifest names, for checking a package.</summary>
+    public IEnumerable<string> Named()
+    {
+        if (Server is not null)
+        {
+            yield return Server.Entry;
+        }
+        if (OpenApi is not null)
+        {
+            yield return OpenApi;
+        }
+        if (Sandbox is not null)
+        {
+            yield return Sandbox;
+        }
+        foreach (var f in Ui.Pages.Select(p => p.Entry).Concat(Ui.Panels.Select(p => p.Entry)).Concat(Ui.IdePanels.Select(p => p.Entry))
+            .Concat(Ui.ComposerActions.Concat(Ui.MessageActions).Select(a => a.Entry).OfType<string>()).Concat(Assistants).Concat(Safeguards).Concat(Skills))
+        {
+            yield return f;
+        }
+        if (Ui.Settings is not null)
+        {
+            yield return Ui.Settings;
+        }
+    }
 
     public static PluginManifest Parse(string text)
     {
+        if (System.Text.Encoding.UTF8.GetByteCount(text) > MostBytes)
+        {
+            throw new ManifestException("manifest.too_large", $"The manifest is larger than {MostBytes / 1024} KB.");
+        }
         JsonObject doc;
         try
         {
@@ -57,101 +152,48 @@ public sealed partial record PluginManifest(
         }
         catch (Chat.Tools.OpenApi.SpecException ex)
         {
-            throw new ManifestException(ex.Message.Replace("OpenAPI document", "manifest", StringComparison.Ordinal));
+            throw new ManifestException("manifest.parse", ex.Message.Replace("OpenAPI document", "manifest", StringComparison.Ordinal));
         }
-        string? Str(JsonNode? n) => n is JsonValue v && v.TryGetValue<string>(out var s) && s.Trim().Length > 0 ? s.Trim() : n is JsonValue o ? o.ToJsonString() : null;
-        var name = Str(doc["name"]) ?? throw new ManifestException("The manifest has no name.");
-        if (!PluginName().IsMatch(name))
-        {
-            throw new ManifestException($"\"{name}\" is not a plugin name: lowercase letters, digits and dashes, up to 50.");
-        }
-        var tools = doc["tools"] as JsonObject ?? throw new ManifestException("The manifest says no tools (tools: openapi: or mcp:).");
-        var openapi = Str(tools["openapi"]);
-        var mcp = Str(tools["mcp"]);
-        var sandbox = Str(tools["sandbox"])?.Trim('/');
-        if (new[] { openapi, mcp, sandbox }.Count(x => x is not null) != 1)
-        {
-            throw new ManifestException("The tools are an OpenAPI document in the plugin (tools: openapi: file), an MCP server (tools: mcp: address), " +
-                "or the plugin's own MCP server run in the sandbox (tools: sandbox: folder): one of them.");
-        }
-        if (sandbox is not null && (sandbox.Length == 0 || sandbox.Contains("..", StringComparison.Ordinal) || Path.IsPathRooted(sandbox)))
-        {
-            throw new ManifestException("The sandbox's server must be a folder inside the plugin.");
-        }
-        if (openapi is not null && (openapi.Contains("..", StringComparison.Ordinal) || Path.IsPathRooted(openapi)))
-        {
-            throw new ManifestException("The OpenAPI document must be a file inside the plugin.");
-        }
-        var auth = doc["auth"] as JsonObject ?? [];
-        var person = Str(auth["per_person"]) switch
-        {
-            null or "none" => null,
-            "api_key" => "api_key",
-            "oauth2" => "oauth2",
-            var other => throw new ManifestException($"auth: per_person: {other} is not none, api_key or oauth2."),
-        };
-        PluginOAuth? oauth = null;
-        if (person == "oauth2")
-        {
-            var o = auth["oauth2"] as JsonObject ?? throw new ManifestException("auth: oauth2: says where people sign in (authorize, token, scopes).");
-            oauth = new PluginOAuth(Str(o["authorize"]) ?? throw new ManifestException("auth: oauth2: has no authorize address."),
-                Str(o["token"]) ?? throw new ManifestException("auth: oauth2: has no token address."),
-                [.. (o["scopes"] as JsonArray ?? []).Select(Str).OfType<string>()]);
-        }
-        var settings = (doc["settings"] as JsonArray ?? []).OfType<JsonObject>().Select(x => new PluginSetting(
-            Str(x["key"]) ?? throw new ManifestException("A setting has no key."),
-            Str(x["title"]) ?? Str(x["key"])!,
-            Str(x["type"]) is { } t && t is "text" or "url" or "secret" ? t : "text",
-            x["required"]?.GetValue<bool>() == true,
-            Str(x["help"]))).ToArray();
-        if (settings.GroupBy(x => x.Key).FirstOrDefault(g => g.Count() > 1) is { } twice)
-        {
-            throw new ManifestException($"The setting {twice.Key} is there twice.");
-        }
-        string[] Files(string key)
-        {
-            string[] files = [.. (doc[key] as JsonArray ?? []).Select(Str).OfType<string>()];
-            return files.FirstOrDefault(f => f.Contains("..", StringComparison.Ordinal) || Path.IsPathRooted(f)) is { } outside
-                ? throw new ManifestException($"{outside} must be a file inside the plugin.")
-                : files;
-        }
-        var toolsets = (doc["toolsets"] as JsonArray ?? []).OfType<JsonObject>().Select(t => new PluginToolset(
-            Str(t["name"]) ?? throw new ManifestException("A toolset has no name."), Str(t["description"]),
-            [.. (t["tools"] as JsonArray ?? []).Select(Str).OfType<string>()])).ToArray();
-        var tasks = (doc["tasks"] as JsonArray ?? []).OfType<JsonObject>().Select(t =>
-        {
-            var task = Str(t["name"]) ?? throw new ManifestException("A task has no name.");
-            var cron = Str(t["cron"]) ?? throw new ManifestException($"The task {task} says no cron (when it runs).");
-            if (Schedules.Cron.Parse(cron).Problem is { } wrong)
-            {
-                throw new ManifestException($"The task {task}'s cron: {wrong}");
-            }
-            return new PluginTask(task, Str(t["description"]), Str(t["prompt"]) ?? throw new ManifestException($"The task {task} has no prompt."), cron,
-                [.. (t["tools"] as JsonArray ?? []).Select(Str).OfType<string>()]);
-        }).ToArray();
-        if (tasks.GroupBy(x => x.Name).FirstOrDefault(g => g.Count() > 1) is { } twiceTask)
-        {
-            throw new ManifestException($"The task {twiceTask.Key} is there twice.");
-        }
-        return new PluginManifest(name, Str(doc["version"]) ?? "0", Str(doc["title"]) ?? name, Str(doc["description"]) ?? "",
-            openapi, mcp, sandbox is not null ? SandboxScheme + name : Str(tools["url"]) ?? mcp ?? "",
-            person, Str(auth["header"]) ?? "Authorization", Str(auth["value"]) ?? "Bearer {token}", oauth, Str(auth["help"]),
-            [.. (doc["writes"] as JsonArray ?? []).Select(Str).OfType<string>()], settings)
-        {
-            Assistants = Files("assistants"), Safeguards = Files("safeguards"), Toolsets = toolsets, Author = Str(doc["author"]), Homepage = Str(doc["homepage"]),
-            Tasks = tasks, Skills = [.. Files("skills").Select(f => f.Trim('/'))], Sandbox = sandbox,
-        };
+        return new ManifestReader(doc).Read();
     }
 
-    /// <summary>"1.10.0" over "1.9.2": versions compared part by part, numbers as numbers.</summary>
+    /// <summary>"1.10.0" over "1.9.2": versions compared part by part, numbers as numbers; a prerelease before its release.</summary>
     public static int CompareVersions(string a, string b)
     {
-        var x = a.TrimStart('v').Split('.', '-', '+');
-        var y = b.TrimStart('v').Split('.', '-', '+');
+        static (string[] Core, string? Pre) Split(string v)
+        {
+            v = v.TrimStart('v');
+            var plus = v.IndexOf('+');
+            if (plus >= 0)
+            {
+                v = v[..plus];
+            }
+            var dash = v.IndexOf('-');
+            return dash >= 0 ? (v[..dash].Split('.'), v[(dash + 1)..]) : (v.Split('.'), null);
+        }
+        static int Part(string p, string q) => int.TryParse(p, out var m) && int.TryParse(q, out var n) ? m.CompareTo(n) : string.CompareOrdinal(p, q);
+        var (x, xp) = Split(a);
+        var (y, yp) = Split(b);
         for (var i = 0; i < Math.Max(x.Length, y.Length); i++)
         {
-            var (p, q) = (i < x.Length ? x[i] : "0", i < y.Length ? y[i] : "0");
-            var c = int.TryParse(p, out var m) && int.TryParse(q, out var n) ? m.CompareTo(n) : string.CompareOrdinal(p, q);
+            var c = Part(i < x.Length ? x[i] : "0", i < y.Length ? y[i] : "0");
+            if (c != 0)
+            {
+                return c;
+            }
+        }
+        if (xp is null || yp is null)
+        {
+            return (xp is null ? 0 : -1) - (yp is null ? 0 : -1);
+        }
+        var (xs, ys) = (xp.Split('.'), yp.Split('.'));
+        for (var i = 0; i < Math.Max(xs.Length, ys.Length); i++)
+        {
+            if (i >= xs.Length || i >= ys.Length)
+            {
+                return i >= xs.Length ? -1 : 1;
+            }
+            var c = Part(xs[i], ys[i]);
             if (c != 0)
             {
                 return c;
@@ -164,9 +206,14 @@ public sealed partial record PluginManifest(
     public static string Fill(string template, IReadOnlyDictionary<string, string> values) =>
         Placeholder().Replace(template, m => values.TryGetValue(m.Groups[1].Value, out var v) ? v.TrimEnd('/') : m.Value);
 
+    public static bool IsVersion(string v) => SemVer().IsMatch(v);
+
     [GeneratedRegex("^[a-z0-9][a-z0-9-]{0,49}$")]
-    private static partial Regex PluginName();
+    internal static partial Regex PluginName();
 
     [GeneratedRegex(@"\{([a-z0-9_]+)\}")]
     private static partial Regex Placeholder();
+
+    [GeneratedRegex(@"^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$")]
+    private static partial Regex SemVer();
 }

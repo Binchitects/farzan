@@ -28,7 +28,8 @@ public sealed partial class PeopleService(
     IOpenIddictAuthorizationManager authorizations,
     CreditBook book,
     Access.AccessService access,
-    Models.KeyAccessWatcher keyWatcher)
+    Models.KeyAccessWatcher keyWatcher,
+    Plugins.PluginEvents plugins)
 {
     [System.Text.RegularExpressions.GeneratedRegex("^[a-z0-9][a-z0-9._-]{1,63}$")]
     private static partial System.Text.RegularExpressions.Regex UserNamePattern();
@@ -82,6 +83,7 @@ public sealed partial class PeopleService(
         var password = GeneratePassword();
         Check(await users.CreateAsync(user, password));
         await JoinDefaultGroupsAsync(user);
+        await AnnounceAsync(user);
         if (p.Admin)
         {
             await access.SetOwnerAsync(null, user, true);
@@ -95,6 +97,13 @@ public sealed partial class PeopleService(
 
     /// <summary>A new person, however they came, joins the groups set under Admin → Access → Groups (before their key is made, which carries their models).</summary>
     public Task JoinDefaultGroupsAsync(AppUser user) => Access.AccessGroups.JoinAsync(db, audit, keyWatcher, user);
+
+    /// <summary>
+    /// A person made here (by an admin, the directory, company sign-in or SCIM), once they are in their default groups:
+    /// plugins that listen hear of it as that person, so only those allowed to them (enabled for their groups) do.
+    /// </summary>
+    public Task AnnounceAsync(AppUser user) =>
+        plugins.EmitAsync("person.created", new System.Text.Json.Nodes.JsonObject { ["personId"] = user.Id.ToString() }, user.Id, CancellationToken.None);
 
     /// <summary>For people who arrive through LDAP: a key, so they can use the API at once.</summary>
     public async Task ProvisionGatewayAsync(AppUser user)

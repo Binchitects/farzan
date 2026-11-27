@@ -1,3 +1,4 @@
+import { PluginPanels } from '@/plugins/plugin-page'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, CheckCircle2, XCircle } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -45,6 +46,7 @@ export function HomePage() {
         </h1>
         <p className="mt-1 text-muted-foreground">What would you like to do?</p>
       </div>
+      <PluginPanels slot="home.card" />
       <section aria-labelledby="get-started" className="grid gap-3">
         <h2 id="get-started" className="text-sm font-semibold text-muted-foreground">
           Get started

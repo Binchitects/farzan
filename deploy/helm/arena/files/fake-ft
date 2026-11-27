@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+"""`ft serve ARGS` for a stack without FreeToken: the fake server (fake_vllm.py --freetoken), with the arguments
+services/freetoken/serve.py runs it with (the key from FREETOKEN_API_KEY, inside the process)."""
+import os
+import sys
+
+if sys.argv[1:2] != ["serve"]:
+    print("fake ft: only `ft serve` is here", file=sys.stderr)
+    sys.exit(2)
+fake = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fake_vllm.py")
+os.execv(sys.executable, [sys.executable, fake, "serve", "--freetoken", *sys.argv[2:]])

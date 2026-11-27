@@ -23,8 +23,29 @@ public static class PluginContent
     {
         var m = package.Manifest;
         var list = new List<PluginGrant>();
-        var host = Uri.TryCreate(url ?? m.Url, UriKind.Absolute, out var u) ? u.Host : null;
-        list.Add(new("tools", m.Mcp is not null ? $"Adds an MCP server's tools to the chat{(host is null || host.Contains('{') ? "" : $", at {host}")}." : "Adds tools to the chat, from its API document."));
+        var host = Uri.TryCreate(url ?? m.Url, UriKind.Absolute, out var u) && u.Scheme is "http" or "https" ? u.Host : null;
+        if (m.Mcp is not null || m.OpenApi is not null || m.Sandbox is not null || m.Functions.Length > 0)
+        {
+            list.Add(new("tools", m.Mcp is not null ? $"Adds an MCP server's tools to the chat{(host is null || host.Contains('{') ? "" : $", at {host}")}."
+                : m.Functions.Length > 0 ? $"Adds tools to the chat from its own code: {string.Join(", ", m.Functions.Select(f => f.Name))}."
+                : m.Sandbox is not null ? "Adds tools to the chat, from its own Python server in the sandbox." : "Adds tools to the chat, from its API document."));
+        }
+        if (m.Server is not null)
+        {
+            list.Add(new("code", $"Runs its own server code in Arena's plugin runtime: apart from Arena and every other plugin, no network of its own, at most {m.Server.MemoryMb} MB, each call within {m.Server.TimeoutMs / 1000.0:0.#} s."));
+        }
+        if (m.Ui.Any)
+        {
+            list.Add(new("ui", $"Adds {string.Join(", ", new[] { (m.Ui.Pages.Length, "page"), (m.Ui.Panels.Length + m.Ui.IdePanels.Length, "panel"), (m.Ui.ComposerActions.Length + m.Ui.MessageActions.Length, "chat action") }.Where(x => x.Item1 > 0).Select(x => $"{x.Item1} {x.Item2}{(x.Item1 > 1 ? "s" : "")}"))}{(m.Ui.Settings is null ? "" : " and a settings screen")} to Arena, each in a sandboxed frame."));
+        }
+        foreach (var scope in m.Scopes)
+        {
+            if (scope.Scope == "network")
+            {
+                list.AddRange(scope.Hosts.Select(h => new PluginGrant(PluginRules.HostKey(h), $"Reaches {h} through Arena (http.fetch), and no other host.")));
+            }
+            list.Add(new(PluginRules.GrantKey(scope.Scope), PluginRules.Scopes.First(x => x.Scope == scope.Scope).Text));
+        }
         if (host is not null)
         {
             list.Add(new($"network:{host}", $"Sends what the chat asks of it to {host}."));
@@ -58,7 +79,67 @@ public static class PluginContent
 
     /// <summary>Permissions that need the admin's yes beyond adding tools: everything it brings to people or to the rules.</summary>
     public static IEnumerable<string> NeedingYes(IEnumerable<PluginGrant> permissions) =>
-        permissions.Select(p => p.Key).Where(k => k is "assistants" or "safeguards" or "toolsets" or "accounts" or "writes" || k.StartsWith("network:", StringComparison.Ordinal));
+        permissions.Select(p => p.Key).Where(k => k is "assistants" or "safeguards" or "toolsets" or "accounts" or "writes" or "code" or "ui"
+            || k.StartsWith("network:", StringComparison.Ordinal) || k.StartsWith("scope:", StringComparison.Ordinal) || k.StartsWith("host:", StringComparison.Ordinal));
+
+    /// <summary>
+    /// Why the package may not be installed here, or null: an Arena version outside the range it runs on, or code or pages
+    /// (plugins v3's parts, which run in Arena's runtime and frames) not signed by a trusted publisher, unless an admin
+    /// allowed unsigned packages (Settings → Plugins). Tools and content only (plugins v2's parts) install as before.
+    /// </summary>
+    public static string? Refusal(PluginPackage package, bool allowUnsigned)
+    {
+        var m = package.Manifest;
+        var arena = AppInfo.Current.Version.Split('-', '+')[0];
+        if (!PluginRules.Satisfies(arena, m.Arena))
+        {
+            return $"{m.Title} {m.Version} runs on Arena {m.Arena}; this is {arena}.";
+        }
+        if (m.HasOwnParts && !package.Signature.Trusted && !allowUnsigned)
+        {
+            return package.Signature.IsSigned
+                ? $"{m.Title} is signed by a key not trusted here ({package.Signature.Fingerprint}): an admin adds its publisher's key under Admin → Plugins → Trusted publishers."
+                : $"{m.Title} runs code or pages in Arena and is not signed: sign it (arena-plugin package --key), or an admin allows unsigned packages (Settings → Plugins).";
+        }
+        return null;
+    }
+
+    /// <summary>The package checked again with the trusted publishers' keys: signed by one of them, it is trusted.</summary>
+    public static async Task<PluginPackage> TrustAsync(AppDbContext db, PluginPackage package, CancellationToken ct)
+    {
+        if (package.Bytes is null || !package.Signature.IsSigned || package.Signature.Trusted)
+        {
+            return package;
+        }
+        var keys = await db.PluginPublishers.AsNoTracking().Select(p => p.PublicKeyPem).ToListAsync(ct);
+        return package with { Signature = PluginFap.Read(package.Bytes, keys).Signature };
+    }
+
+    /// <summary>A .fap kept with its release (every file, its UI's pictures too), for the runtime, the frames and a rollback.</summary>
+    public static void Keep(AppDbContext db, PluginRelease release, PluginPackage package)
+    {
+        if (package.Bytes is { } bytes)
+        {
+            db.PluginPackageBlobs.Add(new PluginPackageBlob { ReleaseId = release.Id, Bytes = bytes, Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)) });
+        }
+    }
+
+    /// <summary>The plugin's state kept with the signer of the version installed (and, for a dev install, whose it is).</summary>
+    public static async Task StateAsync(AppDbContext db, McpServer server, PluginPackage package, Guid? devOwner, CancellationToken ct)
+    {
+        var state = await db.PluginStates.SingleOrDefaultAsync(s => s.ServerId == server.Id, ct);
+        if (state is null && !package.Manifest.HasOwnParts && devOwner is null)
+        {
+            return;
+        }
+        if (state is null)
+        {
+            state = new PluginState { ServerId = server.Id, DevOwnerId = devOwner };
+            db.PluginStates.Add(state);
+        }
+        state.Signer = package.Signature.Trusted ? package.Signature.Fingerprint : null;
+        state.UntrustedSigner = package.Signature.IsSigned && !package.Signature.Trusted ? package.Signature.Fingerprint : null;
+    }
 
     /// <summary>The plugin's assistants, rules and toolsets as the package has them: added, changed, or removed when it no longer does.</summary>
     public static async Task SyncAsync(AppDbContext db, McpServer server, PluginPackage package, Guid? adminId, CancellationToken ct)

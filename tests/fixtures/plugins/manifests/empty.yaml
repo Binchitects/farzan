@@ -1,0 +1,3 @@
+apiVersion: arena.plugins/v3
+name: empty
+version: 1.0.0

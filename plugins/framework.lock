@@ -1,0 +1,43 @@
+# The plugin framework Arena is held to (tools/plugin-framework-sync.sh writes this).
+framework: Binchitects/farzan-arena-plugin-framework
+version: 0.2.0
+commit: 4afe88acc86779d157d4228df832239dc94580ac
+files:
+  keys/publisher.pub.pem: e97cbe3862e1ca2b989e625030d7a0c64a3738b73944be92acb7b66371f6ebb3
+  manifests/bad-arena-range.yaml: 4c4dc6303cffbad7279c0ce1860c3253e0fc2cc1834190c7f4485a5ed2f954ca
+  manifests/bad-cron.yaml: 5822d07eb93174cc26cc5baeebb3473a0bd416a9e5ee292a01398fb984bcfe45
+  manifests/bad-name.yaml: ca7f6d36dba30b067c0383ed9cc640e4184ee645af5529535e9d8f88f2f73b05
+  manifests/bad-panel-slot.yaml: b203c03e9fdb0cdae6bfc9a89d0a8f1d3670fc4c4137210a1c130b7a9d8be504
+  manifests/bad-version.yaml: 3fb81a11199c667263b3cc34c087936219715aba0fb486c36da24824e4115fff
+  manifests/code-without-server.yaml: 59c3f537862cca186e7e2d1e90ac968e427873144132e706c388b49760615687
+  manifests/duplicate-key.yaml: 1689f6508faa386f3c9488561fb2bc0dca4ac4b6701f907c72329abedfa5ebba
+  manifests/duplicate-route.yaml: 5459c488ff1b4f475b170c4bb07dec3bb27a8bb8f4af15de8a67a520de203c2f
+  manifests/empty.yaml: e29750a9a9724c5cbfd3b8265f74c27b9c60d5fb4bc1f36d8135117dfc0870a0
+  manifests/event-without-scope.yaml: 5320018701270872a36dbb2b981da19ce6fb15745d0a9eaae3d7f9201ce97c4a
+  manifests/expected.json: bf00ee2de46edeb70d135f98421c4656500011a84f4e37d2e546f7f3a4deb2a7
+  manifests/fail-closed-without-scope.yaml: de08082b432a6084cbb12863810362b95eebc374d453c828051a9d2422fdb340
+  manifests/hook-without-scope.yaml: 158731ff005a3f70463b9c241a6e22ee9f8282bf3c5caa8c1c3472789408afd4
+  manifests/menu-without-page.yaml: 01a4dcd4cd7cac62bb89c80740343aa7f846def8b456891ec5d4b8f590fe9fda
+  manifests/modify-hook-without-scope.yaml: 956104f31f9c4332af9d8619858df588596aa3529d53a5fbf6d776c251869ad1
+  manifests/network-address.yaml: 07c22516582fd769dcc6ff8714a8ff5e5e6fce7c93a9b93c06e2530e75a34809
+  manifests/network-without-hosts.yaml: e6b96af5b56914e53ea1fcb70236faae517158359a1d36451dea86a78bff8654
+  manifests/newer-host-api.yaml: b523e4eb87af694cda7015f9e6b8dba2083cf7aba3d80f11ecc0a08d9980911f
+  manifests/no-api-version.yaml: 5a1875adcefd4ebdd4a7760b6b3757f65cb816223ff0c85908dd599176931c5c
+  manifests/path-outside.yaml: 0a7882fda28ff636f020b852551bf9d8d3a2883d09cd422b04f3f2f9789cd69a
+  manifests/public-route.yaml: efe1ff5813fb160416791a0e19980ad6a83e247a66641835a1d7b73de4feb29d
+  manifests/secret-default.yaml: a53bd07f792ede4f504c70d205bdbd4a20efa808d18ac72f4fec37e2e8d8a7d6
+  manifests/two-tool-sources.yaml: 2183b34483a3db850d3fc6ef8a8811d9c5ec57dab97bed13994f6c88d5888f2e
+  manifests/unknown-permission.yaml: 5e66777ff2d3e23ed07f8ed1753f3fbb39da7c4ccc31f0c256db742d6a3a36c9
+  manifests/valid-everything.yaml: 821eed9d27791690417e10b436e1da7b5c9c6562ef9546084fc348e660ada99b
+  manifests/valid-minimal.yaml: 00f7bb2ed0778a567a8dd4009e57fd783e8cfbd278b25bea1a53de1f3676ac0e
+  manifests/valid-v2-shape.yaml: bbb2da7226cc69e2deaae170810b095e50069923d34c942a6b0357bbb70f5429
+  packages/added-file.fap: 0040cc6f7b437a66585aa6e1c139ced1dbca563874286e9fa54f262a1a974737
+  packages/changed-file.fap: b0259225b59652a2774aa9a6314a79341011279d7051d256eb09c35aad52a07b
+  packages/changed-list.fap: 9bf06f9b75a35931bf59725623d3f2800ee9e354b32d4cd88f659ef7b62531e2
+  packages/chaos.fap: 13942cf62f6f08ad408ebd154f86d426c35c55bca8be7faca6c8967aabcb2341
+  packages/expected.json: 2ab39b4f5195ab38589f9657d7ea757ec156b83fa47c0f426602810ea0b54794
+  packages/hello.fap: 1a048de8604a604a71d68cca229de4f42370b5dbd191e3d553da516cfc512835
+  packages/stranger-signed.fap: 58f669fdd4c0dcf76545ea5b712bbc4b0aa496229d4c4d695ca23d8520d0ed0a
+  packages/swapped-embedded-key.fap: 8a28d98a7aca5e216be694cfdcc151bd0031f330ab66f5f784e89226dd2d4c77
+  packages/ticket-desk.fap: 5094133093cff56f5b0734d3fee40e0169752e06f29fc0c0c98e6429bd638f74
+  packages/unsigned.fap: 5a312f6ca338fb9924bf38486238b686710313ac982d6413f626a8cdd73bbc3a

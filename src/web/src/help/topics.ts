@@ -221,6 +221,16 @@ export const topics = {
     manual: { doc: 'chat', section: 'apps' },
   },
 
+  'plugin-page': {
+    title: 'A plugin\'s page',
+    about: 'A page a plugin adds to Arena, in a frame of its own: it reaches Arena only through this page, as you, with only what an admin granted it, and it cannot read your other pages, your session or the network.',
+    parts: [
+      { name: 'Its frame', text: 'The plugin\'s own page. When it does not start or misbehaves, a card says it is not working, with **Try again**; the rest of Arena goes on.' },
+      { name: 'Dev', text: 'A dev install: a plugin its developer is making, seen only by them.' },
+    ],
+    tasks: [{ title: 'Find what a plugin may reach', steps: ['An admin opens **Admin → Plugins**, the plugin\'s card, **What it may reach**.'] }],
+  },
+
   wiki: {
     title: 'Wiki',
     about: 'The company\'s documents, code and data, searched and read directly, with no model: only what you may read.',
@@ -948,8 +958,8 @@ export const topics = {
       { name: 'Working hours', text: 'Other models kept loaded at some hours: a small fast one by day, the big one at night.' },
       { name: 'Other servers and providers', text: 'Another machine\'s OpenAI-compatible engine, or a provider\'s API (OpenAI, Anthropic, Gemini, OpenRouter...) with the company\'s key: their models the gateway serves beside these, to the chat, API keys and Code Arena.' },
       { name: 'Find on Hugging Face', text: 'Search GGUF models for llama.cpp (**Chat**) or snapshots for vLLM and SGLang (**Snapshots**), see whether they fit this machine, and download them into the library. **Downloads** shows the progress.' },
-      { name: 'Add a model', text: 'One dialog for every kind: choose a file from the model library or a model the speech server has, and it is taken as what it is (a chat, picture, video or speech model), which you can change. A chat model has an **Engine** (llama.cpp, vLLM, SGLang, LMDeploy or Strata; one that does not run here is disabled, saying why) and its **File or model** in that engine\'s form: a GGUF file for llama.cpp and Strata, a Hugging Face snapshot for vLLM, SGLang and LMDeploy. Its form shows what fits this machine, and for a snapshot how its precision runs on its GPUs (an FP4 one is widened as it is read on Hopper and Ampere, and runs natively on Blackwell). **Edit** on a card opens the same dialog.' },
-      { name: 'Advanced', text: 'In a vLLM, SGLang or LMDeploy model\'s form: its **Tool calls parser** and **Reasoning parser**. **Automatic** chooses them by its family (Qwen, Llama, gpt-oss, DeepSeek, GLM, Kimi, Mistral...), each engine by its own names; without one the engine refuses tools or answers them as text, and the thinking lands in the answer. When its engine has none for its family, the form says so: turn Tools off for it or use another engine. Strata reads both itself.' },
+      { name: 'Add a model', text: 'One dialog for every kind: choose a file from the model library or a model the speech server has, and it is taken as what it is (a chat, picture, video or speech model), which you can change. A chat model has an **Engine** (llama.cpp, vLLM, SGLang, LMDeploy, Strata, FreeToken or Ollama; one that does not run here is disabled, saying why) and its **File or model** in that engine\'s form: a GGUF file for llama.cpp, Strata and Ollama, a Hugging Face snapshot for vLLM, SGLang and LMDeploy, either for FreeToken. Its form shows what fits this machine, and for a snapshot how its precision runs on its GPUs (an FP4 one is widened as it is read on Hopper and Ampere, and runs natively on Blackwell). **Edit** on a card opens the same dialog.' },
+      { name: 'Advanced', text: 'In a vLLM, SGLang or LMDeploy model\'s form: its **Tool calls parser** and **Reasoning parser**. **Automatic** chooses them by its family (Qwen, Llama, gpt-oss, DeepSeek, GLM, Kimi, Mistral...), each engine by its own names; without one the engine refuses tools or answers them as text, and the thinking lands in the answer. When its engine has none for its family, the form says so: turn Tools off for it or use another engine. Strata, FreeToken and Ollama read both themselves.' },
     ],
     tasks: [
       { title: 'Switch the chat to another model', steps: ['Press **Load** on the model (or **Keep loaded** in its **Details** to keep it).', 'Wait while it loads: seconds from memory, minutes from disk.', 'Set **Model new chats use** under Settings → Model to make it the default.'] },
@@ -1241,7 +1251,7 @@ export const topics = {
     admin: true,
     parts: [
       { name: 'Services', text: 'Each service with its state, and why it is down.' },
-      { name: 'Engines and sandboxes', text: 'llama.cpp, vLLM, SGLang, LMDeploy and Strata, the picture and video servers, and the sandboxes: each one\'s state, the answers or jobs on it, and what was done to it last. **Reload** loads an engine\'s models again, **Restart** starts its process again, **Reset** stops a sandbox\'s jobs (their callers are told) and starts it again. Each asks first, says what it cuts, and is in the audit log. Reload needs `models.load`; Restart and Reset `runtimes.restart`.' },
+      { name: 'Engines and sandboxes', text: 'llama.cpp, vLLM, SGLang, LMDeploy, Strata, FreeToken and Ollama, the picture and video servers, and the sandboxes: each one\'s state, the answers or jobs on it, and what was done to it last. **Reload** loads an engine\'s models again, **Restart** starts its process again, **Reset** stops a sandbox\'s jobs (their callers are told) and starts it again. Each asks first, says what it cuts, and is in the audit log. Reload needs `models.load`; Restart and Reset `runtimes.restart`.' },
       { name: 'Elsewhere', text: 'Links to Prometheus\'s and Alertmanager\'s own pages, with the same sign-in.' },
     ],
     tasks: [

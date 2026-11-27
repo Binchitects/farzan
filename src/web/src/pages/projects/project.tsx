@@ -1,3 +1,4 @@
+import { PluginPanels } from '@/plugins/plugin-page'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppWindow, Bot, Clock, Coins, ExternalLink, Gauge, FolderGit2, GitMerge, Globe2, Hash, Hourglass, ListChecks, MessageSquare, Plus, SquareSlash, SquareTerminal, Tag, Target, Timer, Trash2, Users } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
@@ -167,6 +168,7 @@ export function ProjectView({ id, time, host }: { id: string; time: TimeWindowSt
           </>
         }
       />
+      <PluginPanels slot="project.sidebar" projectId={id} />
       <TagsDialog
         open={tagging}
         onOpenChange={setTagging}

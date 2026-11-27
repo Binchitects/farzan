@@ -693,6 +693,21 @@ full the models kept loaded would make it.
   without drafting: Strata's draft layers are downloads of its own; see
   [deployment.md](deployment.md#engines-and-gpus)), no tiers and no sleep. Its load is read from its metrics, which are
   vLLM's names.
+- **FreeToken models** (`engineKind: freetoken`, the `freetoken` feature): a
+  GGUF file of one of FreeToken's families (Qwen, Llama, Gemma 4, GLM,
+  DeepSeek-V4, MiniMax, gpt-oss and others) or a snapshot, on one GPU (more is
+  refused), one copy, its cache at 8 bits a value for fp8. Its share
+  (`--memory-ratio`) is of what is free on its GPU, for its weights, the
+  experts it keeps there and its cache; a MoE model's experts beyond it stay
+  in RAM, which the advisor counts as Strata's. It reads tool calls and
+  thinking itself; no speculative decoding, tiers or sleep the app sets. Its
+  first start on a GPU compiles its kernels (minutes).
+- **Ollama models** (`engineKind: ollama`, the `ollama` feature): a GGUF file
+  of the library, made Ollama's model with its context; a snapshot is refused.
+  One copy, its GPUs split by layers and the layers beyond them in RAM (the
+  advisor counts them), its cache q8_0 for fp8, people at once by
+  `OLLAMA_NUM_PARALLEL`. It reads tool calls and thinking by the model's
+  template. Ollama keeps its own copy of each file (the `ollama-data` volume).
 - **Tool calls and thinking** (the form's **Advanced**: `toolParser`,
   `reasoningParser`). vLLM, SGLang and LMDeploy read a model's tool calls into
   `tool_calls` only with a tool-call parser, and its thinking into the

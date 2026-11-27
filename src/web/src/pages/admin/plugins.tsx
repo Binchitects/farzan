@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { PluginRuntimePanel, PublishersCard } from './plugin-runtime-panel'
 import { Activity, Blocks, ClipboardCheck, Download, FileCode2, Link2, Pin, PinOff, RefreshCw, RotateCcw, Settings2, Trash2, Upload, Users } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Link, useOutletContext } from 'react-router'
@@ -122,13 +123,13 @@ export function PluginsPage() {
     <>
       <PageHeader
         title="Plugins"
-        description="Ready-made tools for the chat: an API or an MCP server, with its sign-in and the calls that ask first. Installed, each is a tool in Admin → Tools, where you choose who may use it."
+        description="Tools for the chat, and plugins with code and pages of their own (each run apart, with only what you grant it). Installed, each is a tool in Admin → Tools, where you choose who may use it."
         actions={
           <>
             <input
               ref={file}
               type="file"
-              accept=".zip,application/zip"
+              accept=".zip,.fap,application/zip"
               className="hidden"
               aria-label="Plugin zip"
               onChange={async (e) => {
@@ -141,7 +142,7 @@ export function PluginsPage() {
             <input
               ref={checkFile}
               type="file"
-              accept=".zip,application/zip"
+              accept=".zip,.fap,application/zip"
               className="hidden"
               aria-label="Plugin zip to check"
               onChange={async (e) => {
@@ -166,7 +167,7 @@ export function PluginsPage() {
             {mayInstall && (
               <>
                 <Button variant="outline" onClick={() => file.current?.click()}>
-                  <Upload /> Upload a zip
+                  <Upload /> Upload a package
                 </Button>
                 <Button variant="outline" onClick={() => setFromUrl(true)}>
                   <Link2 /> From an address
@@ -192,6 +193,7 @@ export function PluginsPage() {
             </div>
           )}
         </section>
+        <PublishersCard mayGrant={holds(me, 'plugins.grant')} />
         <section aria-labelledby="catalog-heading" className="grid gap-3">
           <h2 id="catalog-heading" className="text-sm font-medium text-muted-foreground">
             Catalog
@@ -329,6 +331,7 @@ function InstalledCard({ plugin, onEdit, onChanged }: { plugin: Plugins['install
         <CardDescription className="font-mono text-xs break-all">{plugin.url}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">
+        {plugin.url.startsWith('plugin:') && <PluginRuntimePanel id={plugin.id} name={plugin.plugin} may={{ enable: holds(me, 'plugins.enable'), grant: holds(me, 'plugins.grant') }} />}
         {plugin.tls === 'Off' && <TlsWarning name={plugin.title} />}
         {plugin.tls === 'OwnCa' && (
           <div className="text-xs">

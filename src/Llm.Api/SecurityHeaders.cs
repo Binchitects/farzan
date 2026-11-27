@@ -22,7 +22,11 @@ public static class SecurityHeaders
                     h.ContentSecurityPolicy = Csp;
                 }
                 h.XContentTypeOptions = "nosniff";
-                h.XFrameOptions = "DENY";
+                // DENY, unless the endpoint says otherwise itself (a plugin's frame: SAMEORIGIN, with its own sandboxed policy).
+                if (!h.ContainsKey("X-Frame-Options"))
+                {
+                    h.XFrameOptions = "DENY";
+                }
                 h["Referrer-Policy"] = "no-referrer";
                 h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
                 h["Cross-Origin-Opener-Policy"] = "same-origin";

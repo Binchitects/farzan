@@ -15,6 +15,67 @@ Sections used:
   makes weaker (gone, a clause or a check dropped, fewer tests), by its id,
   and why ([compliance](docs/compliance/README.md#when-a-change-weakens-a-control))
 
+## v8.3.0 (2026-11-27)
+
+### :rocket: Epics and highlights
+
+- **Plugins with code, pages and access to Arena, installed like today's.** Plugins v3 (the plugin framework,
+  [Binchitects/farzan-arena-plugin-framework](https://github.com/Binchitects/farzan-arena-plugin-framework) 0.2.0):
+  server code with tools for models, routes, hooks, events and scheduled jobs; pages in the menu, panels beside a chat,
+  a project, the home page and the admin overview, a settings screen and chat actions; a versioned host API to chats,
+  projects, models, knowledge, files, people, groups, settings, storage, the internet hosts granted, the bell and the
+  audit log. `arena-plugin dev` pushes a developer's own install on every save.
+- **A plugin that breaks takes only itself down.** Its code runs in the new `plugins` service, each plugin a worker of
+  its own (its own user, no network, rlimits, a heap cap, memory and CPU watched, a deadline on every call); its pages
+  in sandboxed frames behind a checked bridge. The framework's chaos plugin crashes, hangs, leaks, forks, floods and
+  tries to escape while everything else answers; five failures in a row turn a plugin off by itself, its admins told.
+- **Grants an admin can read.** What each plugin asks for in words, granted all, some or none and taken back at once;
+  only packages signed by trusted publishers run code; every denial, write and outward call audited.
+
+### :sparkles: New features & Enhancements
+
+- **Two engines more**, each its own feature (off until asked for), run by the same supervisor as vLLM, with its
+  launcher, compose service, Helm Deployment and fake for tests:
+  - **FreeToken** 0.2.3 (Apache-2.0): MoE models on one GPU, GGUF files or snapshots, the experts that do not fit
+    there in RAM. arena-freetoken is built on SGLang's image with no resolve of its dependencies (about 0.4 GB from
+    PyPI); its kernels are compiled on its GPU on its first start and kept.
+  - **Ollama** 0.40.18 (MIT): a GGUF file of the library made Ollama's model, nothing pulled, behind a front that asks
+    the engine key (Ollama's own server asks none); its layers in RAM when the GPUs are short.
+- TokenSpeed and Unsloth were weighed and left out: TokenSpeed's 0.1.1 image (its latest release) fails as it starts,
+  its own FlashInfer packages not matching, so it never serves; Unsloth's server is Unsloth Studio, an application with
+  its own accounts and the keys it mints, a notebook shell and a tunnel in its image, serving through its own
+  llama.cpp, which Arena runs already. Unsloth's GGUF files run on llama.cpp, Ollama and FreeToken.
+- The vLLM and SGLang supervisor's readiness reads a `/health` that answers 200 while it loads (FreeToken's
+  `"status": "loading"`).
+- The `plugins` feature and service (on by default), its volume and its Helm Deployment (TCP with a key, a
+  NetworkPolicy with no egress).
+- Every extension point a plugin's manifest takes runs: hooks on a message before the model reads it, on the finished
+  answer (a change replaces the words on the page), on a tool call, and on a file a person uploads before it is kept
+  (renamed or refused); events for chats, messages, projects, tasks, uploads, people made and group members; IDE
+  panels in Code Studio (the Code page's Plugins tab, and beside each review, told which).
+- Admin → Plugins: on and off with the reason, the signer, what it may reach, its worker and logs, its own settings
+  screen, trusted publishers; `.fap` uploads.
+- New permissions: plugins.grant, plugins.enable, feature.plugins.develop. Settings → Plugins: Allow unsigned plugins
+  with code; Developers' own installs.
+- `POST /api/plugins/packages` (publish and dev installs by API key), `/api/p/{plugin}/...` (a plugin's routes),
+  `/api/plugins/mine`.
+- `tools/plugin-dev-stack.sh`: a throwaway Arena for making plugins; `tools/plugin-framework-sync.sh`: the framework's
+  conformance suite into `tests/fixtures/plugins`.
+- Compliance: a new control, OPS-03 (plugins run apart, with only what an admin granted), with its tests; IAM-08 (the
+  engine key no command line shows) covers FreeToken and Ollama, Ollama's front included.
+
+### :boom: Breaking changes & Deprecations
+
+- `plugin.yaml` needs `apiVersion: arena.plugins/v3` and a version like 1.2.3 (`arena-plugin migrate` makes a v2
+  folder v3). Installed plugins are made v3 by the upgrade, their settings, grants and versions kept.
+
+### :arrow_up: Deps updates
+
+- llama.cpp pinned to its build b12767 (1.1.0-dev) in place of the floating `server-cuda` tag, for chat models and
+  the embedder (ROCm: `server-rocm-b12767`). Every preset key the app writes is still one of its flags.
+- vLLM's PyPI build (`vllm-build.yml`, for a host that cannot pull vLLM's image) pinned to 0.34.0, the vLLM, PyTorch
+  and GGUF plugin arena-vllm already runs.
+
 ## v8.2.5 (2026-11-26)
 
 Skills are checked by NVIDIA's SkillSpector, and the admin assistant looks and

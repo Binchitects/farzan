@@ -10,7 +10,7 @@
 # Build arguments:
 #   BASE_IMAGE       the base: python:3.13-slim (vLLM's wheels bring PyTorch with its own CUDA libraries, so
 #                    no CUDA base is needed: the host's driver, >= R580 for CUDA 13, is all it takes)
-#   VLLM_VERSION     the vLLM release, pinned (0.31.0: CUDA 13 by default, sm_120 kernels)
+#   VLLM_VERSION     the vLLM release, pinned (0.34.0, as vllm/vllm-openai:v0.34.0: torch 2.14.0, CUDA 13 by default)
 #   LMCACHE_VERSION  empty: no LMCache; a version (0.5.6) adds it, built against this vLLM
 #                    (the KV tier's step 2; docs/multi-gpu-server.md §4)
 #
@@ -20,7 +20,7 @@
 ARG BASE_IMAGE=python:3.13-slim
 FROM ${BASE_IMAGE}
 
-ARG VLLM_VERSION=0.31.0
+ARG VLLM_VERSION=0.34.0
 ARG LMCACHE_VERSION=
 
 # gcc and the C headers for Triton's kernels, compiled as they are first used; procps for the supervisor.

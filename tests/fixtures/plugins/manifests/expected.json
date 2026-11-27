@@ -1,0 +1,74 @@
+{
+  "bad-arena-range.yaml": [
+    "manifest.arena.invalid"
+  ],
+  "bad-cron.yaml": [
+    "manifest.job.cron"
+  ],
+  "bad-name.yaml": [
+    "manifest.name.invalid"
+  ],
+  "bad-panel-slot.yaml": [
+    "manifest.ui.slot"
+  ],
+  "bad-version.yaml": [
+    "manifest.version.invalid"
+  ],
+  "code-without-server.yaml": [
+    "manifest.server.required"
+  ],
+  "duplicate-key.yaml": [
+    "manifest.parse"
+  ],
+  "duplicate-route.yaml": [
+    "manifest.route.duplicate"
+  ],
+  "empty.yaml": [
+    "manifest.empty"
+  ],
+  "event-without-scope.yaml": [
+    "manifest.event.scope"
+  ],
+  "fail-closed-without-scope.yaml": [
+    "manifest.hook.scope"
+  ],
+  "hook-without-scope.yaml": [
+    "manifest.hook.scope"
+  ],
+  "menu-without-page.yaml": [
+    "manifest.ui.menu_page"
+  ],
+  "modify-hook-without-scope.yaml": [
+    "manifest.hook.scope"
+  ],
+  "network-address.yaml": [
+    "manifest.permission.network_hosts"
+  ],
+  "network-without-hosts.yaml": [
+    "manifest.permission.network_hosts"
+  ],
+  "newer-host-api.yaml": [
+    "manifest.host_api.unsupported"
+  ],
+  "no-api-version.yaml": [
+    "manifest.api_version.missing"
+  ],
+  "path-outside.yaml": [
+    "manifest.path.outside"
+  ],
+  "public-route.yaml": [
+    "manifest.route.access"
+  ],
+  "secret-default.yaml": [
+    "manifest.setting.secret_default"
+  ],
+  "two-tool-sources.yaml": [
+    "manifest.tools.sources"
+  ],
+  "unknown-permission.yaml": [
+    "manifest.permission.unknown"
+  ],
+  "valid-everything.yaml": [],
+  "valid-minimal.yaml": [],
+  "valid-v2-shape.yaml": []
+}

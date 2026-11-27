@@ -60,7 +60,7 @@ public static class GroupEndpoints
         g.MapDelete("/{id:guid}", (Guid id, AppDbContext db, Audit audit, Models.KeyAccessWatcher keys, AccessService access, HttpContext http) =>
             GuardedAsync(http, access, () => DeleteAsync(id, db, audit, keys)));
         g.MapPost("/{id:guid}/members", (Guid id, MembersRequest body, AppDbContext db, Audit audit, Models.KeyAccessWatcher keys, AccessService access, HttpContext http) =>
-            GuardedAsync(http, access, () => AddMembersAsync(id, body, db, audit, keys)));
+            GuardedAsync(http, access, () => AddMembersAsync(id, body, db, audit, keys, http.RequestServices.GetRequiredService<Plugins.PluginEvents>())));
         g.MapDelete("/{id:guid}/members/{userId:guid}", (Guid id, Guid userId, AppDbContext db, Audit audit, Models.KeyAccessWatcher keys, AccessService access, HttpContext http) =>
             GuardedAsync(http, access, () => RemoveMemberAsync(id, userId, db, audit, keys)));
     }
@@ -218,7 +218,7 @@ public static class GroupEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> AddMembersAsync(Guid id, MembersRequest body, AppDbContext db, Audit audit, Models.KeyAccessWatcher keys)
+    private static async Task<IResult> AddMembersAsync(Guid id, MembersRequest body, AppDbContext db, Audit audit, Models.KeyAccessWatcher keys, Plugins.PluginEvents events)
     {
         if (await db.Groups.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id) is not { } group)
         {
@@ -246,6 +246,10 @@ public static class GroupEndpoints
         }
         await db.SaveChangesAsync();
         keys.Wake();
+        foreach (var p in people.Where(p => !already.Contains(p.Id)))
+        {
+            await events.EmitAsync("group.member.added", new System.Text.Json.Nodes.JsonObject { ["groupId"] = id.ToString(), ["personId"] = p.Id.ToString(), ["group"] = group.Name }, p.Id, CancellationToken.None);
+        }
         return Results.NoContent();
     }
 

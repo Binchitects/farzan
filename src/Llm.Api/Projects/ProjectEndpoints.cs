@@ -264,7 +264,7 @@ public static class ProjectEndpoints
         }
     }
 
-    private static async Task<IResult> CreateAsync(ProjectRequest body, ClaimsPrincipal principal, UserManager<AppUser> users, AppDbContext db, AccessService access, Audit audit,
+    private static async Task<IResult> CreateAsync(ProjectRequest body, ClaimsPrincipal principal, UserManager<AppUser> users, AppDbContext db, AccessService access, Audit audit, Plugins.PluginEvents events,
         CancellationToken ct)
     {
         var me = await Me(principal, users);
@@ -281,6 +281,7 @@ public static class ProjectEndpoints
         db.Projects.Add(p);
         await db.SaveChangesAsync(ct);
         await audit.WriteAsync("project.create", p.Id.ToString(), detail: p.Global ? $"{p.Name} (global)" : p.Name);
+        await events.EmitAsync("project.created", new System.Text.Json.Nodes.JsonObject { ["projectId"] = p.Id.ToString(), ["name"] = p.Name }, me.Id, ct);
         return Results.Created($"/api/projects/{p.Id}", new { id = p.Id });
     }
 
@@ -965,7 +966,7 @@ public static class ProjectEndpoints
         }
     }
 
-    private static async Task<IResult> AddTaskAsync(Guid id, ProjectTaskRequest body, ClaimsPrincipal principal, UserManager<AppUser> users, AppDbContext db, AccessService access,
+    private static async Task<IResult> AddTaskAsync(Guid id, ProjectTaskRequest body, ClaimsPrincipal principal, UserManager<AppUser> users, AppDbContext db, AccessService access, Plugins.PluginEvents events,
         CancellationToken ct)
     {
         var me = await Me(principal, users);
@@ -991,11 +992,12 @@ public static class ProjectEndpoints
         db.ProjectTasks.Add(task);
         p.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
+        await events.EmitAsync("project.task.changed", new System.Text.Json.Nodes.JsonObject { ["projectId"] = id.ToString(), ["taskId"] = task.Id.ToString(), ["title"] = task.Title, ["status"] = task.Status, ["change"] = "added" }, me.Id, ct);
         return Results.Created($"/api/projects/{id}/tasks/{task.Id}", new { id = task.Id });
     }
 
     private static async Task<IResult> ChangeTaskAsync(Guid id, Guid taskId, ProjectTaskRequest body, ClaimsPrincipal principal, UserManager<AppUser> users, AppDbContext db,
-        AccessService access, CancellationToken ct)
+        AccessService access, Plugins.PluginEvents events, CancellationToken ct)
     {
         var me = await Me(principal, users);
         var (p, _, refused) = await FindAsync(db, id, me, await access.MembershipAsync(me, ct), ProjectMember.Contributor, ct, active: true);
@@ -1014,6 +1016,7 @@ public static class ProjectEndpoints
         Apply(task, body);
         p.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
+        await events.EmitAsync("project.task.changed", new System.Text.Json.Nodes.JsonObject { ["projectId"] = id.ToString(), ["taskId"] = task.Id.ToString(), ["title"] = task.Title, ["status"] = task.Status, ["change"] = "changed" }, me.Id, ct);
         return Results.NoContent();
     }
 

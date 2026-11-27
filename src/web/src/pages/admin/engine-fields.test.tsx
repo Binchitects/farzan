@@ -169,12 +169,13 @@ describe('admin models: vLLM', () => {
   })
 
   // One test of each engine's form (two dialogs in one test outran its time on a loaded machine).
-  const lmdeployAndStrata = () => {
+  const lmdeployAndStrata = (more: { name: string; kind: string; managed: boolean; problem: null; on: boolean }[] = []) => {
     const instances = [
       { name: 'llamacpp', kind: 'llamacpp', managed: true, problem: null, on: true },
       { name: 'vllm', kind: 'vllm', managed: true, problem: null, on: true },
       { name: 'lmdeploy', kind: 'lmdeploy', managed: true, problem: null, on: true },
       { name: 'strata', kind: 'strata', managed: true, problem: null, on: true },
+      ...more,
     ]
     const flash = {
       path: 'unsloth/Qwen3.8-Flash-Next-UD-IQ4_XS-00001-of-00003.gguf', size: 94e9, parts: 3, usedBy: [],
@@ -233,6 +234,29 @@ describe('admin models: vLLM', () => {
     expect(within(form).queryByLabelText('Copies')).not.toBeInTheDocument()
     expect(within(form).getByText(/--parallel, 1 to 8/)).toBeInTheDocument()
     expect(within(form).getByLabelText('People at once')).toHaveValue('8')
+  })
+
+  it('adds a GGUF file as a FreeToken model on one GPU, and Ollama offers the same file', async () => {
+    const calls = lmdeployAndStrata([
+      { name: 'freetoken', kind: 'freetoken', managed: true, problem: null, on: true },
+      { name: 'ollama', kind: 'ollama', managed: true, problem: null, on: true },
+    ])
+    renderApp('/admin/models')
+    await userEvent.click(await screen.findByRole('button', { name: 'Add a model' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Add a model' })
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'File or model' }))
+    await userEvent.click(await screen.findByRole('option', { name: /Qwen3\.8-Flash-Next-UD-IQ4_XS/ }))
+    await userEvent.click(await within(dialog).findByRole('combobox', { name: 'Engine' }))
+    expect(await screen.findByRole('option', { name: 'Ollama' })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('option', { name: 'FreeToken' }))
+    const form = await within(dialog).findByRole('form', { name: 'The FreeToken model' })
+    expect(within(form).getByText(/--memory-ratio/)).toBeInTheDocument()
+    // One copy, no speculative decoding, tiers, quantisation or parsers the app sets: FreeToken reads its calls itself.
+    expect(within(form).queryByLabelText('Copies')).not.toBeInTheDocument()
+    for (const gone of ['Speculative decoding', 'Cache beyond the GPU', 'Quantisation']) expect(within(form).queryByLabelText(gone)).not.toBeInTheDocument()
+    await userEvent.click(within(form).getByRole('button', { name: 'Add model' }))
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.path === '/api/admin/models')).toBe(true))
+    expect(calls.find((c) => c.method === 'POST' && c.path === '/api/admin/models')!.body).toMatchObject({ engineKind: 'freetoken', sleep: false })
   })
 
   it('shows a model asleep, one draining, a GPU of another vendor, and an engine that is not running', async () => {

@@ -1,0 +1,62 @@
+{
+  "chaos.fap": {
+    "ok": true,
+    "signed": true,
+    "trusted": true,
+    "errors": []
+  },
+  "hello.fap": {
+    "ok": true,
+    "signed": true,
+    "trusted": true,
+    "errors": []
+  },
+  "ticket-desk.fap": {
+    "ok": true,
+    "signed": true,
+    "trusted": true,
+    "errors": []
+  },
+  "unsigned.fap": {
+    "ok": true,
+    "signed": false,
+    "trusted": false,
+    "errors": []
+  },
+  "stranger-signed.fap": {
+    "ok": true,
+    "signed": true,
+    "trusted": false,
+    "errors": []
+  },
+  "changed-file.fap": {
+    "ok": false,
+    "signed": true,
+    "trusted": true,
+    "errors": [
+      "package.file.changed"
+    ]
+  },
+  "changed-list.fap": {
+    "ok": false,
+    "signed": true,
+    "trusted": false,
+    "errors": [
+      "package.signature.bad"
+    ]
+  },
+  "added-file.fap": {
+    "ok": false,
+    "signed": true,
+    "trusted": true,
+    "errors": [
+      "package.file.unlisted"
+    ]
+  },
+  "swapped-embedded-key.fap": {
+    "ok": true,
+    "signed": true,
+    "trusted": true,
+    "errors": []
+  }
+}

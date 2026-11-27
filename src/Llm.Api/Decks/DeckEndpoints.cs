@@ -371,6 +371,13 @@ public static class DeckEndpoints
         {
             return AuthEndpoints.Problem(409, "decks", $"You have {DeckMaker.MostDecks} decks, the most: remove one first.");
         }
+        // Plugins' hooks before it is kept: observed, renamed by one granted to, or refused by one granted to.
+        var (given, stopped) = await Plugins.PluginUploads.BeforeStoreAsync(request.HttpContext.RequestServices, me,
+            Path.GetFileName(upload.FileName) is { Length: > 0 } u ? u : "deck.pptx", upload.ContentType, ct);
+        if (stopped is not null)
+        {
+            return AuthEndpoints.Problem(400, "plugin", stopped);
+        }
         using var m = new MemoryStream();
         await upload.CopyToAsync(m, ct);
         var data = m.ToArray();
@@ -404,7 +411,7 @@ public static class DeckEndpoints
         title = title.Length > 200 ? title[..200] : title;
         var deck = new Deck { OwnerId = me.Id, Title = title, Slides = DeckModel.Write(slides) };
         db.Decks.Add(deck);
-        var name = Path.GetFileName(upload.FileName) is { Length: > 0 } f ? (f.Length > 200 ? f[..200] : f) : "deck.pptx";
+        var name = given.Length > 200 ? given[..200] : given;
         db.DeckSources.Add(new DeckSource { DeckId = deck.Id, FileName = name, Data = data });
         db.DeckVersions.Add(new DeckVersion { DeckId = deck.Id, Version = 1, Title = deck.Title, Slides = deck.Slides, Note = $"Opened {name}" });
         await db.SaveChangesAsync(ct);

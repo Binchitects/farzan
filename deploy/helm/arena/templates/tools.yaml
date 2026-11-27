@@ -137,6 +137,78 @@ spec:
   policyTypes: [Ingress, Egress]
 ---
 {{- end }}
+{{- /* Plugins' server code: each plugin its own worker, user and limits; only the app reaches it, and it reaches nothing. */}}
+{{- if .Values.plugins.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plugins
+  labels: {{- include "arena.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {{- include "arena.selector" (dict "root" $ "name" "plugins") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "arena.selector" (dict "root" $ "name" "plugins") | nindent 8 }}
+    spec:
+      {{- include "arena.podDefaults" . | nindent 6 }}
+      automountServiceAccountToken: false
+      # The pause process reaps what a worker leaves behind, as compose's init: true.
+      shareProcessNamespace: true
+      containers:
+        - name: plugins
+          image: {{ include "arena.image" (dict "root" $ "image" .Values.images.plugins) }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          resources: {{- toYaml .Values.plugins.resources | nindent 12 }}
+          ports: [{ name: rpc, containerPort: 7700 }]
+          # Ready when its port takes a connection, as compose's health check takes its socket's.
+          readinessProbe: { tcpSocket: { port: rpc }, periodSeconds: 10 }
+          livenessProbe: { tcpSocket: { port: rpc }, periodSeconds: 30, failureThreshold: 4 }
+          env:
+            - { name: PLUGINS_LISTEN, value: "tcp:0.0.0.0:7700" }
+            - { name: PLUGINS_MOST_MEMORY_MB, value: {{ .Values.plugins.mostMemoryMb | quote }} }
+            - { name: PLUGINS_KEY, valueFrom: { secretKeyRef: { name: arena-plugins, key: PLUGINS_KEY } } }
+          securityContext:
+            runAsUser: 0
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL], add: [SETUID, SETGID, CHOWN, DAC_OVERRIDE, FOWNER, KILL] }
+          volumeMounts:
+            - { name: runtime, mountPath: /plugin-runtime }
+            - { name: work, mountPath: /work }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: runtime, emptyDir: { sizeLimit: 256Mi } }
+        - { name: work, emptyDir: { sizeLimit: 1Gi } }
+        - { name: tmp, emptyDir: { sizeLimit: 16Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: plugins
+  labels: {{- include "arena.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "arena.selector" (dict "root" $ "name" "plugins") | nindent 4 }}
+  ports: [{ name: rpc, port: 7700, targetPort: rpc }]
+---
+# Only the app in, on its port; nothing out (a plugin reaches the world only through the app's http.fetch).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: plugins
+  labels: {{- include "arena.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{- include "arena.selector" (dict "root" $ "name" "plugins") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {{- include "arena.selector" (dict "root" $ "name" "app") | nindent 14 }}
+      ports: [{ port: 7700 }]
+---
+{{- end }}
 {{- /* The chat's 3D models: Blender headless, as the sandbox is; the app hands it jobs through a volume of its own. */}}
 {{- if .Values.blender.enabled }}
 apiVersion: apps/v1

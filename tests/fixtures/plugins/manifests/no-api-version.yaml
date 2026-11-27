@@ -1,0 +1,5 @@
+name: case
+version: 1.0.0
+server: { entry: server/index.js }
+tools:
+  functions: [{ name: ping, description: Answers. }]

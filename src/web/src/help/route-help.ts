@@ -26,6 +26,7 @@ export const routeHelp: Record<string, TopicId> = {
   '/lab/:id': 'lab-notebook',
   '/apps': 'apps',
   '/apps/:id': 'app-page',
+  '/p/:plugin/*': 'plugin-page',
   '/data': 'data',
   '/wiki': 'wiki',
   '/wiki/documents/:id': 'wiki',
