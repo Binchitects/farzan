@@ -70,6 +70,8 @@ NETWORK = "arena-packs"
 EMBEDDER = "arena-pack-embed"
 # A pack with fewer pages than this share of the one before is kept out: its upstream changed shape.
 LEAST_SHARE = 0.8
+# Tries for each file uploaded to the week's release.
+UPLOAD_TRIES = 6
 
 # name -> how its source is fetched. git: repositories (folder under the work directory, URL, branch); archive: the
 # function that finds the newest archive; script: a fetch of its own; renew: code-intel's advisories renewal.
@@ -433,12 +435,38 @@ def release(version: str, notes: list[str], index: Path, sums: Path) -> bool:
     body = [f"Knowledge packs of {version}: {len(assets)} new, {len(entries) - len(assets)} as before.", ""] + notes + [
         "", "Install on a stack: Admin -> Packs -> Update all (CODE_INTEL_PACK_INDEX_URL set to this release's index.json), "
         "or download a pack and check it against SHA256SUMS, then `code-intel pack install FILE --sha256 DIGEST`."]
+    tag = f"packs-{version}"
     with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as f:
         f.write("\n".join(body) + "\n")
-    run(["gh", "release", "create", f"packs-{version}", "--repo", REPO, "--title", f"Knowledge packs {version}", "--notes-file", f.name,
-         "--latest=false", *assets, str(index), str(sums)])
-    os.unlink(f.name)
+    try:
+        # A draft first, each file uploaded on its own (taken up again when one fails: a pack of hundreds of MB through a
+        # proxy can time out), and the release shown only once it holds them all. A release of the day left by a run
+        # that failed is taken up where it stopped.
+        if subprocess.run(["gh", "release", "view", tag, "--repo", REPO], capture_output=True).returncode == 0:
+            run(["gh", "release", "edit", tag, "--repo", REPO, "--notes-file", f.name])
+        else:
+            run(["gh", "release", "create", tag, "--repo", REPO, "--title", f"Knowledge packs {version}", "--notes-file", f.name,
+                 "--draft", "--latest=false"])
+        for path in [*assets, str(index), str(sums)]:
+            upload(tag, Path(path))
+        run(["gh", "release", "edit", tag, "--repo", REPO, "--draft=false", "--latest=false"])
+    finally:
+        os.unlink(f.name)
     return True
+
+
+def upload(tag: str, path: Path) -> None:
+    """One file onto the release, again (replacing a partial one) until it is there."""
+    for attempt in range(1, UPLOAD_TRIES + 1):
+        got = subprocess.run(["gh", "release", "upload", tag, str(path), "--repo", REPO, "--clobber"], capture_output=True, text=True)
+        if got.returncode == 0:
+            say(f"  uploaded {path.name}")
+            return
+        why = (got.stderr or got.stdout or f"gh exit {got.returncode}").strip().splitlines()[-1][:200]
+        if attempt == UPLOAD_TRIES:
+            raise RuntimeError(f"could not upload {path.name} to {tag} ({UPLOAD_TRIES} tries): {why}")
+        say(f"  upload of {path.name} failed ({why}): again")
+        time.sleep(min(120, 15 * attempt))
 
 
 def prune() -> None:

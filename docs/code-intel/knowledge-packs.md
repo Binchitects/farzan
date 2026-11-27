@@ -460,7 +460,8 @@ before (an upstream that changed shape), is kept out as `FILE.held` and named;
 
 `packs/index.json` then lists the newest pack of each name with its checksum
 and where it is served: `--publish` uploads the week's new packs, the index and
-`SHA256SUMS` to the release `packs-YYYY.MM.DD`, and a pack unchanged that week
+`SHA256SUMS` to the release `packs-YYYY.MM.DD` (made as a draft, each file uploaded on its own and tried
+again when an upload fails, and shown only once it holds them all; a run again that day takes it up), and a pack unchanged that week
 stays where it was released (`packs/published.json` remembers). A stack takes
 them with Admin → Packs → **Update all** (`CODE_INTEL_PACK_INDEX_URL` set to
 the release's `index.json`), and an offline one from the next bundle

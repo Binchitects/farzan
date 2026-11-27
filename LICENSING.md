@@ -147,7 +147,9 @@ Admin → Models → **Find on Hugging Face** shows it before a download), Laya
 its published wheel and checked against its SHA-256), the Lucide icons (ISC), and
 the knowledge packs (CC-BY-4.0, CC-BY-SA-3.0, PSF-2.0, GFDL-1.3, ODC-By-1.0 or public
 domain, per pack: the iso pack is ISO Open Data's catalogue, © ISO, under ODC-By-1.0, and
-holds no standard's text; `code-intel pack info <name>` prints each).
+holds no standard's text; the security pack's parts are under MITRE's CWE and CAPEC terms,
+CC-BY-SA-4.0, CC-BY-4.0, MIT and Apache-2.0, and the grc pack's under US public domain and
+the EU's reuse decision 2011/833/EU; `code-intel pack info <name>` prints each).
 
 ### Source of the container images
 

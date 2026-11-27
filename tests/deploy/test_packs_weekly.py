@@ -91,6 +91,61 @@ class PacksWeekly(unittest.TestCase):
         self.assertEqual("packs-2026.11.12", published["cpp-2026.11.12.kpack"]["release"])
         self.assertEqual("packs-2026.11.05", published["sqlite.kpack"]["release"])
 
+    def test_The_release_is_a_draft_until_every_file_is_up_and_a_failed_upload_is_tried_again(self):
+        import subprocess
+        new = pack(self.packs / "cpp-2026.11.12.kpack", "cpp", "2026.11.12")
+        index, sums = pw.write_index("2026.11.12", [new], True)
+        calls, failed = [], []
+
+        def fake(cmd, **kw):
+            calls.append(cmd[:4])
+            if cmd[:3] == ["gh", "release", "view"]:
+                return subprocess.CompletedProcess(cmd, 1, "", "release not found")
+            if cmd[:3] == ["gh", "release", "upload"] and cmd[4].endswith(".kpack") and not failed:
+                failed.append(cmd[4])
+                return subprocess.CompletedProcess(cmd, 1, "", "HTTP 408: Upload body timed out due to inactivity")
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+
+        saved = pw.subprocess.run, pw.time.sleep
+        pw.subprocess.run, pw.time.sleep = fake, lambda _: None
+        try:
+            self.assertTrue(pw.release("2026.11.12", [], index, sums))
+        finally:
+            pw.subprocess.run, pw.time.sleep = saved
+        create = next(c for c in calls if c[:3] == ["gh", "release", "create"])
+        self.assertEqual("packs-2026.11.12", create[3])
+        uploads = [c for c in calls if c[:3] == ["gh", "release", "upload"]]
+        self.assertEqual(4, len(uploads))  # the pack twice, index.json, SHA256SUMS
+        # Shown only after the last upload.
+        self.assertEqual(["gh", "release", "edit", "packs-2026.11.12"], calls[-1])
+        self.assertLess(calls.index(create), calls.index(uploads[0]))
+
+    def test_A_file_that_never_uploads_stops_the_release_a_draft(self):
+        import subprocess
+        new = pack(self.packs / "cpp-2026.11.12.kpack", "cpp", "2026.11.12")
+        index, sums = pw.write_index("2026.11.12", [new], True)
+        calls = []
+
+        def fake(cmd, **kw):
+            calls.append(cmd[:3])
+            if cmd[:3] == ["gh", "release", "view"]:
+                return subprocess.CompletedProcess(cmd, 0, "", "")
+            code = 1 if cmd[:3] == ["gh", "release", "upload"] else 0
+            return subprocess.CompletedProcess(cmd, code, "", "HTTP 408")
+
+        saved = pw.subprocess.run, pw.time.sleep
+        pw.subprocess.run, pw.time.sleep = fake, lambda _: None
+        try:
+            with self.assertRaises(RuntimeError):
+                pw.release("2026.11.12", [], index, sums)
+        finally:
+            pw.subprocess.run, pw.time.sleep = saved
+        # The day's release already there is taken up (no second create), and it is never shown.
+        self.assertNotIn(["gh", "release", "create"], calls)
+        self.assertEqual(pw.UPLOAD_TRIES, sum(1 for c in calls if c == ["gh", "release", "upload"]))
+        self.assertEqual(1, sum(1 for c in calls if c == ["gh", "release", "edit"]))
+        self.assertFalse((self.packs / "published.json").exists())
+
     def test_Pruning_keeps_the_two_newest_of_each_name(self):
         for v in ("1.0", "2026.11.5", "2026.11.12"):
             pack(self.packs / f"cpp-{v}.kpack", "cpp", v)
