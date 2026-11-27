@@ -308,7 +308,7 @@ def fetch(dest: Path) -> int:
 # ------------------------------------------------------------------ the CC's components, from its XML
 
 CC_XML = {"cc2022": ("ccfiles/cc_2022.xml", "CC:2022"), "cc31": ("ccfiles/cc3R5.xml.zip", "CC 3.1 Revision 5")}
-COMPONENT_ID = re.compile(r"^([A-Z]{3})_([A-Z0-9]{2,5})(?:_EXT)?\.(\d+)$")
+COMPONENT_ID = re.compile(r"^([A-Z]{3})_([A-Z0-9]{2,7})(?:_EXT)?\.(\d+)$")
 
 
 def upper_id(xml_id: str) -> str:
@@ -455,7 +455,7 @@ def base_component(sfr: str) -> str:
     """The component an SFR or SAR names, without its iteration or element: FCS_COP.1/Hash, FCS_COP.1(1) and
     FCS_COP.1.1 -> FCS_COP.1; FCS_CKM_EXT.4 stays (an extended component is its own); ALC_FLR.2.1D -> ALC_FLR.2."""
     s = re.split(r"[/(\s]", sfr.strip(), maxsplit=1)[0].rstrip(".:")
-    m = re.match(r"^([A-Z]{3}_[A-Z0-9]{2,5}(?:_EXT)?)\.(\d+)", s)
+    m = re.match(r"^([A-Z]{3}_[A-Z0-9]{2,7}(?:_EXT)?)\.(\d+)", s)
     return f"{m.group(1)}.{m.group(2)}" if m else s
 
 
@@ -559,6 +559,29 @@ def sections(raw: str) -> list[tuple[str, str, int, str]]:
                     more.append((i, m.group(1), " ".join(m.group(2).split())))
                     last = m.group(1)
         heads = sorted(heads + more)
+        # An annex the contents list but whose heading the body does not show as a line of its own: placed before its
+        # first section, so its sections keep their annex ("Annex B: Selection-Based Security Requirements").
+        found = {h[1] for h in heads}
+        for num, title in toc:
+            letter = num.split()[-1]
+            if num in found or not re.fullmatch(r"(?:(?:Annex|Appendix) )?[A-Z]", num):
+                continue
+            child = next((h for h in heads if h[1].startswith(letter + ".")), None)
+            if child:
+                heads.append((child[0] - 0.5, num, title))
+        # And one the contents leave out, from its heading in the body ("Appendix B: Selection-Based Requirements").
+        found = {h[1] for h in heads}
+        for j, x in enumerate(lines):
+            m = re.match(r"^\s{0,4}((?:Annex|Appendix) ([A-Z]))\s*[:.\-–—]\s+([A-Z]\S.{2,90}?)\s*$", x)
+            if not m or m.group(1) in found or PAGE_AT_END.search(x):
+                continue
+            # Only where it stands: after the section before its first one, and before that one.
+            child = next((h for h in heads if h[1].startswith(m.group(2) + ".")), None)
+            before = max((h[0] for h in heads if child and h[0] < child[0]), default=-1)
+            if child and before < j < child[0]:
+                heads.append((j, m.group(1), " ".join(m.group(3).split())))
+                found.add(m.group(1))
+        heads.sort()
     if len(heads) < 3:
         heads, last = [], None
         for j, x in enumerate(lines):
@@ -572,13 +595,14 @@ def sections(raw: str) -> list[tuple[str, str, int, str]]:
                 kept.append(h)
         heads = kept if len(kept) >= 3 else []
     out = []
-    first = heads[0][0] if heads else len(lines)
+    first = int(heads[0][0] + 0.5) if heads else len(lines)
     front = "\n".join(x for i, x in enumerate(lines[:first]) if i not in toc_lines and not re.search(r"\.{6,}\s*[0-9ivxlc]*\s*$", x)).strip()
     if front:
         out.append(("", "Front matter", 1, front))
     for k, (j, num, title) in enumerate(heads):
-        end = heads[k + 1][0] if k + 1 < len(heads) else len(lines)
-        body = "\n".join(lines[j + 1:end]).strip("\n")
+        end = int(heads[k + 1][0] + 0.5) if k + 1 < len(heads) else len(lines)
+        # A placed annex heading (a half line) has no body of its own.
+        body = "" if j != int(j) else "\n".join(lines[int(j) + 1:end]).strip("\n")
         depth = 1 + num.count(".") if not num.startswith(("Annex", "Appendix")) else 1 + num.count(".")
         out.append((num, title, depth, body))
     return out
@@ -607,9 +631,12 @@ def layout_text(body: str) -> str:
 
 # ------------------------------------------------------------------ what a PP requires
 
-# An element as a PP states it, at the start of its line: FIA_UAU.2.1, FCS_COP.1.1/Hash, FCS_CKM.1.1(1), ADV_FSP.4.2C.
-ELEMENT = re.compile(r"^[\s|]{0,14}((?:F|A)[A-Z]{2}_[A-Z0-9]{2,5}(?:_EXT)?\.\d+\.\d+[CDE]?)((?:/[\w.\-]+|\([a-z0-9]{1,6}\))*)(?=[\s:.|]|$)")
-STATED = re.compile(r"shall|\[(?:selection|assignment|refinement)", re.I)
+# An element as a PP states it, at the start of its line (after a margin's line number, where the PP prints them):
+# FIA_UAU.2.1, FCS_COP.1.1/Hash, FCS_CKM.1.1(1), ADV_FSP.4.2C.
+ELEMENT = re.compile(r"^[\s|]{0,14}(?:\d{1,3}\s{1,8})?((?:F|A)[A-Z]{2}_[A-Z0-9]{2,7}(?:_EXT)?\.\d+\.\d+[CDE]?)((?:/[\w.\-]+|\([a-z0-9]{1,6}\))*)(?=[\s:.|]|$)")
+# What follows a stated element: "shall" or an operation, in the languages the schemes write PPs in.
+STATED = re.compile(r"shall|\[(?:selection|assignment|refinement)|\b(?:muss|müssen|soll|sollen)\b|\[(?:zuweisung|auswahl)|"
+                    r"\bdoi(?:t|vent)\b|\[(?:affectation|s[ée]lection)|\bdeber[áa]n?\b|\bdebe\b|\[(?:asignaci[óo]n|selecci[óo]n)", re.I)
 HOW = (("definition", re.compile(r"extended (?:security )?(?:functional |assurance )?component|component definition|definition of (?:the )?extended|"
                                  r"extended requirements? definition", re.I)),
        ("rationale", re.compile(r"rationale|dependenc|mapping|traceab", re.I)),
@@ -685,14 +712,15 @@ FORBID = re.compile(r"no part (?:of this (?:document|publication|specification) 
                     r"utilisation interdite|distribution of this document is restricted|recipients of this document|all rights reserved|"
                     r"alle rechte vorbehalten|tous droits r[ée]serv[ée]s", re.I)
 GRANT = re.compile(r"reproduction of this document without any change or cut is authori[sz]ed|reproduction de ce document sans alt[ée]ration ni "
-                   r"coupure est autoris|may be (?:freely )?(?:reproduced|copied|distributed)|permission is (?:hereby )?granted to|creative commons|"
-                   r"reproduction is authori[sz]ed|reuse is authori[sz]ed", re.I)
+                   r"coupure est autoris|(?:this|the) (?:document|publication|protection profile|pp|specification) may be (?:freely )?"
+                   r"(?:reproduced|copied|distributed)|permission is (?:hereby )?granted to (?:copy|reproduce|use|distribute)|creative commons|"
+                   r"reproduction is authori[sz]ed|reuse is authori[sz]ed|(?:donate|put|putting|placed?) (?:this document |it )?in(?:to)? the public domain", re.I)
 COPYRIGHT = re.compile(r"copyright|©|\(c\)\s*(?:19|20)\d\d", re.I)
 GOVERNMENT = re.compile(r"bundesamt|federal office for information security|federal offce|\bBSI\b|ANSSI|SGDSN|DCSSI|premier ministre|"
                         r"centro cript|\bCCN\b|ministerio|ministry|ministère|\bKISA\b|national intelligence service|\bNIS\b|\bIPA\b|"
                         r"information-technology promotion agency|\bNIAP\b|national security agency|\bNSA\b|government|department of|"
                         r"\bNLNCSA\b|\bFMV\b|försvarets|communications security establishment|\bCSE\b|australian signals|\bASD\b|"
-                        r"\bINTECO\b|\bENISA\b|european union|SOG-IS|\bCCRA\b|common criteria|cyber security agency|\bSTQC\b|"
+                        r"\bINTECO\b|\bENISA\b|european union|SOG-IS|\bCCRA\b|cyber security agency|\bSTQC\b|"
                         r"\bTSE\b|türk standardlar|national cyber security|nederlands|\bNCSC\b", re.I)
 
 
@@ -723,7 +751,7 @@ def terms(head: str, scheme: str, source: str, cpp: bool = False) -> dict:
         return {"code": "permitted", "label": "its notice allows reproduction", "text": around(m), "shared": True}
     m = COPYRIGHT.search(flat_)
     if m:
-        holder = flat_[max(0, m.start() - 160):m.end() + 160]
+        holder = flat_[m.start():m.end() + 120]
         if GOVERNMENT.search(holder):
             return {"code": "government-copyright", "label": "a government publication (copyright line, no terms stated)", "text": around(m),
                     "shared": True}
@@ -791,6 +819,8 @@ def footer_of(source: str, url: str, t: dict) -> str:
     return f"Source: {source}, {url}\n\nTerms: {t['label']}. {t['text']}"
 
 
+REPORT = re.compile(r"certification report|validation report|rapport de certification|zertifizierungsreport|certificado de|"
+                    r"certificat de|certificate of|maintenance report|assurance continuity", re.I)
 DOCS = [(re.compile(r"CC2022PART(\d)R1\.pdf$"), "cc2022/part{0}", "CC:2022 Part {0}"),
         (re.compile(r"CEM2022R1\.pdf$"), "cem2022", "CEM:2022"),
         (re.compile(r"CCPART(\d)V3\.1R5\.pdf$"), "cc31/part{0}", "CC 3.1 R5 Part {0}"),
@@ -962,6 +992,10 @@ def texts(src_dir: Path, out: Path) -> int:
         if hit:
             base, title = hit[1].format(*hit[0].groups()), hit[2].format(*hit[0].groups())
             t = terms("", "", "cc")
+            if base == "cem31":
+                # The portal's grant for 3.1 names CC Parts 1 to 3; the CEM 3.1 is the CCRA's publication under its own Legal Notice.
+                t = {"code": "ccra-cem31", "label": "the CCRA's publication, under its Legal Notice (the CC portal's re-use grant for 3.1 R5 "
+                     "names CC Parts 1 to 3, and the CCRA's policy supports the texts' re-use)", "text": CCRA_NOTICE, "shared": True}
         else:
             base, title = "ccra/" + slug(f.stem)[:80], (d["label"] if len(d["label"]) > 12 else f.stem)
             t = terms(src.pdf(url)[:30000], "", "ccra")
@@ -1002,8 +1036,12 @@ def texts(src_dir: Path, out: Path) -> int:
                 if not raw.strip():
                     files_lines.append(f"- {f.get('name') or Path(urllib.parse.unquote(url)).name} (no text layer): {url}")
                     continue
-            t = terms(head, r["scheme"], f["source"], r["cpp"])
             label = f.get("name") or Path(urllib.parse.unquote(urllib.parse.urlsplit(url).path)).name
+            # A certification report or certificate the portal files as the PP: linked, as its reports are, not its text.
+            if kind == "pp" and REPORT.search(" ".join(head[:1500].split())) and not any(c.startswith("F") for c in requirements(secs)):
+                files_lines.append(f"- certification report or certificate: {label}, {url_shown}")
+                continue
+            t = terms(head, r["scheme"], f["source"], r["cpp"])
             files_lines.append(f"- {f['kind']}: {label}, {url_shown} ({t['label']})")
             notices.append(t)
             if kind == "pp" and not (has_html_pp and not f.get("html")):

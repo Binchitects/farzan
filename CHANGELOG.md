@@ -25,14 +25,14 @@ Sections used:
   Beside them are every Protection Profile, PP-Module, PP-Configuration, package and Supporting Document on the CC
   portal's lists of certified, archived and collaborative PPs and on NIAP's: 568 PP records from 14 schemes. NIAP's
   1,002 Technical Decisions are in it too. Everything comes from www.commoncriteriaportal.org and www.niap-ccevs.org:
-  1,357 files, 23,467 pages.
-  - **Requirements as data.** Each component has a page (`FCS_COP.1`, `ALC_FLR.2`, and the 478 extended
+  1,357 files, 23,382 pages.
+  - **Requirements as data.** Each component has a page (`FCS_COP.1`, `ALC_FLR.2`, and the 491 extended
     components). It gives the component's definition in each edition, taken from the CC's own XML: elements,
     operations, dependencies, audit, and the CEM's work units. It then lists every PP that requires the component,
     and how: mandatory, conditionally mandatory, optional, selection-based, objective, implementation-dependent, or
     in its EAL package with the portal's augmentations. The page also names the Supporting Documents that evaluate
     the component and the Technical Decisions about it, so `docs_lookup("FIA_UAU.2")` answers "which PPs require
-    FIA_UAU.2?". `requirements.json` holds the same as data.
+    FIA_UAU.2?". The work directory's `requirements.json` holds the same as data.
   - **Terms.** Each page ends with its document's source and terms. The CC and CEM come under the CCRA's Legal
     Notice, which allows anyone to re-use and publish their text. NIAP's documents are US-government works. The
     schemes' and the CCRA's documents are their free publications.

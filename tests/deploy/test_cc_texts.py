@@ -48,6 +48,23 @@ class CcTexts(unittest.TestCase):
                           "FPT_TUD_EXT.2": ["objective"]}, {k: sorted(v["how"]) for k, v in got.items()})
         self.assertEqual({"FCS_COP.1.1/Hash"}, got["FCS_COP.1"]["as"])
 
+    def test_Margin_line_numbers_long_families_and_the_deepest_heading_that_says_how(self):
+        secs = [("Appendix A", "Optional Requirements", 1, ""),
+                ("A.1", "Strictly Optional Requirements", 2, "15   FCS_MACSEC_EXT.1.1 The TSF shall implement MACsec."),
+                ("A.2", "Objective Requirements", 2, "FPT_TUD_EXT.2.1 The TSF shall verify updates.")]
+        got = {k: sorted(v["how"]) for k, v in cc.requirements(secs).items()}
+        self.assertEqual({"FCS_MACSEC_EXT.1": ["optional"], "FPT_TUD_EXT.2": ["objective"]}, got)
+
+    def test_An_annex_the_contents_leave_out_keeps_its_sections(self):
+        toc = "Contents\n1 Introduction ........ 3\n2 Requirements ........ 4\nA.1 Audit events ........ 9\nB.1 Audit events ........ 10\n"
+        body = ("1    Introduction\nText.\n2    Requirements\nFAU_GEN.1.1 The TSF shall audit.\n"
+                "Appendix A: Optional Requirements\nA.1  Audit events\nFAU_STG.2.1 The TSF shall protect.\n"
+                "Appendix B: Selection-Based Requirements\nB.1  Audit events\nFCS_TLSC_EXT.1.1 The TSF shall implement TLS.\n")
+        secs = cc.sections(toc + "\f" + body)
+        self.assertEqual(["1", "2", "Appendix A", "A.1", "Appendix B", "B.1"], [s[0] for s in secs if s[0]])
+        got = {k: sorted(v["how"]) for k, v in cc.requirements(secs).items()}
+        self.assertEqual({"FAU_GEN.1": ["mandatory"], "FAU_STG.2": ["optional"], "FCS_TLSC_EXT.1": ["selection-based"]}, got)
+
     def test_Contents_find_the_headings_in_the_body_and_running_headers_go(self):
         page = ("Example PP\n\n1 Introduction ........................ 3\n2 Requirements ........................ 4\n2.1 Functional "
                 "....................... 4\nAnnex A (informative) Notes .......... 5\n")

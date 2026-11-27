@@ -173,9 +173,9 @@ Profile its schemes publish:
 |---|---|---|
 | `cc2022`, `cem2022` | CC:2022 Parts 1 to 5 and the CEM:2022, a page per section | 398, 89 |
 | `cc31`, `cem31` | CC 3.1 Revision 5 Parts 1 to 3 and its CEM, still used by many evaluations | 336, 88 |
-| `components` | a page per class, family, component and EAL, from the CC's own XML (`cc_2022.xml`, `cc3R5.xml`) | 1,031 |
+| `components` | a page per class, family, component and EAL, from the CC's own XML (`cc_2022.xml`, `cc3R5.xml`) | 1,046 |
 | `ccra` | the CCRA's supporting documents and operating procedures, the CC and CEM errata, the SOG-IS JIL papers and ENISA's EUCC state-of-the-art documents the CC portal links | 564 |
-| `pp` | every PP, PP-Module, PP-Configuration and package of the CC portal's certified, archived and collaborative lists and of NIAP (568 records, 295 archived or sunset), a page per section and a page per PP | 17,968 |
+| `pp` | every PP, PP-Module, PP-Configuration and package of the CC portal's certified, archived and collaborative lists and of NIAP (568 records, 295 archived or sunset), a page per section and a page per PP | 17,868 |
 | `sd` | their Supporting Documents (the evaluation activities) | 1,991 |
 | `td` | NIAP's 1,002 Technical Decisions, current and archived | 1,002 |
 
@@ -188,7 +188,7 @@ objective, implementation-dependent, or in the assurance package it claims
 (EAL4 augmented with ALC_DVS.2, as the portal records it). So "which PPs
 require FIA_UAU.2?" is one `docs_lookup("FIA_UAU.2")`. The Supporting
 Documents with its evaluation activities and the Technical Decisions about it
-follow. Extended components (`FCS_TLSC_EXT.1`, 478 of the 820 components the
+follow. Extended components (`FCS_TLSC_EXT.1`, 491 of the 835 components the
 PPs state) have a page too, listing the PPs that state them.
 
 A PP requires an element where it states it: its id leads a line
@@ -240,7 +240,7 @@ A list that fails fails the fetch, so a half list never replaces a whole one.
 Some links on the portal lead nowhere (six on 2026-11-27); NIAP serves some of
 its HTML editions empty, and the PDF is read instead. Writing the pages
 (pdftotext reads each PDF once, the text kept by its checksum) takes about a
-minute, and gives 23,467 pages, about 200 MB of text. The provenance is the
+minute, and gives 23,382 pages, about 200 MB of text. The provenance is the
 files' and decisions' checksums. `tools/packs-weekly.py` renews the pack each week.
 
 Not in it: the PPs' certification and maintenance reports (each PP's page
