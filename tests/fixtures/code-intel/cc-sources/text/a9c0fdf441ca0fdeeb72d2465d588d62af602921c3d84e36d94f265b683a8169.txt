@@ -1,0 +1,11 @@
+Supporting Document for the Protection Profile for Example Devices
+
+1   Introduction
+
+This document gives the evaluation activities for the example PP. Its text is the repository's own.
+
+2   Evaluation Activities for SFRs
+
+2.1   FIA_UAU.2 User authentication before any action
+
+FIA_UAU.2.1 The evaluator shall check that the TSS describes how the TSF shall authenticate administrators.

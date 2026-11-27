@@ -120,6 +120,41 @@ public sealed class IsoCatalog : IndexedTexts
 }
 
 /// <summary>
+/// The Common Criteria in full: CC:2022 Parts 1 to 5 and the CEM:2022, CC and CEM 3.1 Revision 5, their errata, the CCRA's
+/// supporting documents, and every Protection Profile, PP-Module, PP-Configuration and Supporting Document the CC portal
+/// and NIAP list, with NIAP's Technical Decisions. A page per component (FCS_COP.1, ALC_FLR.2) holds its definition in each
+/// edition, from the CC's own XML, and every PP that requires it and how (mandatory, conditionally mandatory, optional,
+/// selection-based, objective, implementation-dependent, or in its assurance package), so "which PPs require FIA_UAU.2?"
+/// is one lookup. A PP whose notice restricts reproduction, or whose copyright a company holds, is a page of its metadata,
+/// link and requirements, without its text. <c>tools/cc-texts.py</c> fetches the sources and writes the work directory,
+/// with the files' checksums as the provenance. Components, families, classes, EALs, PPs (their short names and scheme
+/// identifiers) and Technical Decisions are symbols; each part is a facet.
+/// </summary>
+public sealed class CommonCriteriaTexts : IndexedTexts
+{
+    public override string Name => "commoncriteria";
+    public override string RepoUrl => "https://www.commoncriteriaportal.org/, https://www.niap-ccevs.org/";
+    public override string License => "LicenseRef-CCRA-CC-CEM-Notice AND LicenseRef-US-Government-Public-Domain AND LicenseRef-CC-Scheme-Publications";
+    public override string LicenseUrl => "https://www.commoncriteriaportal.org/cc/";
+    public override string Attribution =>
+        "Common Criteria for Information Technology Security Evaluation (CC:2022 and CC 3.1 Revision 5) and the Common Methodology for " +
+        "Information Technology Security Evaluation (CEM): copyright the governmental organizations of the CCRA, together with ISO/IEC for " +
+        "the 2022 editions, whose Legal Notice and the CC portal grant every CC user the re-use and publication of their text " +
+        "(https://www.commoncriteriaportal.org/cc/). Protection Profiles, PP-Modules, PP-Configurations and Supporting Documents: each " +
+        "page names its document's source and terms; NIAP's are works of the United States government (17 U.S.C. 105); the schemes', " +
+        "the CCRA's, SOG-IS's and ENISA's are their publications, free on their sites; the text of a document whose notice restricts " +
+        "reproduction, or whose copyright a company holds, is not in this pack (its metadata and link are). NIAP's Technical Decisions: " +
+        "https://www.niap-ccevs.org/technical-decisions.";
+    protected override string Writer => "tools/cc-texts.py --from <what tools/cc-texts.py --fetch wrote> --out";
+
+    /// <summary>lang="components" keeps a search to the components, "cc2022", "cem2022", "cc31" or "cem31" to that text,
+    /// "ccra" to the CCRA's and the schemes' supporting documents, "pp" to the PPs, "sd" to their Supporting Documents and
+    /// "td" to NIAP's Technical Decisions.</summary>
+    public override IReadOnlyList<(string Name, string Prefix)> Facets =>
+        [.. new[] { "components", "cc2022", "cem2022", "cc31", "cem31", "ccra", "pp", "sd", "td" }.Select(f => (f, f + "/"))];
+}
+
+/// <summary>
 /// What is known of software weaknesses and how to find and fix them, for the security review and Fix it: MITRE's CWE and
 /// CAPEC; OWASP's Cheat Sheet Series, ASVS 5.0, Web Security Testing Guide and Top 10s (web 2025 and 2021, API 2023, LLM
 /// applications 2025); CodeQL's security queries' help (never its engine); and the analyzers' rules (.NET's security

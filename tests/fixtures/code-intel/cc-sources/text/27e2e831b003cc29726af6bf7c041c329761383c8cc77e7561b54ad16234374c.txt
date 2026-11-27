@@ -1,0 +1,16 @@
+Example Smart Card Protection Profile
+BSI-CC-PP-9999-2026
+
+Copyright (c) 2026 Example Card Consortium. All rights reserved. No part of this document may be reproduced.
+
+1   PP introduction
+
+A protection profile written for this repository's tests.
+
+6   Security requirements
+
+6.1   Security functional requirements
+
+FIA_UAU.2.1 The TSF shall require each user to be successfully authenticated before allowing any other TSF-mediated actions.
+
+FDP_ACC.1.1 The TSF shall enforce the access control SFP on all objects.

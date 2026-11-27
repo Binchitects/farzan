@@ -143,9 +143,10 @@ clause a page in its own words: NIST SP 800-53 Rev. 5 (each control and
 enhancement, its discussion, related controls and baselines), SP 800-171
 Rev. 3, the Cybersecurity Framework 2.0 (with its implementation examples),
 the AI RMF 1.0 with its Playbook, and the EU AI Act's articles and annexes.
-ISO's, PCI DSS's, the CCM's and the Common Criteria's texts are not shared, so
-they are not in it; [docs/compliance](../compliance/README.md) names their
-clauses, and the [iso pack](#iso-standards-the-iso-pack) holds ISO's catalogue.
+ISO's, PCI DSS's and the CCM's texts are not shared, so they are not in it;
+[docs/compliance](../compliance/README.md) names their clauses, and the
+[iso pack](#iso-standards-the-iso-pack) holds ISO's catalogue. The Common
+Criteria's texts are shared, in [their own pack](#the-common-criteria-the-commoncriteria-pack).
 
 A clause's id is its symbol (`AC-2(1)`, `03.01.01`, `GV.OC-01`, `GOVERN 1.1`,
 `Art.50`, `Annex III`), and each framework is a facet: `lang="nist80053"`,
@@ -162,6 +163,93 @@ code-intel pack build --source grc --work-dir "$PWD/.packwork/docsrc/grc" --out 
 
 It has 1,437 pages and 5,349 passages, about 10 MB; the embedding takes a few
 minutes on a GPU.
+
+## The Common Criteria: the commoncriteria pack
+
+The `commoncriteria` pack is the Common Criteria in full, and every Protection
+Profile its schemes publish:
+
+| Facet | What | Pages |
+|---|---|---|
+| `cc2022`, `cem2022` | CC:2022 Parts 1 to 5 and the CEM:2022, a page per section | 398, 89 |
+| `cc31`, `cem31` | CC 3.1 Revision 5 Parts 1 to 3 and its CEM, still used by many evaluations | 336, 88 |
+| `components` | a page per class, family, component and EAL, from the CC's own XML (`cc_2022.xml`, `cc3R5.xml`) | 1,031 |
+| `ccra` | the CCRA's supporting documents and operating procedures, the CC and CEM errata, the SOG-IS JIL papers and ENISA's EUCC state-of-the-art documents the CC portal links | 564 |
+| `pp` | every PP, PP-Module, PP-Configuration and package of the CC portal's certified, archived and collaborative lists and of NIAP (568 records, 295 archived or sunset), a page per section and a page per PP | 17,968 |
+| `sd` | their Supporting Documents (the evaluation activities) | 1,991 |
+| `td` | NIAP's 1,002 Technical Decisions, current and archived | 1,002 |
+
+A component's page (`components/FIA/FIA_UAU.2.md`) has its definition in each
+edition (its elements with their assignments and selections, hierarchy,
+dependencies, management and audit; for a SAR, its developer, content and
+evaluator elements and the CEM's work units), then every PP that requires it,
+with how: mandatory, conditionally mandatory, optional, selection-based,
+objective, implementation-dependent, or in the assurance package it claims
+(EAL4 augmented with ALC_DVS.2, as the portal records it). So "which PPs
+require FIA_UAU.2?" is one `docs_lookup("FIA_UAU.2")`. The Supporting
+Documents with its evaluation activities and the Technical Decisions about it
+follow. Extended components (`FCS_TLSC_EXT.1`, 478 of the 820 components the
+PPs state) have a page too, listing the PPs that state them.
+
+A PP requires an element where it states it: its id leads a line
+(`FCS_COP.1.1/Hash`) with "shall" or an operation after it, and how comes from
+the deepest heading above it that says so ("Annex B: Selection-Based Security
+Requirements", "A.2 Objective Requirements"). Extended component definitions,
+rationales and dependency tables name components without requiring them, and
+are left out. An iteration (`/Hash`, `(1)`) and an element (`.1.1`) belong to
+their component. NIAP's HTML edition of a PP is read instead of its PDF where
+NIAP serves one, and the portal's and NIAP's records of a PP are one page.
+The work directory's `requirements.json` holds the same as data: each component
+with the PPs that require it, and each PP with its requirements.
+
+Symbols: components, families, classes and EALs (`FCS_COP.1`, `FCS_COP`,
+`FCS`, `EAL4`), PPs by their short names and scheme identifiers
+(`CPP_ND_V4.0`, `BSI-CC-PP-0098-V3-2021`, `ANSSI-CC-PP-2016/05`, `KECS-PP-1233-2023`), and Technical
+Decisions (`TD1024`).
+
+Each page ends with its document's source and terms, which are read from the
+document itself:
+
+- the CC and the CEM: the CCRA's Legal Notice, which the CC portal makes
+  explicit: every CC user may re-use their text and publish documents that use it;
+- NIAP's PPs and Technical Decisions: works of the United States government;
+- the collaborative PPs: the CCRA's technical communities', published free;
+- the schemes' PPs (BSI, ANSSI, KECS, JISEC, CCN and the others), the CCRA's
+  supporting documents, SOG-IS's and ENISA's: their publications, free on their
+  sites, most with no terms stated or a bare copyright line, a few that allow
+  reproduction outright;
+- a document whose notice restricts reproduction ("all rights reserved", "no
+  part may be reproduced"), or whose copyright a company or consortium holds
+  (GlobalPlatform, Oracle, CAR 2 CAR, REALSEC and others): 47 documents. These
+  are pages of their metadata, link and requirements only, never their text,
+  and the work directory's `index.json` names them (`metadata_only`), each
+  with its notice's own words.
+
+```bash
+python3 tools/cc-texts.py --fetch .packwork/cc-sources
+python3 tools/cc-texts.py --from .packwork/cc-sources --out .packwork/docsrc/commoncriteria
+code-intel pack build --source commoncriteria --work-dir "$PWD/.packwork/docsrc/commoncriteria" --out packs/commoncriteria-1.0.kpack --version 1.0
+```
+
+The first fetch is 1,357 files, about 1.2 GB, from www.commoncriteriaportal.org
+and www.niap-ccevs.org, and each Technical Decision's text (NIAP answers in some
+seconds a request, so it takes about an hour, six at a time). `manifest.json`
+records each file's address, SHA-256 and size, and a later fetch takes only the
+lists again and what is new in them: a week's new PPs and Technical Decisions.
+A list that fails fails the fetch, so a half list never replaces a whole one.
+Some links on the portal lead nowhere (six on 2026-11-27); NIAP serves some of
+its HTML editions empty, and the PDF is read instead. Writing the pages
+(pdftotext reads each PDF once, the text kept by its checksum) takes about a
+minute, and gives 23,467 pages, about 200 MB of text. The provenance is the
+files' and decisions' checksums. `tools/packs-weekly.py` renews the pack each week.
+
+Not in it: the PPs' certification and maintenance reports (each PP's page
+links them), the Security Targets of certified products, and the national
+schemes' sites beyond NIAP: the BSI's and ANSSI's certified PPs are on the CC
+portal (138 and 62 here), which is where the schemes report them. NIAP's
+certificates, validation reports, control mappings and DoD annexes are left
+out too. PP-Configurations state no requirements of their own; their pages
+name the PPs and modules they combine.
 
 ## ISO standards: the iso pack
 
@@ -447,7 +535,7 @@ tools/packs-weekly.py --publish           # and the GitHub release packs-YYYY.MM
 
 For each pack in turn it fetches its source again (git repositories as a
 shallow fetch of their branch; SQLite's and cppreference's newest archives;
-the security, GRC and ISO sources through their scripts; the advisories through
+the security, GRC, ISO and Common Criteria sources through their scripts; the advisories through
 `code-intel pack renew`), each swapped in only when whole. A pack whose source
 is the one its newest build came from is kept as it is. The others are built
 by the code-intel image against a temporary embedder on the GPU (the stack's
@@ -504,7 +592,7 @@ repository would otherwise record that repository's commit as the pack's
 provenance.
 
 Available sources: `python`, `react`, `cpp`, `dotnet`, `scripting`, `sqlite`,
-`cppreference`, `qt`, `grc`, `security`, `advisories`, `debugger`, `algorithms`, `system-design`, the two composites
+`cppreference`, `qt`, `grc`, `iso`, `commoncriteria`, `security`, `advisories`, `debugger`, `algorithms`, `system-design`, the two composites
 `win32` and `wdk` (API reference *and* samples in one pack), and the halves on
 their own — `win32-docs`, `wdk-docs`, `win32-samples`, `wdk-samples`.
 `code-intel pack build --help` prints the list.

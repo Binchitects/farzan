@@ -1,0 +1,27 @@
+{
+ "https://www.commoncriteriaportal.org/files/ccfiles/cc3R5.xml.zip": {
+  "file": "portal/ccfiles/cc3R5.xml",
+  "sha256": "f4a85f858fcb1354d6b9443f0e858d52f4b7a23f6c0ac74ebcdcef62741dcbcc",
+  "size": 42441
+ },
+ "https://www.commoncriteriaportal.org/files/ccfiles/cc_2022.xml": {
+  "file": "portal/ccfiles/cc_2022.xml",
+  "sha256": "f32998190700381c17db0c2772b92c77d7101930366ca9ac718e2633216fca33",
+  "size": 37379
+ },
+ "https://www.commoncriteriaportal.org/nfs/ccpfiles/files/ppfiles/pp9999b.pdf": {
+  "file": "portal/ppfiles/pp9999b.pdf",
+  "sha256": "27e2e831b003cc29726af6bf7c041c329761383c8cc77e7561b54ad16234374c",
+  "size": 86
+ },
+ "https://www.niap-ccevs.org/api/file/get_public_file/?file_id=901": {
+  "file": "niap/901-PP_EX_V1.0-SD.pdf",
+  "sha256": "a9c0fdf441ca0fdeeb72d2465d588d62af602921c3d84e36d94f265b683a8169",
+  "size": 86
+ },
+ "https://www.niap-ccevs.org/static_html/protection-profile/900/-900-/index.html": {
+  "file": "niap/html/900/-900-/index.html",
+  "sha256": "e9d11b86870c30e870fbde965e147893c68310662d9a68b1ac328d54e6a6b832",
+  "size": 1012
+ }
+}

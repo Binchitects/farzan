@@ -1,0 +1,48 @@
+{
+ "pps": [
+  {
+   "pp_id": 900,
+   "pp_name": "Protection Profile for Example Devices Version 1.0",
+   "pp_short_name": "PP_EX_V1.0",
+   "tech_type": "Example",
+   "pp_date": "2026-01-15T00:00:00Z",
+   "sunset_date": null,
+   "cc_version": "CC:2022",
+   "pp_sponsor_id": "NIAP",
+   "status": "Publishing",
+   "files": [
+    {
+     "kind": "Protection Profile (HTML)",
+     "url": "https://www.niap-ccevs.org/static_html/protection-profile/900/-900-/index.html",
+     "name": "-900-",
+     "file_id": 9000,
+     "html": true
+    },
+    {
+     "kind": "Supporting Docs",
+     "url": "https://www.niap-ccevs.org/api/file/get_public_file/?file_id=901",
+     "name": "PP_EX_V1.0-SD.pdf",
+     "file_id": 901,
+     "html": false
+    }
+   ]
+  }
+ ],
+ "tds": [
+  {
+   "identifier": "TD9001",
+   "title": "Clarification of FIA_UAU.2.1 for example devices",
+   "status": "Published",
+   "publication_date": "2026-03-01T00:00:00Z",
+   "related_to": "FIA_UAU.2.1, PP_EX_V1.0-SD",
+   "removed_on": null,
+   "protection_profile": [
+    {
+     "pp_id": 900,
+     "pp_name": "Protection Profile for Example Devices Version 1.0"
+    }
+   ],
+   "sunset_protection_profile": []
+  }
+ ]
+}

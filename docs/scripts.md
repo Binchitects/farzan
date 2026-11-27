@@ -261,6 +261,7 @@ the web's need `npm ci` in `src/web` once. [testing.md](testing.md) says more.
 | `fetch-sqlite-vec.sh` | the vector extension Farzan Graph loads into SQLite |
 | `compliance-docs.py` | the compliance documents from `docs/compliance/controls.yaml` |
 | `grc-catalogs.py` | the frameworks' catalogs |
+| `cc-texts.py` | the commoncriteria pack's sources (the CC portal's and NIAP's) and pages: the CC, the CEM, every PP and its requirements, NIAP's Technical Decisions ([knowledge-packs.md](code-intel/knowledge-packs.md#the-common-criteria-the-commoncriteria-pack)) |
 | `iso-catalog.py` | the iso pack's pages, from ISO Open Data's catalogue of every deliverable ([knowledge-packs.md](code-intel/knowledge-packs.md#iso-standards-the-iso-pack)) |
 | `release-scan.py` | a release's software bill of materials and known vulnerabilities: the release gate |
 | `licence-check.py` | the licensing guard: SPDX and copyright lines on every source file (`--fix` adds them), every shipped package's licence against `docs/compliance/licence-policy.yaml`, `THIRD-PARTY-NOTICES.md` (`--write`), the licence labels and metadata, and who wrote each commit ([LICENSING.md](../LICENSING.md)) |

@@ -1,0 +1,542 @@
+{
+ "provenance": "files=5,tds=1,sha256=1ee9e3ec8ee77311",
+ "docs": [
+  {
+   "path": "pp/PP_EX_V1.0/900/000-front.md",
+   "title": "PP_EX_V1.0 Protection Profile for Example Devices",
+   "url": "https://www.niap-ccevs.org/static_html/protection-profile/900/-900-/index.html",
+   "symbols": []
+  },
+  {
+   "path": "pp/PP_EX_V1.0/900/001-1.md",
+   "title": "PP_EX_V1.0 1 Introduction",
+   "url": "https://www.niap-ccevs.org/static_html/protection-profile/900/-900-/index.html",
+   "symbols": []
+  },
+  {
+   "path": "pp/PP_EX_V1.0/900/003-5.1.md",
+   "title": "PP_EX_V1.0 5.1 Identification and Authentication (FIA)",
+   "url": "https://www.niap-ccevs.org/static_html/protection-profile/900/-900-/index.html",
+   "symbols": []
+  },
+  {
+   "path": "pp/PP_EX_V1.0/900/005-A.1.md",
+   "title": "PP_EX_V1.0 A.1 Cryptographic Support (FCS)",
+   "url": "https://www.niap-ccevs.org/static_html/protection-profile/900/-900-/index.html",
+   "symbols": []
+  },
+  {
+   "path": "pp/PP_EX_V1.0/900/006-Appendix-B.md",
+   "title": "PP_EX_V1.0 Appendix B Extended Component Definitions",
+   "url": "https://www.niap-ccevs.org/static_html/protection-profile/900/-900-/index.html",
+   "symbols": []
+  },
+  {
+   "path": "sd/PP_EX_V1.0/PP_EX_V1.0-SD/000-front.md",
+   "title": "PP_EX_V1.0 Front matter",
+   "url": "https://www.niap-ccevs.org/api/file/get_public_file/?file_id=901",
+   "symbols": []
+  },
+  {
+   "path": "sd/PP_EX_V1.0/PP_EX_V1.0-SD/001-1.md",
+   "title": "PP_EX_V1.0 1 Introduction",
+   "url": "https://www.niap-ccevs.org/api/file/get_public_file/?file_id=901",
+   "symbols": []
+  },
+  {
+   "path": "sd/PP_EX_V1.0/PP_EX_V1.0-SD/003-2.1.md",
+   "title": "PP_EX_V1.0 2.1 FIA_UAU.2 User authentication before any action",
+   "url": "https://www.niap-ccevs.org/api/file/get_public_file/?file_id=901",
+   "symbols": []
+  },
+  {
+   "path": "td/TD9001.md",
+   "title": "TD9001 Clarification of FIA_UAU.2.1 for example devices",
+   "url": "https://www.niap-ccevs.org/technical-decisions/TD9001",
+   "symbols": [
+    {
+     "name": "TD9001",
+     "kind": "technical-decision",
+     "namespace": "NIAP",
+     "signature": "NIAP TD9001: Clarification of FIA_UAU.2.1 for example devices (Published)"
+    }
+   ]
+  },
+  {
+   "path": "pp/PP_EX_V1.0/index.md",
+   "title": "Protection Profile for Example Devices, Version 1.0",
+   "url": "https://www.niap-ccevs.org/protectionprofiles/900",
+   "symbols": [
+    {
+     "name": "PP_EX_V1.0",
+     "kind": "protection-profile",
+     "namespace": "Common Criteria PP",
+     "signature": "PP_EX_V1.0: Protection Profile for Example Devices, Version 1.0 (US)"
+    }
+   ]
+  },
+  {
+   "path": "pp/pp9999b/index.md",
+   "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+   "url": "https://www.commoncriteriaportal.org/nfs/ccpfiles/files/ppfiles/pp9999b.pdf",
+   "symbols": [
+    {
+     "name": "BSI-CC-PP-9999-2026",
+     "kind": "protection-profile",
+     "namespace": "Common Criteria PP",
+     "signature": "BSI-CC-PP-9999-2026: BSI-CC-PP-9999-2026 Example Smart Card Protection Profile (DE)"
+    }
+   ]
+  },
+  {
+   "path": "components/ADV/ADV_ARC.1.md",
+   "title": "ADV_ARC.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ADV_ARC.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ADV_ARC.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ADV/ADV_FSP.4.md",
+   "title": "ADV_FSP.4",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ADV_FSP.4",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ADV_FSP.4 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ADV/ADV_IMP.1.md",
+   "title": "ADV_IMP.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ADV_IMP.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ADV_IMP.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ADV/ADV_TDS.3.md",
+   "title": "ADV_TDS.3",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ADV_TDS.3",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ADV_TDS.3 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/AGD/AGD_OPE.1.md",
+   "title": "AGD_OPE.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "AGD_OPE.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "AGD_OPE.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/AGD/AGD_PRE.1.md",
+   "title": "AGD_PRE.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "AGD_PRE.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "AGD_PRE.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ALC/ALC_CMC.4.md",
+   "title": "ALC_CMC.4",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ALC_CMC.4",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ALC_CMC.4 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ALC/ALC_CMS.4.md",
+   "title": "ALC_CMS.4",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ALC_CMS.4",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ALC_CMS.4 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ALC/ALC_DEL.1.md",
+   "title": "ALC_DEL.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ALC_DEL.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ALC_DEL.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ALC/ALC_DVS.1.md",
+   "title": "ALC_DVS.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ALC_DVS.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ALC_DVS.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ALC/ALC_FLR.2.md",
+   "title": "ALC_FLR.2 Flaw reporting procedures",
+   "url": "https://www.commoncriteriaportal.org/cc/",
+   "symbols": [
+    {
+     "name": "ALC_FLR.2",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ALC_FLR.2 Flaw reporting procedures: SAR"
+    }
+   ]
+  },
+  {
+   "path": "components/ALC/ALC_LCD.1.md",
+   "title": "ALC_LCD.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ALC_LCD.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ALC_LCD.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ALC/ALC_TAT.1.md",
+   "title": "ALC_TAT.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ALC_TAT.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ALC_TAT.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ASE/ASE_CCL.1.md",
+   "title": "ASE_CCL.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ASE_CCL.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ASE_CCL.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ASE/ASE_ECD.1.md",
+   "title": "ASE_ECD.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ASE_ECD.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ASE_ECD.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ASE/ASE_INT.1.md",
+   "title": "ASE_INT.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ASE_INT.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ASE_INT.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ASE/ASE_OBJ.2.md",
+   "title": "ASE_OBJ.2",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ASE_OBJ.2",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ASE_OBJ.2 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ASE/ASE_REQ.2.md",
+   "title": "ASE_REQ.2",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ASE_REQ.2",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ASE_REQ.2 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ASE/ASE_SPD.1.md",
+   "title": "ASE_SPD.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ASE_SPD.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ASE_SPD.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ASE/ASE_TSS.1.md",
+   "title": "ASE_TSS.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ASE_TSS.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ASE_TSS.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ATE/ATE_COV.2.md",
+   "title": "ATE_COV.2",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ATE_COV.2",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ATE_COV.2 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ATE/ATE_DPT.1.md",
+   "title": "ATE_DPT.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ATE_DPT.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ATE_DPT.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ATE/ATE_FUN.1.md",
+   "title": "ATE_FUN.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ATE_FUN.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ATE_FUN.1 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ATE/ATE_IND.2.md",
+   "title": "ATE_IND.2",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "ATE_IND.2",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "ATE_IND.2 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/AVA/AVA_VAN.3.md",
+   "title": "AVA_VAN.3",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "AVA_VAN.3",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "AVA_VAN.3 : SAR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/FCS/FCS_COP.1.md",
+   "title": "FCS_COP.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "FCS_COP.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "FCS_COP.1 : SFR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/FDP/FDP_ACC.1.md",
+   "title": "FDP_ACC.1",
+   "url": "https://www.niap-ccevs.org/protectionprofiles",
+   "symbols": [
+    {
+     "name": "FDP_ACC.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "FDP_ACC.1 : SFR, required by 1 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/FIA/FIA_UAU.1.md",
+   "title": "FIA_UAU.1 Timing of authentication",
+   "url": "https://www.commoncriteriaportal.org/cc/",
+   "symbols": [
+    {
+     "name": "FIA_UAU.1",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "FIA_UAU.1 Timing of authentication: SFR"
+    }
+   ]
+  },
+  {
+   "path": "components/FIA/FIA_UAU.2.md",
+   "title": "FIA_UAU.2 User authentication before any action",
+   "url": "https://www.commoncriteriaportal.org/cc/",
+   "symbols": [
+    {
+     "name": "FIA_UAU.2",
+     "kind": "component",
+     "namespace": "Common Criteria",
+     "signature": "FIA_UAU.2 User authentication before any action: SFR, required by 2 PPs"
+    }
+   ]
+  },
+  {
+   "path": "components/ALC/ALC_FLR.md",
+   "title": "ALC_FLR Flaw remediation",
+   "url": "https://www.commoncriteriaportal.org/cc/",
+   "symbols": [
+    {
+     "name": "ALC_FLR",
+     "kind": "family",
+     "namespace": "Common Criteria",
+     "signature": "ALC_FLR Flaw remediation: family of class ALC"
+    }
+   ]
+  },
+  {
+   "path": "components/FIA/FIA_UAU.md",
+   "title": "FIA_UAU User authentication",
+   "url": "https://www.commoncriteriaportal.org/cc/",
+   "symbols": [
+    {
+     "name": "FIA_UAU",
+     "kind": "family",
+     "namespace": "Common Criteria",
+     "signature": "FIA_UAU User authentication: family of class FIA"
+    }
+   ]
+  },
+  {
+   "path": "components/ALC/index.md",
+   "title": "Class ALC: Life-cycle support",
+   "url": "https://www.commoncriteriaportal.org/cc/",
+   "symbols": [
+    {
+     "name": "ALC",
+     "kind": "class",
+     "namespace": "Common Criteria",
+     "signature": "ALC Life-cycle support: assurance class"
+    }
+   ]
+  },
+  {
+   "path": "components/FIA/index.md",
+   "title": "Class FIA: Identification and authentication",
+   "url": "https://www.commoncriteriaportal.org/cc/",
+   "symbols": [
+    {
+     "name": "FIA",
+     "kind": "class",
+     "namespace": "Common Criteria",
+     "signature": "FIA Identification and authentication: functional class"
+    }
+   ]
+  },
+  {
+   "path": "components/EAL/EAL4.md",
+   "title": "EAL4",
+   "url": "https://www.commoncriteriaportal.org/cc/",
+   "symbols": [
+    {
+     "name": "EAL4",
+     "kind": "package",
+     "namespace": "Common Criteria",
+     "signature": "EAL4: assurance package"
+    }
+   ]
+  }
+ ],
+ "metadata_only": [
+  {
+   "document": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile: pp9999b.pdf",
+   "url": "https://www.commoncriteriaportal.org/nfs/ccpfiles/files/ppfiles/pp9999b.pdf",
+   "terms": "its notice restricts reproduction",
+   "notice": "Copyright (c) 2026 Example Card Consortium. All rights reserved."
+  }
+ ]
+}

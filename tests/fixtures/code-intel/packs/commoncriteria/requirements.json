@@ -1,0 +1,694 @@
+{
+ "components": {
+  "ADV_ARC.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ADV_FSP.4": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ADV_IMP.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ADV_TDS.3": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "AGD_OPE.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "AGD_PRE.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ALC_CMC.4": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ALC_CMS.4": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ALC_DEL.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ALC_DVS.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ALC_LCD.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ALC_TAT.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ASE_CCL.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ASE_ECD.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ASE_INT.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ASE_OBJ.2": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ASE_REQ.2": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ASE_SPD.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ASE_TSS.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ATE_COV.2": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ATE_DPT.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ATE_FUN.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "ATE_IND.2": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "AVA_VAN.3": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "package"
+    ],
+    "as": [
+     "EAL4"
+    ],
+    "archived": ""
+   }
+  ],
+  "FCS_COP.1": [
+   {
+    "slug": "PP_EX_V1.0",
+    "title": "Protection Profile for Example Devices, Version 1.0",
+    "abbr": "PP_EX_V1.0",
+    "scheme": "US",
+    "how": [
+     "optional"
+    ],
+    "as": [
+     "FCS_COP.1.1/Hash"
+    ],
+    "archived": ""
+   }
+  ],
+  "FDP_ACC.1": [
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "mandatory"
+    ],
+    "as": [
+     "FDP_ACC.1.1"
+    ],
+    "archived": ""
+   }
+  ],
+  "FIA_UAU.2": [
+   {
+    "slug": "PP_EX_V1.0",
+    "title": "Protection Profile for Example Devices, Version 1.0",
+    "abbr": "PP_EX_V1.0",
+    "scheme": "US",
+    "how": [
+     "mandatory"
+    ],
+    "as": [
+     "FIA_UAU.2.1"
+    ],
+    "archived": ""
+   },
+   {
+    "slug": "pp9999b",
+    "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+    "abbr": "",
+    "scheme": "DE",
+    "how": [
+     "mandatory"
+    ],
+    "as": [
+     "FIA_UAU.2.1"
+    ],
+    "archived": ""
+   }
+  ]
+ },
+ "pps": {
+  "PP_EX_V1.0": {
+   "title": "Protection Profile for Example Devices, Version 1.0",
+   "abbr": "PP_EX_V1.0",
+   "scheme": "US",
+   "archived": "",
+   "requirements": {
+    "FCS_COP.1": {
+     "how": [
+      "optional"
+     ],
+     "as": [
+      "FCS_COP.1.1/Hash"
+     ],
+     "sections": [
+      "A.1"
+     ]
+    },
+    "FIA_UAU.2": {
+     "how": [
+      "mandatory"
+     ],
+     "as": [
+      "FIA_UAU.2.1"
+     ],
+     "sections": []
+    }
+   }
+  },
+  "pp9999b": {
+   "title": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+   "abbr": "",
+   "scheme": "DE",
+   "archived": "",
+   "requirements": {
+    "ADV_ARC.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ADV_FSP.4": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ADV_IMP.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ADV_TDS.3": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "AGD_OPE.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "AGD_PRE.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ALC_CMC.4": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ALC_CMS.4": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ALC_DEL.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ALC_DVS.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ALC_LCD.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ALC_TAT.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ASE_CCL.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ASE_ECD.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ASE_INT.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ASE_OBJ.2": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ASE_REQ.2": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ASE_SPD.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ASE_TSS.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ATE_COV.2": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ATE_DPT.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ATE_FUN.1": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "ATE_IND.2": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "AVA_VAN.3": {
+     "how": [
+      "package"
+     ],
+     "as": [
+      "EAL4"
+     ],
+     "sections": []
+    },
+    "FDP_ACC.1": {
+     "how": [
+      "mandatory"
+     ],
+     "as": [
+      "FDP_ACC.1.1"
+     ],
+     "sections": []
+    },
+    "FIA_UAU.2": {
+     "how": [
+      "mandatory"
+     ],
+     "as": [
+      "FIA_UAU.2.1"
+     ],
+     "sections": []
+    }
+   }
+  }
+ }
+}

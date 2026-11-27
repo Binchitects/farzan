@@ -1,0 +1,14 @@
+{
+ "identifier": "TD9001",
+ "title": "Clarification of FIA_UAU.2.1 for example devices",
+ "description": "<p>The element does not say which users.</p>",
+ "resolution": "<p>FIA_UAU.2.1 applies to <strong>administrators</strong>.</p>",
+ "justification": "<p>Written for this repository's tests.</p>",
+ "protection_profile": [
+  {
+   "pp_id": 900,
+   "pp_name": "Protection Profile for Example Devices Version 1.0"
+  }
+ ],
+ "sunset_protection_profile": []
+}

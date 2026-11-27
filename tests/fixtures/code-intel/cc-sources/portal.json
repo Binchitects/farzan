@@ -1,0 +1,52 @@
+{
+ "docs": [
+  {
+   "url": "https://www.commoncriteriaportal.org/files/ccfiles/cc_2022.xml",
+   "label": "CC:2022 XML"
+  },
+  {
+   "url": "https://www.commoncriteriaportal.org/files/ccfiles/cc3R5.xml.zip",
+   "label": "CC 3.1 R5 XML"
+  }
+ ],
+ "pps": [
+  {
+   "id": "2026.0001",
+   "list": "pps",
+   "name": "Protection Profile for Example Devices, Version 1.0",
+   "abbr": "PP_EX_V1.0",
+   "version": "1.0",
+   "eal": "EAL1",
+   "scheme": "US",
+   "cpp": false,
+   "category": "Other Devices and Systems",
+   "issued": "2026-01-15",
+   "archived": "",
+   "files": []
+  },
+  {
+   "id": "2026.0002",
+   "list": "pps",
+   "name": "BSI-CC-PP-9999-2026 Example Smart Card Protection Profile",
+   "abbr": "",
+   "version": "1.0",
+   "eal": "EAL4+",
+   "scheme": "DE",
+   "cpp": false,
+   "category": "ICs, Smart Cards and Smart Card-Related Devices and Systems",
+   "issued": "2026-02-01",
+   "archived": "",
+   "files": [
+    {
+     "kind": "pp",
+     "url": "https://www.commoncriteriaportal.org/nfs/ccpfiles/files/ppfiles/pp9999b.pdf"
+    },
+    {
+     "kind": "report",
+     "url": "https://www.commoncriteriaportal.org/nfs/ccpfiles/files/ppfiles/pp9999a.pdf"
+    }
+   ]
+  }
+ ],
+ "maintenance": []
+}

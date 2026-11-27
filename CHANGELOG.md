@@ -19,6 +19,29 @@ Sections used:
 
 ### :sparkles: New features & Enhancements
 
+- **The Common Criteria in Farzan Graph: the `commoncriteria` knowledge pack.** It holds the full texts of CC:2022
+  Parts 1 to 5 and the CEM:2022, and of CC and CEM 3.1 Revision 5, with their errata. It also holds the CCRA's
+  supporting documents and operating procedures, and the SOG-IS and ENISA (EUCC) documents the CC portal links.
+  Beside them are every Protection Profile, PP-Module, PP-Configuration, package and Supporting Document on the CC
+  portal's lists of certified, archived and collaborative PPs and on NIAP's: 568 PP records from 14 schemes. NIAP's
+  1,002 Technical Decisions are in it too. Everything comes from www.commoncriteriaportal.org and www.niap-ccevs.org:
+  1,357 files, 23,467 pages.
+  - **Requirements as data.** Each component has a page (`FCS_COP.1`, `ALC_FLR.2`, and the 478 extended
+    components). It gives the component's definition in each edition, taken from the CC's own XML: elements,
+    operations, dependencies, audit, and the CEM's work units. It then lists every PP that requires the component,
+    and how: mandatory, conditionally mandatory, optional, selection-based, objective, implementation-dependent, or
+    in its EAL package with the portal's augmentations. The page also names the Supporting Documents that evaluate
+    the component and the Technical Decisions about it, so `docs_lookup("FIA_UAU.2")` answers "which PPs require
+    FIA_UAU.2?". `requirements.json` holds the same as data.
+  - **Terms.** Each page ends with its document's source and terms. The CC and CEM come under the CCRA's Legal
+    Notice, which allows anyone to re-use and publish their text. NIAP's documents are US-government works. The
+    schemes' and the CCRA's documents are their free publications.
+  - **Left out.** The 47 documents whose notice restricts reproduction, or whose copyright a company holds, are
+    there as metadata, link and requirements only.
+  - **Building it.** `tools/cc-texts.py` fetches the sources and writes the pages. `tools/packs-weekly.py` renews
+    the pack each week, fetching only the new PPs and Technical Decisions. The grc pack's catalog of the CC's
+    families stays as it was, and each of its 121 families has a page in the new pack
+    ([knowledge-packs.md](docs/code-intel/knowledge-packs.md#the-common-criteria-the-commoncriteria-pack)).
 - **Every ISO standard in Farzan Graph: the `iso` knowledge pack.** ISO's catalogue of all 81,910 deliverables, from
   ISO Open Data (`iso_deliverables_metadata`, `iso_technical_committees` and `iso_ics`, © ISO, under ODC-By 1.0). It
   holds 26,600 current, 29,860 withdrawn, 5,397 under development and 20,053 cancelled projects. Each page gives the

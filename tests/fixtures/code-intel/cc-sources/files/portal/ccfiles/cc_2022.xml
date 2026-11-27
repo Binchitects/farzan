@@ -1,0 +1,704 @@
+<?xml version='1.0' encoding='utf-8'?>
+<cc version="CC:2022" revision="0.9">
+  <a-class name="Life-cycle support" id="alc">
+    <ac-introduction>
+      <para>
+        Life-cycle support is an aspect of establishing appropriate security controls in the
+        development, production, delivery and maintenance of the TOE. Confidence in the
+        correspondence between the TOE security requirements and the TOE is greater if security
+        analysis and the production of the evidence are done on a regular basis as an integral
+        part of the development, production, delivery and maintenance activities.
+      </para>
+      <para>
+        During the life-cycle of the TOE it is distinguished whether the TOE is under the
+        responsibility of the TOE developer or the user rather than whether it is located in the
+        development or the user environment. The point of transition is when the TOE is accepted
+        by the user. User in this context relates to the end-user as well as product- and system
+        integrators.
+      </para>
+      <para>
+        The <xref id="alc" /> class consists of nine families:
+        <list type="itemized">
+          <item>
+            <xref id="alc_lcd" /> provides requirements for the developer's description of the
+            life-cycle model used in the development, production, delivery and maintenance life-cycle
+            of the TOE;
+          </item>
+          <item>
+            <xref id="alc_cmc" /> provides requirements for the management of the configuration items;
+          </item>
+          <item>
+            <xref id="alc_cms" /> requires a minimum set of configuration items to be managed in the
+            defined way;
+          </item>
+          <item>
+            <xref id="alc_dvs" /> is concerned with the developer's physical, logical, procedural,
+            personnel, and other security controls;
+          </item>
+          <item>
+            <xref id="alc_tat" /> provides requirements for the development tools and implementation
+            standards used by the developer;
+          </item>
+          <item>
+            <xref id="alc_flr" /> provides requirements for the handling of security flaws;
+          </item>
+          <item>
+            <xref id="alc_del" /> provides requirements for the procedures used for the delivery of the
+            TOE to the downstream user. processes occurring during the development of the TOE are
+            denoted rather as transfers, and are handled in the context of integration and acceptance
+            procedures in other families of this class;
+          </item>
+          <item>
+            <xref id="alc_tda" /> is concerned with the generation of certain artefacts during the
+            development process;
+          </item>
+          <item>
+            <xref id="alc_comp" /> is concerned with the integration of composition parts and a
+            consistency check of delivery procedures.
+          </item>
+        </list>
+      </para>
+      <para>
+        Throughout this class, development and related terms (developer, develop) are meant in the
+        more general sense to comprise development and production, whereas production specifically
+        means the process of transforming the implementation representation into the final TOE.
+      </para>
+    </ac-introduction>
+    <ma-introduction>
+      <para>
+        The purpose of the life-cycle support activity is to determine the adequacy of the
+        security procedures that the developer uses during the development and maintenance of the
+        TOE. These procedures include the life-cycle model used by the developer, the
+        configuration management, the security measures used throughout TOE development, the tools
+        used by the developer throughout the life-cycle of the TOE, the handling of security
+        flaws, and the delivery activity.
+      </para>
+      <para>
+        Poorly controlled development and maintenance of the TOE can result in vulnerabilities in
+        the implementation. Conformance to a defined life-cycle model can help to improve controls
+        in this area. A measurable life-cycle model used for the TOE can remove ambiguity in
+        assessing the development progress of the TOE.
+      </para>
+      <para>
+        The purpose of the configuration management activity is to assist the consumer in
+        identifying the evaluated TOE, to ensure that configuration items are uniquely identified,
+        and the adequacy of the procedures that are used by the developer to control and track
+        changes that are made to the TOE. This includes details on what changes are tracked, how
+        potential changes are incorporated, and the degree to which automation is used to reduce
+        the scope for error.
+      </para>
+      <para>
+        Developer security procedures are intended to protect the TOE and its associated design
+        information from interference or disclosure. Interference in the development process may
+        allow the deliberate introduction of vulnerabilities. Disclosure of design information may
+        allow vulnerabilities to be more easily exploited. The adequacy of the procedures will
+        depend on the nature of the TOE and the development process.
+      </para>
+      <para>
+        The use of well-defined development tools and the application of implementation standards
+        by the developer and by third parties involved in the development process help to ensure
+        that vulnerabilities are not inadvertently introduced during refinement.
+      </para>
+      <para>
+        The flaw remediation activity is intended to track security flaws, to identify corrective
+        actions, and to distribute the corrective action information to TOE users.
+      </para>
+      <para>
+        The purpose of the delivery activity is to judge the adequacy of the documentation of the
+        procedures used to ensure that the TOE is delivered to the consumer without modification.
+      </para>
+    </ma-introduction>
+    <ma-application-notes>
+      <subclause id="composition-in-alc" title="Composition">
+        <para>
+          The composite-specific work units defined here are intended to be integrated as
+          refinements to the evaluation activities of the <xref id="alc" /> class listed in the
+          following table. The other activities of <xref id="alc" /> class do not require
+          composite-specific work units.
+        </para>
+        <table>
+          <title>
+            <xref id="alc_comp" />
+          </title>
+          <tgroup cols="4">
+            <thead>
+              <row>
+                <entry>
+                  Assurance family
+                </entry>
+                <entry>
+                  Evaluation activity
+                </entry>
+                <entry>
+                  Evaluation work unit
+                </entry>
+                <entry>
+                  Composite-specific work unit
+                </entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry>
+                  <xref id="alc_cms" />
+                </entry>
+                <entry>
+                  <xref id="alc_cms.1.1e" />
+                </entry>
+                <entry>
+                  <xref id="alc_cms.1-2" />
+                </entry>
+                <entry>
+                  <xref id="alc_comp.1-1" />
+                </entry>
+              </row>
+              <row>
+                <entry>
+                  <xref id="agd_pre" />
+                </entry>
+                <entry>
+                  <xref id="agd_pre.1.1e" />
+                </entry>
+                <entry>
+                  <xref id="agd_pre.1-2" />
+                </entry>
+                <entry>
+                  <xref id="alc_comp.1-2" />
+                </entry>
+              </row>
+              <row>
+                <entry>
+                  <xref id="alc_cmc" />
+                </entry>
+                <entry>
+                  <xref id="alc_cmc.4.1e" />
+                </entry>
+                <entry>
+                  <xref id="alc_cmc.4-10" />
+                </entry>
+                <entry>
+                  <xref id="alc_comp.1-2" />
+                </entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <para type="note">
+          If the level of the assurance requirement chosen is higher than those identified in this
+          table, the composite-specific work unit is also applicable.
+        </para>
+      </subclause>
+    </ma-application-notes>
+    <a-family name="Flaw remediation" id="alc_flr">
+      <af-objectives>
+        <para>
+          Flaw remediation requires that discovered security flaws be tracked and corrected by the
+          developer. Although future compliance with flaw remediation procedures cannot be
+          determined at the time of the TOE evaluation, it is possible to evaluate the policies and
+          procedures that a developer has in place to track and correct flaws, and to distribute the
+          flaw information and corrections.
+        </para>
+      </af-objectives>
+      <af-levelling-criteria>
+        <para>
+          The components in this family are levelled on the basis of the increasing extent in scope
+          of the flaw remediation procedures and the rigour of the flaw remediation policies.
+        </para>
+      </af-levelling-criteria>
+      <af-application-notes>
+        <para>
+          This family provides assurance that the TOE will be maintained and supported in the
+          future, requiring the TOE developer to track and correct flaws in the TOE. Additionally,
+          requirements are included for the distribution of flaw corrections. However, this family
+          does not impose evaluation requirements beyond the current evaluation.
+        </para>
+        <para>
+          The TOE user is considered to be the focal point in the user organization that is
+          responsible for receiving and implementing fixes to security flaws. This is not
+          necessarily an individual user, but may be an organisational representative who is
+          responsible for the handling of security flaws. The use of the term TOE user recognizes
+          that different organisations have different procedures for handling flaw reporting, which
+          may be done either by an individual user, or by a central administrative body.
+        </para>
+        <para>
+          The flaw remediation procedures should describe the methods for dealing with all types of
+          flaws encountered. These flaws may be reported by the developer, by users of the TOE, or
+          by other parties with familiarity with the TOE. Some flaws may not be reparable
+          immediately. There may be some occasions where a flaw cannot be fixed and other (e.g.
+          procedural) controls must be taken. The documentation provided should cover the procedures
+          for providing the operational sites with fixes and providing information on flaws where
+          fixes are delayed (and what to do in the interim) or when fixes are not possible.
+        </para>
+        <para>
+          Changes applied to a TOE after its release render it unevaluated; although some
+          information from the original evaluation may still apply. The phrase "release of the TOE"
+          used in this family therefore refers to a version of a product that is a release of a
+          certified TOE, to which changes have been applied.
+        </para>
+      </af-application-notes>
+      <a-component name="Flaw reporting procedures" id="alc_flr.2">
+        <msa-objectives>
+          <para>
+            The objective of this sub-activity is to determine whether the developer has established
+            flaw remediation procedures that describe the tracking of security flaws, the
+            identification of corrective actions, and the distribution of corrective action
+            information to TOE users. Additionally, this sub-activity determines whether the
+            developer's procedures provide for the corrections of security flaws, for the receipt of
+            flaw reports from TOE users, and for assurance that the corrections introduce no new
+            security flaws.
+          </para>
+          <para>
+            In order for the developer to be able to act appropriately upon security flaw reports from
+            TOE users, TOE users need to understand how to submit security flaw reports to the
+            developer, and developers need to know how to receive these reports. Flaw remediation
+            guidance addressed to the TOE user ensures that TOE users are aware of how to communicate
+            with the developer; flaw remediation procedures describe the developer's role is such
+            communication
+          </para>
+        </msa-objectives>
+        <msa-input>
+          <para>
+            <list>
+              <item>
+                the flaw remediation procedures documentation;
+              </item>
+              <item>
+                law remediation guidance documentation.
+              </item>
+            </list>
+          </para>
+        </msa-input>
+        <ae-developer id="alc_flr.2.1d">
+          The developer shall document and provide flaw remediation procedures addressed to TOE
+          developers.
+        </ae-developer>
+        <ae-developer id="alc_flr.2.2d">
+          The developer shall establish a procedure for accepting and acting upon all reports of
+          security flaws and requests for corrections to those flaws.
+        </ae-developer>
+        <ae-developer id="alc_flr.2.3d">
+          The developer shall provide flaw remediation guidance addressed to TOE users.
+        </ae-developer>
+        <ae-content id="alc_flr.2.1c">
+          The flaw remediation procedures documentation shall describe the procedures used to track
+          all reported security flaws in each release of the TOE.
+        </ae-content>
+        <ae-content id="alc_flr.2.2c">
+          The flaw remediation procedures shall require that a description of the nature and effect
+          of each security flaw be provided, as well as the status of finding a correction to that
+          flaw.
+        </ae-content>
+        <ae-content id="alc_flr.2.3c">
+          The flaw remediation procedures shall require that corrective actions be identified for
+          each of the security flaws.
+        </ae-content>
+        <ae-content id="alc_flr.2.4c">
+          The flaw remediation procedures documentation shall describe the methods used to provide
+          flaw information, corrections and guidance on corrective actions to TOE users.
+        </ae-content>
+        <ae-content id="alc_flr.2.5c">
+          The flaw remediation procedures shall describe a means by which the developer receives
+          from TOE users reports and enquiries of suspected security flaws in the TOE.
+        </ae-content>
+        <ae-content id="alc_flr.2.6c">
+          The procedures for processing reported security flaws shall ensure that any reported flaws
+          are remediated and the remediation procedures issued to TOE users.
+        </ae-content>
+        <ae-content id="alc_flr.2.7c">
+          The procedures for processing reported security flaws shall provide safeguards that any
+          corrections to these security flaws do not introduce any new flaws.
+        </ae-content>
+        <ae-content id="alc_flr.2.8c">
+          The flaw remediation guidance shall describe a means by which TOE users report to the
+          developer any suspected security flaws in the TOE.
+        </ae-content>
+        <ae-evaluator id="alc_flr.2.1e">
+          The evaluator shall confirm that the information provided meets all requirements for
+          content and presentation of evidence.
+          <m-workunit id="alc_flr.2-1">
+            <ae-dc-element id="alc_flr.2.1c" />
+            <para>
+              The evaluator shall examine the flaw remediation procedures documentation to determine
+              that it describes the procedures used to track all reported security flaws in each release
+              of the TOE.
+            </para>
+            <para>
+              The procedures describe the actions that are taken by the developer from the time each
+              suspected security flaw is reported to the time that it is resolved. This includes the
+              flaw's entire time frame, from initial detection through ascertaining that the flaw is a
+              security flaw, to resolution of the security flaw.
+            </para>
+            <para>
+              If a flaw is discovered not to be security-relevant, there is no need (for the purposes of
+              the <xref id="alc_flr" /> requirements) for the flaw remediation procedures to track it
+              further; only that there be an explanation of why the flaw is not security-relevant.
+            </para>
+          </m-workunit>
+          <m-workunit id="alc_flr.2-2">
+            <ae-dc-element id="alc_flr.2.2c" />
+            <para>
+              The evaluator shall examine the flaw remediation procedures to determine that the
+              application of these procedures would produce a description of each security flaw in terms
+              of its nature and effects.
+            </para>
+            <para>
+              The procedures identify the actions that are taken by the developer to describe the nature
+              and effects of each security flaw in sufficient detail to be able to reproduce it. The
+              description of the nature of a security flaw addresses whether it is an error in the
+              documentation, a flaw in the design of the TSF, a flaw in the implementation of the TSF,
+              etc. The description of the security flaw's effects identifies the portions of the TSF
+              that are affected and how those portions are affected. For example, a security flaw in the
+              implementation can be found that affects the identification and authentication enforced by
+              the TSF by permitting authentication with the password "BACKDOOR".
+            </para>
+          </m-workunit>
+          <m-workunit id="alc_flr.2-3">
+            <para>
+              The evaluator shall examine the flaw remediation procedures to determine that the
+              application of these procedures would identify the status of finding a correction to each
+              security flaw.
+            </para>
+            <para>
+              The flaw remediation procedures identify the different stages of security flaws. This
+              differentiation includes at least: suspected security flaws that have been reported,
+              suspected security flaws that have been confirmed to be security flaws, and security flaws
+              whose solutions have been implemented. It is permissible that additional stages (e.g.
+              flaws that have been reported but not yet investigated, flaws that are under
+              investigation, security flaws for which a solution has been found but not yet implemented)
+              be included.
+            </para>
+          </m-workunit>
+          <m-workunit id="alc_flr.2-4">
+            <ae-dc-element id="alc_flr.2.3c" />
+            <para>
+              The evaluator shall check the flaw remediation procedures to determine that the
+              application of these procedures would identify the corrective action for each security
+              flaw.
+            </para>
+            <para>
+              Corrective action may consist of a repair to the hardware, firmware, or software portions
+              of the TOE, a modification of TOE guidance, or both. Corrective action that constitutes
+              modifications to TOE guidance (e.g. details of procedural measures to be taken to obviate
+              the security flaw) includes both those measures serving as only an interim solution (until
+              the repair is issued) as well as those serving as a permanent solution (where it is
+              determined that the procedural measure is the best solution).
+            </para>
+            <para>
+              If the source of the security flaw is a documentation error, the corrective action
+              consists of an update of the affected TOE guidance. If the corrective action is a
+              procedural measure, this measure will include an update made to the affected TOE guidance
+              to reflect these corrective procedures.
+            </para>
+          </m-workunit>
+          <m-workunit id="alc_flr.2-5">
+            <ae-dc-element id="alc_flr.2.4c" />
+            <para>
+              The evaluator shall examine the flaw remediation procedures documentation to determine
+              that it describes a means of providing the TOE users with the necessary information on
+              each security flaw.
+            </para>
+            <para>
+              The necessary information about each security flaw consists of its description (not
+              necessarily at the same level of detail as that provided as part of work unit <xref id="alc_flr.2-2" />), the prescribed corrective action, and any associated guidance on
+              implementing the correction.
+            </para>
+            <para>
+              TOE users may be provided with such information, correction, and documentation updates in
+              any of several ways, such as their posting to a website, their being sent to TOE users, or
+              arrangements made for the developer to install the correction. In cases where the means of
+              providing this information requires action to be initiated by the TOE user, the evaluator
+              examines any TOE guidance to ensure that it contains instructions for retrieving the
+              information.
+            </para>
+            <para>
+              The only metric for assessing the adequacy of the method used for providing the
+              information, corrections and guidance is that there be a reasonable expectation that TOE
+              users can obtain or receive it. For example, consider the method of dissemination where
+              the requisite data is posted to a website for one month, and the TOE users know that this
+              will happen and when this will happen. This may not be especially reasonable or effective
+              (as, say, a permanent posting to the website), yet it is feasible that the TOE user can
+              obtain the necessary information. On the other hand, if the information were posted to the
+              website for only one hour, yet TOE users had no way of knowing this or when it would be
+              posted, it is infeasible that they would ever get the necessary information.
+            </para>
+          </m-workunit>
+          <m-workunit id="alc_flr.2-6">
+            <ae-dc-element id="alc_flr.2.5c" />
+            <para>
+              The evaluator shall examine the flaw remediation procedures to determine that they
+              describe procedures for the developer to accept reports of security flaws or requests for
+              corrections to such flaws.
+            </para>
+            <para>
+              The procedures ensure that TOE users have a means by which they can communicate with the
+              TOE developer. By having a means of contact with the developer, the user can report
+              security flaws, enquire about the status of security flaws, or request corrections to
+              flaws. This means of contact may be part of a more general contact facility for reporting
+              non-security related problems.
+            </para>
+            <para>
+              The use of these procedures is not restricted to TOE users; however, only the TOE users
+              are actively supplied with the details of these procedures. Others who can have access to
+              or familiarity with the TOE can use the same procedures to submit reports to the
+              developer, who is then expected to process them. Any means of submitting reports to the
+              developer, other than those identified by the developer, are beyond the scope of this work
+              unit; reports generated by other means need not be addressed.
+            </para>
+          </m-workunit>
+          <m-workunit id="alc_flr.2-7">
+            <ae-dc-element id="alc_flr.2.6c" />
+            <para>
+              The evaluator shall examine the flaw remediation procedures to determine that the
+              application of these procedures would help to ensure every reported flaw is corrected.
+            </para>
+            <para>
+              The flaw remediation procedures cover not only those security flaws discovered and
+              reported by developer personnel, but also those reported by TOE users. The procedures are
+              sufficiently detailed so that they describe how it is ensured that each reported security
+              flaw is corrected. The procedures contain reasonable steps that show progress leading to
+              the eventual, inevitable resolution.
+            </para>
+            <para>
+              The procedures describe the process that is taken from the point at which the suspected
+              security flaw is determined to be a security flaw to the point at which it is resolved.
+            </para>
+          </m-workunit>
+          <m-workunit id="alc_flr.2-8">
+            <para>
+              The evaluator shall examine the flaw remediation procedures to determine that the
+              application of these procedures would help to ensure that the TOE users are issued
+              remediation procedures for each security flaw.
+            </para>
+            <para>
+              The procedures describe the process that is taken from the point at which a security flaw
+              is resolved to the point at which the remediation procedures are provided. The procedures
+              for delivering corrective actions should be consistent with the security objectives; they
+              need not necessarily be identical to the procedures used for delivering the TOE, as
+              documented to meet <xref id="alc_del" />, if included in the assurance requirements. For
+              example, if the hardware portion of a TOE were originally delivered by bonded courier,
+              updates to hardware resulting from flaw remediation would likewise be expected to be
+              distributed by bonded courier. Updates unrelated to flaw remediation would follow the
+              procedures set forth in the documentation meeting the <xref id="alc_del" /> requirements.
+            </para>
+          </m-workunit>
+          <m-workunit id="alc_flr.2-9">
+            <ae-dc-element id="alc_flr.2.7c" />
+            <para>
+              The evaluator shall examine the flaw remediation procedures to determine that the
+              application of these procedures would result in safeguards that the potential correction
+              contains no adverse effects.
+            </para>
+            <para>
+              Through analysis, testing, or a combination of the two, the developer may reduce the
+              likelihood that adverse effects will be introduced when a security flaw is corrected. The
+              evaluator assesses whether the procedures provide detail in how the necessary mix of
+              analysis and testing actions is to be determined for a given correction.
+            </para>
+            <para>
+              The evaluator also determines that, for instances where the source of the security flaw is
+              a documentation problem, the procedures include the means of safeguarding against the
+              introduction of contradictions with other documentation.
+            </para>
+          </m-workunit>
+          <m-workunit id="alc_flr.2-10">
+            <ae-dc-element id="alc_flr.2.8c" />
+            <para>
+              The evaluator shall examine the flaw remediation guidance to determine that the
+              application of these procedures would result in a means for the TOE user to provide
+              reports of suspected security flaws or requests for corrections to such flaws.
+            </para>
+            <para>
+              The guidance ensures that TOE users have a means by which they can communicate with the
+              TOE developer. By having a means of contact with the developer, the user can report
+              security flaws, enquire about the status of security flaws, or request corrections to
+              flaws.
+            </para>
+          </m-workunit>
+        </ae-evaluator>
+      </a-component>
+      </a-family>
+    </a-class>
+  <f-class name="Identification and authentication" id="fia">
+    <fc-introduction>
+      <para>
+        Families in this class address the requirements for functions to establish and verify a
+        claimed user identity.
+      </para>
+      <para>
+        Identification and authentication are required to ensure that users are associated with
+        the proper security attributes
+      </para>
+      <para>
+        The unambiguous identification of authorized users and the correct association of security
+        attributes with users and subjects is critical to the enforcement of the intended security
+        policies. The families in this class deal with determining and verifying the identity of
+        users, determining their authority to interact with the TOE, and with the correct
+        association of security attributes for each authorized user. Other classes of requirements
+        are dependent upon correct identification and authentication of users in order to be
+        effective.
+      </para>
+    </fc-introduction>
+    <fc-informative-notes>
+      <para>
+        A common security requirement is to unambiguously identify the person and/or entity
+        performing functions in a TOE. This involves not only establishing the claimed identity of
+        each user, but also verifying that each user is indeed who he/she claims to be. This is
+        achieved by requiring users to provide the TSF with some information that is known by the
+        TSF to be associated with the user in question.
+      </para>
+      <para>
+        Families in this class address the requirements for functions to establish and verify a
+        claimed user identity. Identification and Authentication is required to ensure that users
+        are associated with the proper security attributes.
+      </para>
+      <para type="example">
+        Security attributes include identity, groups, roles, security, or integrity levels.
+      </para>
+      <para>
+        The unambiguous identification of authorized users and the correct association of security
+        attributes with users and subjects is critical to the enforcement of the security
+        policies.
+      </para>
+      <para>
+        The <xref id="fia_afl" /> family addresses defining limits on repeated unsuccessful
+        authentication attempts.
+      </para>
+      <para>
+        The <xref id="fia_api" /> family addresses defining the functionality provided by the TOE
+        to prove its identity and to be verified by an external entity in the TOE IT environment.
+      </para>
+      <para>
+        The <xref id="fia_atd" /> family addresses the definition of user attributes that are used
+        in the enforcement of the SFRs.
+      </para>
+      <para>
+        The <xref id="fia_sos" /> family addresses the generation and verification of secrets that
+        satisfy a defined metric.
+      </para>
+      <para>
+        The <xref id="fia_uau" /> family addresses verifying the identity of a user.
+      </para>
+      <para>
+        The <xref id="fia_uid" /> family addresses determining the identity of a user.
+      </para>
+      <para>
+        The <xref id="fia_usb" /> family addresses the correct association of security attributes
+        for each authorized user.
+      </para>
+    </fc-informative-notes>
+    <f-family name="User authentication" id="fia_uau">
+      <ff-behaviour>
+        <para>
+          This family defines the types of user authentication mechanisms supported by the TSF. This
+          family also defines the required attributes on which the user authentication mechanisms be
+          based.
+        </para>
+      </ff-behaviour>
+      <ff-application-notes>
+        <para>
+          This family defines the types of user authentication mechanisms supported by the TSF. This
+          family defines the required attributes on which the user authentication mechanisms are
+          based.
+        </para>
+      </ff-application-notes>
+      <f-component name="Timing of authentication" id="fia_uau.1">
+        <fco-dependencies>
+          <fco-dependsoncomponent fcomponent="fia_uid.1" />
+        </fco-dependencies>
+        <fco-rationale>
+          <para>
+            This component requires that the author of a PP, PP-Module, functional package or ST
+            define the TSF-mediated actions that can be performed by the TSF on behalf of the user
+            before the claimed identity of the user is authenticated. The TSF-mediated actions should
+            have no security concerns with users incorrectly identifying themselves prior to being
+            authenticated. For all other TSF-mediated actions not in the list, the user shall be
+            authenticated before the action can be performed by the TSF on behalf of the user.
+          </para>
+          <para>
+            This component cannot control whether the actions can also be performed before the
+            identification took place. This requires the use of either <xref id="fia_uid.1" /> or <xref id="fia_uid.2" /> with the appropriate assignments.
+          </para>
+        </fco-rationale>
+        <fco-levelling>
+          <para>
+            <xref id="fia_uau.1" />, allows a user to perform certain actions prior to the
+            authentication of the user's identity.
+          </para>
+        </fco-levelling>
+        <fco-management>
+          Management of the authentication data by an administrator
+        </fco-management>
+        <fco-management>
+          Management of the authentication data by the associated user
+        </fco-management>
+        <fco-management>
+          Managing the list of actions that can be taken before the user is authenticated
+        </fco-management>
+        <fco-audit level="minimal">
+          Unsuccessful use of the authentication mechanism
+        </fco-audit>
+        <fco-audit level="basic">
+          All use of the authentication mechanism
+        </fco-audit>
+        <fco-audit level="detailed">
+          All TSF mediated actions performed before authentication of the user
+        </fco-audit>
+        <f-element id="fia_uau.1.1">
+          The TSF shall allow
+          <assignment>
+            <assignmentitem>
+              list of TSF mediated actions
+            </assignmentitem>
+            <assignmentnotes>
+              <para>
+                the author of a PP, PP-Module, functional package or ST specifies a list of TSF-mediated
+                actions that can be performed by the TSF on behalf of a user before the claimed identity
+                of the user is authenticated. This list cannot be empty. If no actions are appropriate,
+                component <xref id="fia_uau.2" /> should be used instead.
+              </para>
+            </assignmentnotes>
+          </assignment>
+          on behalf of the user to be performed before the user is authenticated.
+        </f-element>
+        <f-element id="fia_uau.1.2">
+          The TSF shall require each user to be successfully authenticated before allowing any other
+          TSF-mediated actions on behalf of that user.
+        </f-element>
+      </f-component>
+      <f-component name="User authentication before any action" id="fia_uau.2">
+        <fco-hierarchical fcomponent="fia_uau.1" />
+        <fco-dependencies>
+          <fco-dependsoncomponent fcomponent="fia_uid.1" />
+        </fco-dependencies>
+        <fco-rationale>
+          <para>
+            This component requires that a user is authenticated before any other TSF-mediated action
+            can take place on behalf of that user.
+          </para>
+        </fco-rationale>
+        <fco-levelling>
+          <para>
+            <xref id="fia_uau.2" /> requires that users are authenticated before any other action will
+            be allowed by the TSF.
+          </para>
+        </fco-levelling>
+        <fco-management>
+          Management of the authentication data by an administrator
+        </fco-management>
+        <fco-management>
+          Management of the authentication data by the user associated with this data
+        </fco-management>
+        <fco-audit level="minimal">
+          Unsuccessful use of the authentication mechanism
+        </fco-audit>
+        <fco-audit level="basic">
+          All use of the authentication mechanism
+        </fco-audit>
+        <f-element id="fia_uau.2.1">
+          The TSF shall require each user to be successfully authenticated before allowing any other
+          TSF-mediated actions on behalf of that user.
+        </f-element>
+      </f-component>
+      </f-family>
+    </f-class>
+  </cc>

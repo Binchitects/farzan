@@ -66,6 +66,7 @@ public static class SourceCatalog
         ["qt"] = () => new QtDocs(),
         ["grc"] = () => new GrcTexts(),
         ["iso"] = () => new IsoCatalog(),
+        ["commoncriteria"] = () => new CommonCriteriaTexts(),
         ["security"] = () => new SecurityTexts(),
         ["advisories"] = () => new AdvisoriesTexts(),
     };

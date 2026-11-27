@@ -12,8 +12,8 @@ published.
 For each pack, in turn (one at a time: embedding takes the GPU):
 
   1. its source fetched again into .packwork/docsrc/NAME (git: a shallow fetch of its branch; sqlite and cppreference:
-     the newest archive upstream; security, grc and iso: their scripts; advisories: code-intel's own renewal), each swapped
-     in only when whole, so a failed fetch leaves the last good one;
+     the newest archive upstream; security, grc, iso and commoncriteria: their scripts; advisories: code-intel's own
+     renewal), each swapped in only when whole, so a failed fetch leaves the last good one;
   2. skipped when its source is the one the newest pack was built from (its commit, the archive's SHA-256, the texts'
      provenance), unless --force;
   3. built as packs/NAME-VERSION.kpack by the code-intel image (arena-code-intel), its embeddings by the stack's model
@@ -86,8 +86,8 @@ GIT = {
                   ("tldr", "https://github.com/tldr-pages/tldr.git", "main")],
 }
 ARCHIVE = ("sqlite", "cppreference")
-SCRIPTED = ("security", "grc", "iso")
-WEEKLY = ["advisories", "security", "grc", "iso", "sqlite", "cppreference", "react", "python", "cpp", "debugger", "scripting", "dotnet"]
+SCRIPTED = ("security", "grc", "iso", "commoncriteria")
+WEEKLY = ["advisories", "security", "grc", "iso", "commoncriteria", "sqlite", "cppreference", "react", "python", "cpp", "debugger", "scripting", "dotnet"]
 MANUAL = ["qt"]
 
 
@@ -293,6 +293,20 @@ def fetch_iso(dry: bool) -> None:
     run([sys.executable, "-I", str(ROOT / "tools" / "iso-catalog.py"), "--from", str(src), "--out", str(new)])
     shutil.rmtree(DOCSRC / "iso", ignore_errors=True)
     new.rename(DOCSRC / "iso")
+
+
+def fetch_commoncriteria(dry: bool) -> None:
+    """The CC portal's and NIAP's lists fetched again, and only the files and Technical Decisions not fetched before
+    (.packwork/cc-sources keeps them), written as the commoncriteria pack's pages."""
+    if dry:
+        return
+    src = WORK / "cc-sources"
+    run([sys.executable, "-I", str(ROOT / "tools" / "cc-texts.py"), "--fetch", str(src)])
+    new = DOCSRC / ".commoncriteria.new"
+    shutil.rmtree(new, ignore_errors=True)
+    run([sys.executable, "-I", str(ROOT / "tools" / "cc-texts.py"), "--from", str(src), "--out", str(new)])
+    shutil.rmtree(DOCSRC / "commoncriteria", ignore_errors=True)
+    new.rename(DOCSRC / "commoncriteria")
 
 
 # ------------------------------------------------------------------ building
@@ -560,6 +574,8 @@ def main() -> int:
                     fetch_grc(a.dry_run)
                 elif name == "iso":
                     fetch_iso(a.dry_run)
+                elif name == "commoncriteria":
+                    fetch_commoncriteria(a.dry_run)
                 if a.dry_run:
                     say(f"  upstream: {commit or 'fetched when built'}; the pack's: {current or 'none'}")
                     continue
@@ -569,7 +585,7 @@ def main() -> int:
                 say(f"  building from {commit[:40] if commit else 'the fetched texts'} ...")
                 target = renew_advisories(a.version, embedder.url) if name == "advisories" else build(name, a.version, embedder.url, commit)
                 m = meta(target)
-                # Texts whose provenance is as before (security, grc, iso): the pack is the one already there.
+                # Texts whose provenance is as before (security, grc, iso, commoncriteria): the pack is the one already there.
                 if commit is None and name != "advisories" and m.get("source_commit") == current and not a.force:
                     target.unlink()
                     say(f"  unchanged upstream ({current[:40]}): kept")

@@ -149,7 +149,14 @@ the knowledge packs (CC-BY-4.0, CC-BY-SA-3.0, PSF-2.0, GFDL-1.3, ODC-By-1.0 or p
 domain, per pack: the iso pack is ISO Open Data's catalogue, © ISO, under ODC-By-1.0, and
 holds no standard's text; the security pack's parts are under MITRE's CWE and CAPEC terms,
 CC-BY-SA-4.0, CC-BY-4.0, MIT and Apache-2.0, and the grc pack's under US public domain and
-the EU's reuse decision 2011/833/EU; `code-intel pack info <name>` prints each).
+the EU's reuse decision 2011/833/EU; the commoncriteria pack holds the Common Criteria and
+the CEM under the CCRA's Legal Notice (LicenseRef-CCRA-CC-CEM-Notice: re-use and publication
+allowed), NIAP's Protection Profiles and Technical Decisions as works of the United States
+government (LicenseRef-US-Government-Public-Domain), and the schemes', the CCRA's, SOG-IS's
+and ENISA's Protection Profiles and supporting documents as their free publications
+(LicenseRef-CC-Scheme-Publications), each page naming its document's terms; a document whose
+notice restricts reproduction, or whose copyright a company holds, is there as its metadata,
+link and requirements only; `code-intel pack info <name>` prints each).
 
 ### Source of the container images
 
