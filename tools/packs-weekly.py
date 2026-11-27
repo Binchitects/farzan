@@ -33,6 +33,10 @@ Qt release comes (--packs qt builds it again from .packwork/docsrc/qt).
 
 --proxy http://HOST:PORT sends every download through an HTTP proxy (git, curl, the advisories' renewal).
 
+--library DIR takes packs/ and .packwork/ from another checkout (the live one, ~/llm-service, whose packs/ the stack and
+`arenactl bundle --packs` read) while the run's code is this checkout's: a clean worktree of main can renew the packs of
+a checkout with edits of its own.
+
 Needs: git, curl, tar, docker (the arena-code-intel and llama.cpp server-cuda images), gh for --publish. Standard library only.
 """
 
@@ -83,6 +87,13 @@ ARCHIVE = ("sqlite", "cppreference")
 SCRIPTED = ("security", "grc", "iso")
 WEEKLY = ["advisories", "security", "grc", "iso", "sqlite", "cppreference", "react", "python", "cpp", "debugger", "scripting", "dotnet"]
 MANUAL = ["qt"]
+
+
+def use_library(root: Path) -> None:
+    """packs/ and .packwork/ of the checkout at ROOT (the code stays this one's)."""
+    global WORK, DOCSRC, PACKS
+    root = root.resolve()
+    WORK, DOCSRC, PACKS = root / ".packwork", root / ".packwork" / "docsrc", root / "packs"
 
 
 def say(*parts: object) -> None:
@@ -460,7 +471,12 @@ def main() -> int:
     p.add_argument("--until", help="start no pack after this time, HH:MM UTC (a run that must not overlap something else); the rest wait for the next run")
     p.add_argument("--proxy", help="an HTTP proxy for every download (http://HOST:PORT)")
     p.add_argument("--prune", action="store_true", help="move the packs older than the two newest of each name into packs/superseded/")
+    p.add_argument("--library", type=Path, help="the checkout whose packs/ and .packwork/ are renewed (default: this one)")
     a = p.parse_args()
+    if a.library:
+        if not (a.library / "packs").is_dir():
+            p.error(f"--library: {a.library / 'packs'} is not a folder")
+        use_library(a.library)
     if a.proxy:
         for k in ("HTTPS_PROXY", "HTTP_PROXY", "https_proxy", "http_proxy"):
             os.environ[k] = a.proxy

@@ -472,7 +472,9 @@ Older weeks stay in `packs/` (an installation may have one loaded);
 `--prune` moves all but the two newest of each name into `packs/superseded/`.
 `--until HH:MM` (UTC) starts no pack after that time, for a run that must not
 overlap something else; `--proxy http://HOST:PORT` sends the downloads through
-a proxy. Qt's pack is not in the weekly run: its offline documentation comes
+a proxy. `--library DIR` renews the packs/ and .packwork/ of another checkout
+(the live one, whose packs/ the stack and the bundle read) with this checkout's code, so a clean worktree of
+main can run it while the live checkout has edits of its own. Qt's pack is not in the weekly run: its offline documentation comes
 from Qt's installer, taken by hand when a Qt release comes (`--packs qt`
 builds it again).
 

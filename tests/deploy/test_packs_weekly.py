@@ -40,6 +40,19 @@ class PacksWeekly(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def test_Another_checkouts_library_is_renewed_with_this_ones_code(self):
+        saved = pw.WORK, pw.DOCSRC, pw.PACKS
+        try:
+            (self.packs / "live" / "packs").mkdir(parents=True)
+            pack(self.packs / "live" / "packs" / "cpp-2026.11.12.kpack", "cpp", "2026.11.12")
+            pw.use_library(self.packs / "live")
+            self.assertEqual((self.packs / "live" / "packs").resolve(), pw.PACKS)
+            self.assertEqual((self.packs / "live" / ".packwork" / "docsrc").resolve(), pw.DOCSRC)
+            self.assertEqual((self.packs / "live" / ".packwork").resolve(), pw.WORK)
+            self.assertEqual(["cpp"], list(pw.newest()))
+        finally:
+            pw.WORK, pw.DOCSRC, pw.PACKS = saved
+
     def test_The_newest_of_each_name_is_by_the_version_it_records(self):
         pack(self.packs / "cpp.kpack", "cpp", "1.0")
         pack(self.packs / "cpp-2026.11.5.kpack", "cpp", "2026.11.5")
