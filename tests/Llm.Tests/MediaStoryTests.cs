@@ -112,7 +112,7 @@ public sealed class MediaStoryTests(AppFixture app)
         Assert.Contains(app.Model.SpeechRequests, r => r["input"]?.GetValue<string>() == "Snow fell all night.");
         var music = Assert.Single(servers.Asked, a => a.Path == "/v1/music").Body;
         Assert.Equal(("calm piano", "[instrumental]"), (music["prompt"]!.GetValue<string>(), music["lyrics"]!.GetValue<string>()));
-        var cut = sandbox.Jobs.Last(j => j["code"]!.GetValue<string>().StartsWith("# The media studio's video", StringComparison.Ordinal));
+        var cut = sandbox.Jobs.Last(j => j["code"]!.GetValue<string>().Contains("# The media studio's video", StringComparison.Ordinal));
         var video = story.GetProperty("videoItemId").GetGuid();
         var items = (await b.JsonAsync(await b.GetAsync("/api/media/items?kind=video"))).GetProperty("items").EnumerateArray().ToList();
         var item = Assert.Single(items);

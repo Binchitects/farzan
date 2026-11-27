@@ -183,7 +183,7 @@ public sealed class FakeSandbox : IAsyncDisposable
                 await File.WriteAllBytesAsync(Path.Combine(draft, "files", $"page-{n:D2}.jpg"), [0xFF, 0xD8, 0xFF, (byte)n]);
             }
         }
-        var media = code.Contains("ffprobe", StringComparison.Ordinal) && !code.StartsWith("# The media studio's video", StringComparison.Ordinal);
+        var media = code.Contains("ffprobe", StringComparison.Ordinal) && !code.Contains("# The media studio's video", StringComparison.Ordinal);
         if (media)
         {
             await File.WriteAllBytesAsync(Path.Combine(draft, "files", "sound.mp3"), [0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, 0, 1, 2]);
@@ -240,7 +240,7 @@ public sealed class FakeSandbox : IAsyncDisposable
             await File.WriteAllBytesAsync(Path.Combine(draft, "files", $"drawing.{format}"), format == "gif" ? [0x47, 0x49, 0x46, 0x38, 0x39, 0x61] : [0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70]);
         }
         // The media studio's cut: a video, and its length (three seconds a shot).
-        var cut = code.StartsWith("# The media studio's video", StringComparison.Ordinal);
+        var cut = code.Contains("# The media studio's video", StringComparison.Ordinal);
         string? cutReport = null;
         if (cut)
         {
