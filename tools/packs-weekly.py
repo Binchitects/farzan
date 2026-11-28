@@ -54,6 +54,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -444,9 +445,12 @@ def release(version: str, notes: list[str], index: Path, sums: Path) -> bool:
     assets = [str(PACKS / e["url"].rsplit("/", 1)[1]) for e in entries if e["url"].startswith(base)]
     if not assets:
         return False
-    if not notes:
-        notes = [f"- **{e['name']}** {e['version']}: {e['size_bytes'] / 2**20:.0f} MB, from {e['source_commit'][:60]}" for e in entries if e["url"].startswith(base)]
-    body = [f"Knowledge packs of {version}: {len(assets)} new, {len(entries) - len(assets)} as before.", ""] + notes + [
+    # A line for each pack the release serves: this run's note of it, else (a pack released by an earlier run that day) its own.
+    served = [e for e in entries if e["url"].startswith(base)]
+    lines = [next((n for n in notes if n.startswith(f"- **{e['name']}** ")),
+                  f"- **{e['name']}** {e['version']}: {e['size_bytes'] / 2**20:.0f} MB, from {e['source_commit'][:60]}") for e in served]
+    lines += [n for n in notes if not any(n.startswith(f"- **{e['name']}** ") for e in served)]
+    body = [f"Knowledge packs of {version}: {len(assets)} new, {len(entries) - len(assets)} as before.", ""] + lines + [
         "", "Install on a stack: Admin -> Packs -> Update all (CODE_INTEL_PACK_INDEX_URL set to this release's index.json), "
         "or download a pack and check it against SHA256SUMS, then `code-intel pack install FILE --sha256 DIGEST`."]
     tag = f"packs-{version}"
@@ -456,31 +460,62 @@ def release(version: str, notes: list[str], index: Path, sums: Path) -> bool:
         # A draft first, each file uploaded on its own (taken up again when one fails: a pack of hundreds of MB through a
         # proxy can time out), and the release shown only once it holds them all. A release of the day left by a run
         # that failed is taken up where it stopped.
-        if subprocess.run(["gh", "release", "view", tag, "--repo", REPO], capture_output=True).returncode == 0:
+        token = out(["gh", "auth", "token"])
+        if release_assets(tag) is not None:
             run(["gh", "release", "edit", tag, "--repo", REPO, "--notes-file", f.name])
         else:
             run(["gh", "release", "create", tag, "--repo", REPO, "--title", f"Knowledge packs {version}", "--notes-file", f.name,
                  "--draft", "--latest=false"])
         for path in [*assets, str(index), str(sums)]:
-            upload(tag, Path(path))
+            upload(tag, Path(path), token)
         run(["gh", "release", "edit", tag, "--repo", REPO, "--draft=false", "--latest=false"])
     finally:
         os.unlink(f.name)
     return True
 
 
-def upload(tag: str, path: Path) -> None:
-    """One file onto the release, again (replacing a partial one) until it is there."""
+def release_assets(tag: str) -> tuple[str, dict[str, dict]] | None:
+    """The release's upload URL and its files by name (None: no such release)."""
+    got = subprocess.run(["gh", "release", "view", tag, "--repo", REPO, "--json", "uploadUrl,assets"], capture_output=True, text=True)
+    if got.returncode != 0:
+        return None
+    d = json.loads(got.stdout or "{}")
+    return d.get("uploadUrl", "").split("{", 1)[0], {x["name"]: x for x in d.get("assets", [])}
+
+
+def upload(tag: str, path: Path, token: str) -> None:
+    """One file onto the release until it is there whole. A pack the release already holds whole is not sent again (the
+    index and the sums always are); a partial one is removed first. curl cuts a transfer that stalls (under 1 KB/s for
+    60 s), and the tries go by turns straight and through --proxy: an upload of hundreds of MB through a proxy can crawl
+    or time out (HTTP 408). The token reaches curl on its standard input, never on a command line."""
+    proxy = os.environ.get("HTTPS_PROXY", "")
+    routes = ["", proxy] if proxy else [""]
+    why = ""
     for attempt in range(1, UPLOAD_TRIES + 1):
-        got = subprocess.run(["gh", "release", "upload", tag, str(path), "--repo", REPO, "--clobber"], capture_output=True, text=True)
-        if got.returncode == 0:
-            say(f"  uploaded {path.name}")
+        found = release_assets(tag)
+        if found is None:
+            raise RuntimeError(f"no release {tag} to upload {path.name} to")
+        url, held = found
+        there = held.get(path.name)
+        if there:
+            if path.suffix == ".kpack" and there.get("state") == "uploaded" and there.get("size") == path.stat().st_size:
+                say(f"  already on {tag}: {path.name}")
+                return
+            subprocess.run(["gh", "api", "-X", "DELETE", there["apiUrl"].split("://", 1)[-1].split("/", 1)[-1]], capture_output=True)
+        route = routes[(attempt - 1) % len(routes)]
+        got = subprocess.run(["curl", "-sS", "--speed-limit", "1024", "--speed-time", "60", "-X", "POST", "-H", "@-",
+                              "-H", "Content-Type: application/octet-stream", "--data-binary", f"@{path}", "-o", "/dev/null",
+                              "-w", "%{http_code}", *(["-x", route] if route else ["--noproxy", "*"]),
+                              f"{url}?name={urllib.parse.quote(path.name)}"],
+                             input=f"Authorization: Bearer {token}\n", capture_output=True, text=True)
+        if got.returncode == 0 and got.stdout.strip() == "201":
+            say(f"  uploaded {path.name}{' (through the proxy)' if route else ''}")
             return
-        why = (got.stderr or got.stdout or f"gh exit {got.returncode}").strip().splitlines()[-1][:200]
-        if attempt == UPLOAD_TRIES:
-            raise RuntimeError(f"could not upload {path.name} to {tag} ({UPLOAD_TRIES} tries): {why}")
-        say(f"  upload of {path.name} failed ({why}): again")
-        time.sleep(min(120, 15 * attempt))
+        why = (got.stderr.strip().splitlines() or [f"HTTP {got.stdout.strip() or '?'}"])[-1][:200]
+        if attempt < UPLOAD_TRIES:
+            say(f"  upload of {path.name} {'through the proxy' if route else 'straight'} failed ({why}): again")
+            time.sleep(min(120, 15 * attempt))
+    raise RuntimeError(f"could not upload {path.name} to {tag} ({UPLOAD_TRIES} tries): {why}")
 
 
 def prune() -> None:

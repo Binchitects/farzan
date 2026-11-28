@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sqlite3
 import tempfile
 import unittest
@@ -91,60 +92,105 @@ class PacksWeekly(unittest.TestCase):
         self.assertEqual("packs-2026.11.12", published["cpp-2026.11.12.kpack"]["release"])
         self.assertEqual("packs-2026.11.05", published["sqlite.kpack"]["release"])
 
-    def test_The_release_is_a_draft_until_every_file_is_up_and_a_failed_upload_is_tried_again(self):
-        import subprocess
+    class FakeGitHub:
+        """gh and curl as the release step calls them: a release (or none), its files, uploads that fail as told."""
+
+        def __init__(self, exists=False, held=None, fail=lambda cmd, n: False):
+            self.exists, self.held, self.fail, self.calls, self.notes, self.inputs = exists, dict(held or {}), fail, [], [], []
+
+        def __call__(self, cmd, **kw):
+            import subprocess
+            self.calls.append(cmd)
+            ok = lambda out="": subprocess.CompletedProcess(cmd, 0, out, "")
+            if cmd[:3] == ["gh", "auth", "token"]:
+                return ok("TOKEN")
+            if cmd[:3] == ["gh", "release", "view"]:
+                if not self.exists:
+                    return subprocess.CompletedProcess(cmd, 1, "", "release not found")
+                assets = [{"name": n, "size": z, "state": st, "apiUrl": f"https://api.github.com/repos/x/y/releases/assets/{n}"}
+                          for n, (z, st) in self.held.items()]
+                return ok(json.dumps({"uploadUrl": "https://uploads.github.com/repos/x/y/releases/1/assets{?name,label}", "assets": assets}))
+            if cmd[:3] == ["gh", "release", "create"]:
+                self.exists = True
+            if "--notes-file" in cmd:
+                self.notes.append(Path(cmd[cmd.index("--notes-file") + 1]).read_text())
+            if cmd[:3] == ["gh", "api", "-X"]:
+                self.held.pop(cmd[-1].rsplit("/", 1)[-1], None)
+            if cmd[0] == "curl":
+                self.inputs.append(kw.get("input", ""))
+                name = cmd[-1].split("?name=", 1)[1]
+                tries = sum(1 for c in self.calls if c[0] == "curl" and c[-1] == cmd[-1])
+                if self.fail(cmd, tries):
+                    self.held[name] = (1, "starter")
+                    return subprocess.CompletedProcess(cmd, 28, "000", "curl: (28) Operation too slow")
+                self.held[name] = (Path(cmd[cmd.index("--data-binary") + 1][1:]).stat().st_size, "uploaded")
+                return ok("201")
+            return ok()
+
+        def uploads(self):
+            return [c for c in self.calls if c[0] == "curl"]
+
+    def released(self, fake, *args):
+        saved = pw.subprocess.run, pw.time.sleep, os.environ.get("HTTPS_PROXY")
+        pw.subprocess.run, pw.time.sleep = fake, lambda _: None
+        os.environ["HTTPS_PROXY"] = "http://proxy.test:3128"
+        try:
+            return pw.release(*args)
+        finally:
+            pw.subprocess.run, pw.time.sleep = saved[0], saved[1]
+            if saved[2] is None:
+                os.environ.pop("HTTPS_PROXY", None)
+            else:
+                os.environ["HTTPS_PROXY"] = saved[2]
+
+    def test_The_release_is_a_draft_until_every_file_is_up_and_a_stalled_upload_is_tried_again_the_other_way(self):
         new = pack(self.packs / "cpp-2026.11.12.kpack", "cpp", "2026.11.12")
         index, sums = pw.write_index("2026.11.12", [new], True)
-        calls, failed = [], []
-
-        def fake(cmd, **kw):
-            calls.append(cmd[:4])
-            if cmd[:3] == ["gh", "release", "view"]:
-                return subprocess.CompletedProcess(cmd, 1, "", "release not found")
-            if cmd[:3] == ["gh", "release", "upload"] and cmd[4].endswith(".kpack") and not failed:
-                failed.append(cmd[4])
-                return subprocess.CompletedProcess(cmd, 1, "", "HTTP 408: Upload body timed out due to inactivity")
-            return subprocess.CompletedProcess(cmd, 0, "", "")
-
-        saved = pw.subprocess.run, pw.time.sleep
-        pw.subprocess.run, pw.time.sleep = fake, lambda _: None
-        try:
-            self.assertTrue(pw.release("2026.11.12", [], index, sums))
-        finally:
-            pw.subprocess.run, pw.time.sleep = saved
-        create = next(c for c in calls if c[:3] == ["gh", "release", "create"])
+        fake = self.FakeGitHub(fail=lambda cmd, n: cmd[-1].endswith(".kpack") and n == 1)
+        self.assertTrue(self.released(fake, "2026.11.12", [], index, sums))
+        create = next(c for c in fake.calls if c[:3] == ["gh", "release", "create"])
         self.assertEqual("packs-2026.11.12", create[3])
-        uploads = [c for c in calls if c[:3] == ["gh", "release", "upload"]]
-        self.assertEqual(4, len(uploads))  # the pack twice, index.json, SHA256SUMS
+        self.assertIn("--draft", create)
+        ups = fake.uploads()
+        self.assertEqual(4, len(ups))  # the pack twice, index.json, SHA256SUMS
+        # Straight first, then through the proxy; the partial file of the stalled try removed before the next.
+        self.assertIn("--noproxy", ups[0])
+        self.assertEqual("http://proxy.test:3128", ups[1][ups[1].index("-x") + 1])
+        self.assertIn(["gh", "api", "-X", "DELETE", "repos/x/y/releases/assets/cpp-2026.11.12.kpack"], fake.calls)
+        # Stalls are cut, and the token is never on a command line.
+        self.assertEqual("60", ups[0][ups[0].index("--speed-time") + 1])
+        self.assertFalse(any("TOKEN" in " ".join(c) for c in ups))
+        self.assertEqual("Authorization: Bearer TOKEN\n", fake.inputs[0])
         # Shown only after the last upload.
-        self.assertEqual(["gh", "release", "edit", "packs-2026.11.12"], calls[-1])
-        self.assertLess(calls.index(create), calls.index(uploads[0]))
+        self.assertEqual(["gh", "release", "edit", "packs-2026.11.12", "--repo", pw.REPO, "--draft=false", "--latest=false"], fake.calls[-1])
 
     def test_A_file_that_never_uploads_stops_the_release_a_draft(self):
-        import subprocess
         new = pack(self.packs / "cpp-2026.11.12.kpack", "cpp", "2026.11.12")
         index, sums = pw.write_index("2026.11.12", [new], True)
-        calls = []
-
-        def fake(cmd, **kw):
-            calls.append(cmd[:3])
-            if cmd[:3] == ["gh", "release", "view"]:
-                return subprocess.CompletedProcess(cmd, 0, "", "")
-            code = 1 if cmd[:3] == ["gh", "release", "upload"] else 0
-            return subprocess.CompletedProcess(cmd, code, "", "HTTP 408")
-
-        saved = pw.subprocess.run, pw.time.sleep
-        pw.subprocess.run, pw.time.sleep = fake, lambda _: None
-        try:
-            with self.assertRaises(RuntimeError):
-                pw.release("2026.11.12", [], index, sums)
-        finally:
-            pw.subprocess.run, pw.time.sleep = saved
+        fake = self.FakeGitHub(exists=True, fail=lambda cmd, n: True)
+        with self.assertRaises(RuntimeError):
+            self.released(fake, "2026.11.12", [], index, sums)
         # The day's release already there is taken up (no second create), and it is never shown.
-        self.assertNotIn(["gh", "release", "create"], calls)
-        self.assertEqual(pw.UPLOAD_TRIES, sum(1 for c in calls if c == ["gh", "release", "upload"]))
-        self.assertEqual(1, sum(1 for c in calls if c == ["gh", "release", "edit"]))
+        self.assertNotIn(["gh", "release", "create"], [c[:3] for c in fake.calls])
+        self.assertEqual(pw.UPLOAD_TRIES, len(fake.uploads()))
+        self.assertNotIn("--draft=false", [x for c in fake.calls for x in c])
         self.assertFalse((self.packs / "published.json").exists())
+
+    def test_A_second_run_that_day_sends_only_what_the_release_lacks_and_keeps_every_packs_line(self):
+        first = pack(self.packs / "cpp-2026.11.12.kpack", "cpp", "2026.11.12")
+        pw.write_index("2026.11.12", [first], True)
+        pw.remember_published()
+        second = pack(self.packs / "qt-2026.11.12.kpack", "qt", "2026.11.12")
+        index, sums = pw.write_index("2026.11.12", [second], True)
+        fake = self.FakeGitHub(exists=True, held={first.name: (first.stat().st_size, "uploaded"), "index.json": (1, "uploaded")})
+        self.assertTrue(self.released(fake, "2026.11.12", ["- **qt** 2026.11.12: 12,000 pages"], index, sums))
+        sent = [c[-1].split("?name=", 1)[1] for c in fake.uploads()]
+        self.assertEqual(["qt-2026.11.12.kpack", "index.json", "SHA256SUMS"], sent)
+        # The index is always sent again: the one there is removed first.
+        self.assertIn(["gh", "api", "-X", "DELETE", "repos/x/y/releases/assets/index.json"], fake.calls)
+        self.assertNotIn(["gh", "release", "create"], [c[:3] for c in fake.calls])
+        self.assertIn("- **qt** 2026.11.12: 12,000 pages", fake.notes[0])
+        self.assertIn("- **cpp** 2026.11.12:", fake.notes[0])
 
     def test_Pruning_keeps_the_two_newest_of_each_name(self):
         for v in ("1.0", "2026.11.5", "2026.11.12"):
